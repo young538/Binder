@@ -1,10 +1,11 @@
-import { TimeBlock, Category, Goal } from '@/lib/types';
-import { aggregateByCategory, aggregateByGoal, aggregateByDay } from '@/lib/aggregate';
+import { TimeBlock, Category, Goal, Todo } from '@/lib/types';
+import { aggregateByCategory, aggregateByGoal, aggregateByDay, aggregateByTodo } from '@/lib/aggregate';
 import { weekDates, toIsoDate } from '@/lib/utils/date';
 
 interface Props {
   isoweek: string;
   blocks: TimeBlock[];
+  todos: Todo[];
   categories: Category[];
   goals: Goal[];
 }
@@ -20,13 +21,18 @@ const Card = ({ title, children }: { title: string; children: React.ReactNode })
   </div>
 );
 
-export const WeeklySummary = ({ isoweek, blocks, categories, goals }: Props) => {
+export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Props) => {
   const totalMin = blocks.reduce((s, b) => s + (b.endMin - b.startMin), 0);
   const byCat = aggregateByCategory(blocks);
   const byGoal = aggregateByGoal(blocks);
   const byDay = aggregateByDay(blocks);
+  const byTodo = aggregateByTodo(blocks);
   const dates = weekDates(isoweek).map(toIsoDate);
   const dayMax = Math.max(1, ...dates.map((d) => byDay.get(d) ?? 0));
+
+  const totalTodos = todos.length;
+  const doneTodos = todos.filter((t) => t.done).length;
+  const completionPct = totalTodos > 0 ? Math.round((doneTodos / totalTodos) * 100) : 0;
 
   return (
     <section className="grid md:grid-cols-3 gap-3 mb-6">
@@ -35,6 +41,26 @@ export const WeeklySummary = ({ isoweek, blocks, categories, goals }: Props) => 
           {hours(totalMin)}
           <span className="text-lg font-medium text-zinc-500">h</span>
         </div>
+      </Card>
+
+      <Card title="TODO 완료율">
+        {totalTodos === 0 ? (
+          <div className="text-sm text-zinc-400">TODO 없음</div>
+        ) : (
+          <div>
+            <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              {doneTodos}
+              <span className="text-lg font-medium text-zinc-500">/{totalTodos}</span>
+              <span className="text-base font-normal text-zinc-500 ml-2">({completionPct}%)</span>
+            </div>
+            <div className="mt-2 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card title="카테고리별">
@@ -64,6 +90,25 @@ export const WeeklySummary = ({ isoweek, blocks, categories, goals }: Props) => 
               <span className="text-zinc-600 dark:text-zinc-400 tabular-nums">{hours(m)}h</span>
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card title="TODO별 시간">
+        {byTodo.size === 0 && <div className="text-sm text-zinc-400">연결된 시간 블록 없음</div>}
+        <div className="space-y-1.5">
+          {Array.from(byTodo.entries()).map(([tid, m]) => {
+            const todo = tid ? todos.find((t) => t.id === tid) : null;
+            const label = tid ? (todo?.title ?? '(삭제된 TODO)') : '(TODO 미연결)';
+            return (
+              <div key={tid ?? '_'} className="flex justify-between text-sm">
+                <span className="truncate text-zinc-700 dark:text-zinc-300">
+                  {todo?.done && <span className="text-emerald-600 mr-1">✓</span>}
+                  {label}
+                </span>
+                <span className="text-zinc-600 dark:text-zinc-400 tabular-nums">{hours(m)}h</span>
+              </div>
+            );
+          })}
         </div>
       </Card>
 
