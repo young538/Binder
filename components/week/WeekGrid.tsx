@@ -65,7 +65,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
   };
 
   return (
-    <div>
+    <div className="hidden md:block">
       <header className="flex items-center gap-3 p-3 border-b">
         <Link href={`/week/${prevWeek}`} className="px-2 py-1 rounded hover:bg-gray-100">
           ◀ 이전주
