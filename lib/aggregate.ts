@@ -26,3 +26,12 @@ export const aggregateByDay = (blocks: TimeBlock[]): Map<string, number> => {
   }
   return map;
 };
+
+export const aggregateByTodo = (blocks: TimeBlock[]): Map<string | null, number> => {
+  const map = new Map<string | null, number>();
+  for (const b of blocks) {
+    const key = b.todoId ?? null;
+    map.set(key, (map.get(key) ?? 0) + duration(b));
+  }
+  return map;
+};

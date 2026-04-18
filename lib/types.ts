@@ -1,4 +1,4 @@
-export type GoalLevel = 'oneThing' | 'mandalartCore' | 'mandalartSub' | 'annual' | 'monthly';
+export type GoalLevel = 'oneThing' | 'mandalartCore' | 'mandalartSub';
 
 export interface Goal {
   id: string;
@@ -11,6 +11,30 @@ export interface Goal {
   updatedAt: string;
 }
 
+export type TodoPeriod = 'monthly' | 'weekly';
+
+export interface Todo {
+  id: string;
+  title: string;
+  parentGoalId?: string;
+  period: TodoPeriod;
+  periodKey: string;
+  done: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FocusScope = 'year' | 'month' | 'week';
+
+export interface FocusNote {
+  id: string;
+  scope: FocusScope;
+  scopeKey: string;
+  text: string;
+  updatedAt: string;
+}
+
 export interface TimeBlock {
   id: string;
   date: string;
@@ -19,6 +43,7 @@ export interface TimeBlock {
   text: string;
   categoryId: string;
   goalId?: string;
+  todoId?: string;
   createdAt: string;
   updatedAt: string;
 }

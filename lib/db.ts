@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Goal, TimeBlock, Category, Retrospective, Settings } from './types';
+import { Goal, TimeBlock, Category, Retrospective, Settings, Todo } from './types';
 
 export interface SyncMeta {
   key: 'main';
@@ -21,6 +21,14 @@ export interface Snapshot {
   data: string;
 }
 
+export interface FocusNoteRow {
+  id: string;
+  scope: 'year' | 'month' | 'week';
+  scopeKey: string;
+  text: string;
+  updatedAt: string;
+}
+
 class BinderDb extends Dexie {
   goals!: Table<Goal, string>;
   categories!: Table<Category, string>;
@@ -30,6 +38,8 @@ class BinderDb extends Dexie {
   syncMeta!: Table<SyncMeta, 'main'>;
   authTokens!: Table<AuthToken, 'google'>;
   snapshots!: Table<Snapshot, string>;
+  todos!: Table<Todo, string>;
+  focusNotes!: Table<FocusNoteRow, string>;
 
   constructor() {
     super('BinderDb');
@@ -42,6 +52,24 @@ class BinderDb extends Dexie {
       syncMeta: 'key',
       authTokens: 'key',
       snapshots: 'id, createdAt',
+    });
+    this.version(2).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, period, periodKey, parentGoalId, done, order, [period+periodKey], [period+periodKey+parentGoalId]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+    }).upgrade(async tx => {
+      await tx.table('goals').toCollection().modify((g: { level?: string }) => {
+        if (g.level !== 'oneThing' && g.level !== 'mandalartCore' && g.level !== 'mandalartSub') {
+          g.level = 'mandalartSub';
+        }
+      });
     });
   }
 }
