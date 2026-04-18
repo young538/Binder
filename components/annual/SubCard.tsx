@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Check } from 'lucide-react';
 import { Goal, Todo } from '@/lib/types';
 import { createTodo, listByParentGoal } from '@/lib/repo/todos';
+import { toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 
 interface Props {
@@ -10,15 +11,28 @@ interface Props {
   currentMonth: Date;
 }
 
+const defaultPickedDate = (currentMonth: Date): string => {
+  const today = new Date();
+  const sameMonth =
+    today.getFullYear() === currentMonth.getFullYear() &&
+    today.getMonth() === currentMonth.getMonth();
+  if (sameMonth) return toIsoDate(today);
+  return `${format(currentMonth, 'yyyy-MM')}-01`;
+};
+
 export const SubCard = ({ sub, currentMonth }: Props) => {
   const [linkedTodos, setLinkedTodos] = useState<Todo[]>([]);
   const [busy, setBusy] = useState(false);
-  const currentYm = format(currentMonth, 'yyyy-MM');
-  const firstDayOfCurrentMonth = `${currentYm}-01`;
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickedDate, setPickedDate] = useState(() => defaultPickedDate(currentMonth));
 
   useEffect(() => {
     listByParentGoal(sub.id).then(setLinkedTodos);
   }, [sub.id]);
+
+  useEffect(() => {
+    setPickedDate(defaultPickedDate(currentMonth));
+  }, [currentMonth]);
 
   const monthBadges = Array.from(
     linkedTodos.reduce((acc, t) => {
@@ -37,21 +51,25 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
     return { key: ym, label, done };
   });
 
-  const alreadyThisMonth = linkedTodos.some(t => t.date.slice(0, 7) === currentYm);
-
-  const assignThisMonth = async () => {
-    if (alreadyThisMonth || busy) return;
+  const assignForDate = async (dateStr: string) => {
+    if (busy) return;
+    const existing = linkedTodos.some(t => t.date === dateStr);
+    if (existing) {
+      alert('이미 그 날짜에 있어요');
+      return;
+    }
     setBusy(true);
     await createTodo({
       title: sub.title,
       parentGoalId: sub.id,
-      date: firstDayOfCurrentMonth,
+      date: dateStr,
       done: false,
       order: Date.now(),
     });
     const ts = await listByParentGoal(sub.id);
     setLinkedTodos(ts);
     setBusy(false);
+    setShowPicker(false);
   };
 
   return (
@@ -68,15 +86,32 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
           </span>
         ))}
       </div>
-      <button
-        onClick={assignThisMonth}
-        disabled={alreadyThisMonth || busy}
-        className={`mt-2 w-full flex items-center justify-center gap-1 text-xs py-1.5 rounded-md border transition
-          ${alreadyThisMonth
-            ? 'border-zinc-200 dark:border-zinc-800 text-zinc-400 cursor-not-allowed'
-            : 'border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30'}`}>
-        {alreadyThisMonth ? <><Check size={12} /> 이번 달 포함</> : <><Plus size={12} /> 이번 달에 하기</>}
-      </button>
+      {showPicker ? (
+        <div className="flex gap-1 mt-2">
+          <input
+            type="date"
+            value={pickedDate}
+            onChange={e => setPickedDate(e.target.value)}
+            className="flex-1 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs px-1.5 py-1 rounded-md" />
+          <button
+            onClick={() => assignForDate(pickedDate)}
+            disabled={busy}
+            className="px-2 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+            추가
+          </button>
+          <button
+            onClick={() => setShowPicker(false)}
+            className="px-2 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+            취소
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowPicker(true)}
+          className="mt-2 w-full flex items-center justify-center gap-1 text-xs py-1.5 rounded-md border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition">
+          <Plus size={12} /> 날짜 선택 후 추가
+        </button>
+      )}
     </div>
   );
 };
