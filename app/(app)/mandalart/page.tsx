@@ -1,3 +1,5 @@
+import { MandalartBoard } from '@/components/mandalart/MandalartBoard';
+
 export default function MandalartPage() {
-  return <div className="p-4">만다라트</div>;
+  return <MandalartBoard />;
 }
