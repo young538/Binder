@@ -6,21 +6,37 @@ import { weekDates, toIsoDate, minutesToTimeStr, toIsoWeek } from '@/lib/utils/d
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { TimeBlock } from '@/lib/types';
 import { addDays } from 'date-fns';
+import { BlockEditor } from './BlockEditor';
 
-interface Props { isoweek: string; }
+interface Props {
+  isoweek: string;
+}
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
+
+interface EditorState {
+  date: string;
+  startMin: number;
+  endMin: number;
+  existing?: TimeBlock;
+}
 
 export const WeekGrid = ({ isoweek }: Props) => {
   const { categories, settings } = useBinder();
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
+  const [editor, setEditor] = useState<EditorState | null>(null);
 
   const dates = weekDates(isoweek);
   const rangeStart = toIsoDate(dates[0]);
   const rangeEnd = toIsoDate(dates[6]);
 
-  useEffect(() => {
+  const reloadBlocks = () => {
     getTimeBlocksInRange(rangeStart, rangeEnd).then(setBlocks);
+  };
+
+  useEffect(() => {
+    reloadBlocks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeStart, rangeEnd]);
 
   if (!settings) return null;
@@ -31,6 +47,19 @@ export const WeekGrid = ({ isoweek }: Props) => {
   const nextWeek = toIsoWeek(addDays(dates[0], 7));
 
   const catColor = (id: string) => categories.find((c) => c.id === id)?.color ?? '#ddd';
+
+  const openNew = (date: string, startMin: number) => {
+    setEditor({ date, startMin, endMin: startMin + gridMinutes });
+  };
+
+  const openEdit = (block: TimeBlock) => {
+    setEditor({
+      date: block.date,
+      startMin: block.startMin,
+      endMin: block.endMin,
+      existing: block,
+    });
+  };
 
   return (
     <div>
@@ -68,20 +97,30 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   (b) => b.date === dateStr && b.startMin <= startMin && b.endMin > startMin,
                 );
                 return (
-                  <div
+                  <button
                     key={col}
-                    className="border-b border-r h-6 text-[10px] overflow-hidden hover:bg-gray-50"
+                    onClick={() => (match ? openEdit(match) : openNew(dateStr, startMin))}
+                    className="border-b border-r h-6 text-[10px] overflow-hidden text-left hover:bg-gray-50"
                     style={match ? { background: catColor(match.categoryId) } : {}}
                     title={match?.text}
                   >
                     {match && match.startMin === startMin ? match.text : ''}
-                  </div>
+                  </button>
                 );
               })}
             </div>
           );
         })}
       </div>
+
+      {editor && (
+        <BlockEditor
+          initial={{ date: editor.date, startMin: editor.startMin, endMin: editor.endMin }}
+          existing={editor.existing}
+          onClose={() => setEditor(null)}
+          onSaved={reloadBlocks}
+        />
+      )}
     </div>
   );
 };
