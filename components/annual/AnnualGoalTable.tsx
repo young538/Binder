@@ -60,13 +60,14 @@ export const AnnualGoalTable = ({ year }: Props) => {
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{year}년 목표</h2>
         <button
           onClick={addRow}
-          className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+          className="hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
         >
           <Plus size={12} /> 행 추가
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop / tablet table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-xs border-collapse" style={{ minWidth: '1200px' }}>
           <thead>
             <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400">
@@ -200,6 +201,140 @@ export const AnnualGoalTable = ({ year }: Props) => {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden p-3 space-y-3">
+        {goals.map((g) => {
+          const sum = g.monthlyActuals.reduce<number>((s, v) => s + (v ?? 0), 0);
+          const pct = g.target && g.target > 0 ? Math.round((sum / g.target) * 100) : null;
+          return (
+            <div
+              key={g.id}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 shadow-sm"
+            >
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-xs text-zinc-400 tabular-nums w-6 shrink-0 pt-1">{g.order}.</span>
+                <input
+                  type="text"
+                  defaultValue={g.title}
+                  onBlur={(e) => patch(g, 'title', e.target.value.trim())}
+                  placeholder="이루고 싶은 일"
+                  className="flex-1 bg-transparent font-semibold outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-2 py-1 rounded text-zinc-900 dark:text-zinc-50"
+                />
+                <button
+                  onClick={() => remove(g.id)}
+                  className="p-1.5 text-zinc-400 hover:text-red-600 rounded"
+                  aria-label="삭제"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                <label className="flex flex-col">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wide">달성 기한</span>
+                  <input
+                    type="text"
+                    defaultValue={g.deadline ?? ''}
+                    onBlur={(e) => patch(g, 'deadline', e.target.value.trim() || undefined)}
+                    placeholder="-"
+                    className="bg-zinc-50 dark:bg-zinc-800/50 rounded px-2 py-1 mt-0.5 outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </label>
+                <label className="flex flex-col">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wide">수치화</span>
+                  <input
+                    type="text"
+                    defaultValue={g.metric ?? ''}
+                    onBlur={(e) => patch(g, 'metric', e.target.value.trim() || undefined)}
+                    placeholder="-"
+                    className="bg-zinc-50 dark:bg-zinc-800/50 rounded px-2 py-1 mt-0.5 outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </label>
+                <label className="flex flex-col col-span-2">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wide">실천 내용</span>
+                  <input
+                    type="text"
+                    defaultValue={g.action ?? ''}
+                    onBlur={(e) => patch(g, 'action', e.target.value.trim() || undefined)}
+                    placeholder="-"
+                    className="bg-zinc-50 dark:bg-zinc-800/50 rounded px-2 py-1 mt-0.5 outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </label>
+                <label className="flex flex-col">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wide">목표</span>
+                  <input
+                    type="number"
+                    defaultValue={g.target ?? ''}
+                    onBlur={(e) =>
+                      patch(g, 'target', e.target.value === '' ? undefined : Number(e.target.value))
+                    }
+                    placeholder="-"
+                    className="bg-zinc-50 dark:bg-zinc-800/50 rounded px-2 py-1 mt-0.5 outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
+                  />
+                </label>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wide">달성률</span>
+                  <div
+                    className={`mt-0.5 px-2 py-1 rounded tabular-nums font-semibold text-sm
+                      ${
+                        pct === null
+                          ? 'text-zinc-400'
+                          : pct >= 100
+                            ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
+                            : pct >= 50
+                              ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/30'
+                              : 'text-zinc-500 bg-zinc-100 dark:bg-zinc-800'
+                      }`}
+                  >
+                    {pct === null ? '-' : `${pct}%`}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1">월별 계획/실적</div>
+                <div className="grid grid-cols-6 gap-1 text-xs">
+                  {MONTHS.map((m, i) => (
+                    <div
+                      key={i}
+                      className={`rounded text-center ${
+                        i < 6
+                          ? 'bg-blue-50/50 dark:bg-blue-950/20'
+                          : 'bg-amber-50/50 dark:bg-amber-950/20'
+                      }`}
+                    >
+                      <div className="text-[9px] text-zinc-500 pt-0.5">{m}</div>
+                      <input
+                        type="number"
+                        defaultValue={g.monthlyTargets[i] ?? ''}
+                        onBlur={(e) => patchMonthly(g, 'monthlyTargets', i, e.target.value)}
+                        placeholder="계"
+                        className="w-full bg-transparent outline-none px-0.5 py-0.5 tabular-nums text-center text-[11px] focus:bg-blue-100 dark:focus:bg-blue-900/40"
+                      />
+                      <div className="h-px bg-zinc-200 dark:bg-zinc-700 mx-1"></div>
+                      <input
+                        type="number"
+                        defaultValue={g.monthlyActuals[i] ?? ''}
+                        onBlur={(e) => patchMonthly(g, 'monthlyActuals', i, e.target.value)}
+                        placeholder="실"
+                        className="w-full bg-transparent outline-none px-0.5 py-0.5 tabular-nums text-center text-[11px] font-medium focus:bg-emerald-100 dark:focus:bg-emerald-900/40"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <button
+          onClick={addRow}
+          className="w-full flex items-center justify-center gap-1.5 py-3 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-zinc-600 dark:text-zinc-400 hover:border-blue-400 hover:text-blue-600"
+        >
+          <Plus size={14} /> 행 추가
+        </button>
+      </div>
+
       <div className="px-4 py-2 text-[10px] text-zinc-500 bg-zinc-50 dark:bg-zinc-800/30">
         💡 각 월 셀의 위 숫자=계획(목표), 아래=실적. 달성률 = Σ실적 / 목표.
       </div>

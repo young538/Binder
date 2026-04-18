@@ -66,7 +66,11 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
           설정 → 습관 섹션에서 추적할 습관을 추가하세요.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          <div className="sm:hidden px-4 py-1 text-[10px] text-zinc-500 italic">
+            ← 좌우로 스크롤해서 전체 달을 확인하세요
+          </div>
+          <div className="overflow-x-auto">
           <table
             className="w-full text-xs border-collapse"
             style={{ minWidth: `${140 + days.length * 28}px` }}
@@ -153,7 +157,8 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </section>
   );

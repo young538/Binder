@@ -107,7 +107,7 @@ export const DataImportPanel = () => {
 
       {preview && (
         <div className="space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-4">
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-center">
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
               <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
                 {preview.goals?.length ?? 0}
