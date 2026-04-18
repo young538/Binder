@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { X, Trash2 } from 'lucide-react';
 import { TimeBlock } from '@/lib/types';
 import { createTimeBlock, updateTimeBlock, deleteTimeBlock } from '@/lib/repo/timeBlocks';
 import { useBinder } from '@/store';
@@ -61,65 +62,118 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg p-5 max-w-sm w-full space-y-3"
+        className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-bold">{existing ? '블록 편집' : '블록 추가'}</h3>
-        <div className="text-xs text-gray-500">{initial.date}</div>
-
-        <div className="flex gap-2">
-          <input
-            type="time"
-            value={startStr}
-            onChange={(e) => setStartStr(e.target.value)}
-            className="border rounded px-2 py-1 flex-1"
-          />
-          <span className="self-center">~</span>
-          <input
-            type="time"
-            value={endStr}
-            onChange={(e) => setEndStr(e.target.value)}
-            className="border rounded px-2 py-1 flex-1"
-          />
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            {existing ? '블록 편집' : '블록 추가'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <input
-          type="text"
-          placeholder="내용"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          autoFocus
-          className="border rounded px-2 py-1 w-full"
-        />
+        <div className="text-xs text-zinc-500 mb-4">{initial.date}</div>
 
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="border rounded px-2 py-1 w-full"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              시간
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={startStr}
+                onChange={(e) => setStartStr(e.target.value)}
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-zinc-400 text-sm">~</span>
+              <input
+                type="time"
+                value={endStr}
+                onChange={(e) => setEndStr(e.target.value)}
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
-        <GoalPicker value={goalId} onChange={setGoalId} />
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              내용
+            </label>
+            <input
+              type="text"
+              placeholder="내용"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              autoFocus
+              className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex gap-2 justify-end pt-2">
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              카테고리
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => {
+                const active = categoryId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setCategoryId(c.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition ${
+                      active
+                        ? 'border-zinc-900 dark:border-white ring-1 ring-zinc-900 dark:ring-white'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: c.color }}
+                    />
+                    <span className="text-zinc-800 dark:text-zinc-200">{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              목표 연결
+            </label>
+            <GoalPicker value={goalId} onChange={setGoalId} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
           {existing && (
-            <button onClick={remove} className="text-red-600 mr-auto">
-              삭제
+            <button
+              onClick={remove}
+              className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-sm font-medium mr-auto"
+            >
+              <Trash2 size={14} /> 삭제
             </button>
           )}
-          <button onClick={onClose} className="px-3 py-1 rounded border">
+          <button
+            onClick={onClose}
+            className="ml-auto px-4 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
             취소
           </button>
-          <button onClick={save} className="px-3 py-1 rounded bg-blue-600 text-white">
+          <button
+            onClick={save}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+          >
             저장
           </button>
         </div>

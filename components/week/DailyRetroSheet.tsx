@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { Retrospective } from '@/lib/types';
 import { getRetrospective, upsertRetrospective } from '@/lib/repo/retrospectives';
 import { RetroTemplate } from '@/components/retro/RetroTemplate';
@@ -53,15 +54,22 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
       className="fixed inset-0 z-40 flex items-end lg:items-center justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white dark:bg-gray-900 w-full lg:max-w-md rounded-t-2xl lg:rounded-lg p-4 max-h-[80vh] overflow-y-auto"
+        className="relative bg-white dark:bg-zinc-900 w-full lg:max-w-lg rounded-t-3xl lg:rounded-2xl p-6 max-h-[85vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-bold">📝 {date} 일일 회고</h3>
-          <button onClick={onClose} className="text-gray-500">
-            닫기
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <div className="text-xs text-zinc-500">일일 회고</div>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">📝 {date}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+            aria-label="닫기"
+          >
+            <X size={18} />
           </button>
         </div>
         <RetroTemplate value={value} onChange={patch} />

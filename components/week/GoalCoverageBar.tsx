@@ -14,54 +14,57 @@ const formatHours = (mins: number) => {
   return m ? `${h}h ${m}m` : `${h}h`;
 };
 
+const Bar = ({
+  rows,
+  title,
+}: {
+  rows: { label: string; color: string; mins: number }[];
+  title: string;
+}) => {
+  const max = Math.max(1, ...rows.map((r) => r.mins));
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">{title}</h3>
+      {rows.length === 0 && <p className="text-xs text-zinc-400">기록 없음</p>}
+      <div className="space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className="flex items-center gap-3 text-xs">
+            <div className="w-24 truncate text-zinc-700 dark:text-zinc-300">{r.label}</div>
+            <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+              <div
+                style={{ width: `${(r.mins / max) * 100}%`, background: r.color }}
+                className="h-full rounded-full"
+              />
+            </div>
+            <div className="w-16 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+              {formatHours(r.mins)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const GoalCoverageBar = ({ blocks, goals, categories }: Props) => {
   const byGoal = aggregateByGoal(blocks);
   const byCat = aggregateByCategory(blocks);
 
   const goalRows = Array.from(byGoal.entries()).map(([gid, mins]) => ({
-    label: gid ? (goals.find(g => g.id === gid)?.title ?? '(삭제된 목표)') : '(목표 미지정)',
-    color: gid ? (goals.find(g => g.id === gid)?.color ?? '#888') : '#ccc',
+    label: gid ? (goals.find((g) => g.id === gid)?.title ?? '(삭제된 목표)') : '(목표 미지정)',
+    color: gid ? (goals.find((g) => g.id === gid)?.color ?? '#71717a') : '#d4d4d8',
     mins,
   }));
   const catRows = Array.from(byCat.entries()).map(([cid, mins]) => ({
-    label: categories.find(c => c.id === cid)?.name ?? '(삭제됨)',
-    color: categories.find(c => c.id === cid)?.color ?? '#888',
+    label: categories.find((c) => c.id === cid)?.name ?? '(삭제됨)',
+    color: categories.find((c) => c.id === cid)?.color ?? '#71717a',
     mins,
   }));
 
-  const goalMax = Math.max(1, ...goalRows.map(r => r.mins));
-  const catMax = Math.max(1, ...catRows.map(r => r.mins));
-
   return (
-    <section className="grid md:grid-cols-2 gap-4 p-4 border-t bg-gray-50 dark:bg-gray-900">
-      <div>
-        <h3 className="text-sm font-semibold mb-2">🎯 목표별</h3>
-        {goalRows.length === 0 && <p className="text-xs text-gray-500">기록 없음</p>}
-        {goalRows.map((r, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs mb-1">
-            <div className="w-24 truncate">{r.label}</div>
-            <div className="flex-1 bg-gray-200 rounded h-2 overflow-hidden">
-              <div style={{ width: `${(r.mins / goalMax) * 100}%`, background: r.color }}
-                className="h-full" />
-            </div>
-            <div className="w-16 text-right">{formatHours(r.mins)}</div>
-          </div>
-        ))}
-      </div>
-      <div>
-        <h3 className="text-sm font-semibold mb-2">🎨 카테고리별</h3>
-        {catRows.length === 0 && <p className="text-xs text-gray-500">기록 없음</p>}
-        {catRows.map((r, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs mb-1">
-            <div className="w-24 truncate">{r.label}</div>
-            <div className="flex-1 bg-gray-200 rounded h-2 overflow-hidden">
-              <div style={{ width: `${(r.mins / catMax) * 100}%`, background: r.color }}
-                className="h-full" />
-            </div>
-            <div className="w-16 text-right">{formatHours(r.mins)}</div>
-          </div>
-        ))}
-      </div>
+    <section className="grid md:grid-cols-2 gap-3 p-4 bg-zinc-50 dark:bg-zinc-950">
+      <Bar rows={goalRows} title="🎯 목표별" />
+      <Bar rows={catRows} title="🎨 카테고리별" />
     </section>
   );
 };

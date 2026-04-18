@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, Plus, NotebookPen } from 'lucide-react';
 import { useBinder } from '@/store';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
@@ -53,7 +54,9 @@ export const DayListView = ({ isoweek }: Props) => {
     .filter((b) => b.date === dateStr)
     .sort((a, b) => a.startMin - b.startMin);
   const catColor = (id: string) =>
-    categories.find((c) => c.id === id)?.color ?? '#ddd';
+    categories.find((c) => c.id === id)?.color ?? '#a1a1aa';
+  const catName = (id: string) =>
+    categories.find((c) => c.id === id)?.name ?? '';
 
   const openAdd = () => {
     const start = (settings?.dayStartHour ?? 9) * 60;
@@ -62,38 +65,43 @@ export const DayListView = ({ isoweek }: Props) => {
   };
 
   return (
-    <div className="md:hidden">
-      <header className="flex items-center justify-between p-3 border-b">
+    <div className="md:hidden bg-zinc-50 dark:bg-zinc-950 min-h-screen">
+      <header className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <button
           onClick={() => setDayIdx((i) => Math.max(0, i - 1))}
           disabled={dayIdx === 0}
-          className="px-3 py-1 disabled:opacity-30"
+          className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
+          aria-label="이전 날"
         >
-          ◀
+          <ChevronLeft size={20} />
         </button>
         <div className="text-center">
-          <div className="font-bold">
-            {current.getMonth() + 1}/{current.getDate()} ({DOW[dayIdx]})
+          <div className="font-semibold text-zinc-900 dark:text-zinc-50">
+            {current.getMonth() + 1}월 {current.getDate()}일{' '}
+            <span className="text-zinc-500 font-normal">({DOW[dayIdx]})</span>
           </div>
           <button
-            className="text-xs text-blue-600 mt-0.5"
+            className="mt-1 text-xs text-blue-600 dark:text-blue-400 inline-flex items-center gap-1"
             onClick={() => setRetroOpen(true)}
           >
-            📝 일일 회고
+            <NotebookPen size={12} /> 📝 일일 회고
           </button>
         </div>
         <button
           onClick={() => setDayIdx((i) => Math.min(6, i + 1))}
           disabled={dayIdx === 6}
-          className="px-3 py-1 disabled:opacity-30"
+          className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
+          aria-label="다음 날"
         >
-          ▶
+          <ChevronRight size={20} />
         </button>
       </header>
 
-      <ul className="divide-y">
+      <ul className="p-4 space-y-2 pb-24">
         {dayBlocks.length === 0 && (
-          <li className="p-6 text-center text-sm text-gray-400">기록 없음</li>
+          <li className="p-8 text-center text-sm text-zinc-400 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+            아직 기록이 없어요
+          </li>
         )}
         {dayBlocks.map((b) => (
           <li
@@ -106,30 +114,40 @@ export const DayListView = ({ isoweek }: Props) => {
                 endMin: b.endMin,
               })
             }
-            className="flex gap-3 p-3 hover:bg-gray-50 cursor-pointer"
+            className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition"
           >
-            <div
-              className="w-3 self-stretch rounded"
-              style={{ background: catColor(b.categoryId) }}
-            />
-            <div className="flex-1">
-              <div className="text-sm font-medium">
-                {b.text || '(내용 없음)'}
-              </div>
-              <div className="text-xs text-gray-500">
-                {minutesToTimeStr(b.startMin)} ~ {minutesToTimeStr(b.endMin)}
+            <div className="flex">
+              <div
+                className="w-1.5 self-stretch"
+                style={{ background: catColor(b.categoryId) }}
+              />
+              <div className="flex-1 p-3">
+                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {b.text || '(내용 없음)'}
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="tabular-nums">
+                    {minutesToTimeStr(b.startMin)} – {minutesToTimeStr(b.endMin)}
+                  </span>
+                  {catName(b.categoryId) && (
+                    <>
+                      <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                      <span>{catName(b.categoryId)}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </li>
         ))}
       </ul>
 
-      <div className="p-3">
+      <div className="fixed bottom-14 left-4 right-4 z-20">
         <button
           onClick={openAdd}
-          className="w-full py-2 bg-blue-600 text-white rounded"
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-1.5"
         >
-          + 블록 추가
+          <Plus size={18} /> 블록 추가
         </button>
       </div>
 
