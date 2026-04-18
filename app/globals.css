@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4 dark variant uses our [data-theme="dark"] instead of OS preference */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   --color-bg: #fafaf9;          /* warm off-white */
   --color-bg-surface: #ffffff;  /* pure white for cards */
@@ -24,16 +27,16 @@
   --color-danger-soft: #fee2e2;   /* red-100 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0a0a0a;
-    --color-bg-surface: #161618;
-    --color-fg: #fafafa;
-    --color-fg-muted: #a1a1aa;
-    --color-border: #27272a;
-    --color-border-subtle: #1c1c1f;
-    --color-today-bg: #1e2a3f;
-  }
+/* Dark theme applied ONLY when explicitly requested via [data-theme="dark"] on <html>.
+   No auto-switch based on OS preference — keep default light for consistent color showcase. */
+html[data-theme="dark"] {
+  --color-bg: #0a0a0a;
+  --color-bg-surface: #161618;
+  --color-fg: #fafafa;
+  --color-fg-muted: #a1a1aa;
+  --color-border: #27272a;
+  --color-border-subtle: #1c1c1f;
+  --color-today-bg: #1e2a3f;
 }
 
 html, body {

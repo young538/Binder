@@ -100,7 +100,7 @@ export interface Settings {
   gridMinutes: 30 | 60;
   dayStartHour: number;
   dayEndHour: number;
-  theme: 'light' | 'dark' | 'auto';
+  theme: 'light' | 'dark';
 }
 
 export interface AnnualGoal {

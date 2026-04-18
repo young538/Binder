@@ -6,7 +6,7 @@ const DEFAULT: Settings = {
   gridMinutes: 30,
   dayStartHour: 6,
   dayEndHour: 24,
-  theme: 'auto',
+  theme: 'light',
 };
 
 export const getSettings = async (): Promise<Settings> => {

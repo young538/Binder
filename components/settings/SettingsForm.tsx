@@ -64,6 +64,17 @@ export const SettingsForm = () => {
         />
         <span className="text-sm text-zinc-500">시</span>
       </label>
+      <label className="flex items-center gap-3">
+        <span className="w-32 text-sm text-zinc-700 dark:text-zinc-300">테마</span>
+        <select
+          value={settings.theme}
+          onChange={(e) => patch({ theme: e.target.value as 'light' | 'dark' })}
+          className={inputCls}
+        >
+          <option value="light">라이트 (기본)</option>
+          <option value="dark">다크</option>
+        </select>
+      </label>
     </section>
   );
 };
