@@ -4,8 +4,7 @@ import { useBinder } from '@/store';
 import { weekDates, toIsoDate } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { getRetrospective, upsertRetrospective } from '@/lib/repo/retrospectives';
-import { listByPeriod } from '@/lib/repo/todos';
-import { weekKeyFromString } from '@/lib/utils/period';
+import { listByDateRange } from '@/lib/repo/todos';
 import { Retrospective, TimeBlock, Todo } from '@/lib/types';
 import { WeeklySummary } from './WeeklySummary';
 import { RetroTemplate } from './RetroTemplate';
@@ -21,7 +20,7 @@ export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
   useEffect(() => {
     const dates = weekDates(isoweek);
     getTimeBlocksInRange(toIsoDate(dates[0]), toIsoDate(dates[6])).then(setBlocks);
-    listByPeriod('weekly', weekKeyFromString(isoweek)).then(setTodos);
+    listByDateRange(toIsoDate(dates[0]), toIsoDate(dates[6])).then(setTodos);
     getRetrospective('weekly', isoweek).then((r) => {
       const v = r ?? { template: {} };
       setValue(v);

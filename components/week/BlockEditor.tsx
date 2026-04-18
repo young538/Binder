@@ -1,22 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { X, Trash2, Link2 } from 'lucide-react';
-import { TimeBlock } from '@/lib/types';
+import { TimeBlock, Todo } from '@/lib/types';
 import {
   createTimeBlock,
   updateTimeBlock,
   deleteTimeBlock,
 } from '@/lib/repo/timeBlocks';
+import { listByDate } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import {
   minutesToTimeStr,
   timeStrToMinutes,
   snapToGrid,
-  toIsoWeek,
 } from '@/lib/utils/date';
 import { GoalPicker } from '@/components/common/GoalPicker';
-import { TodoPicker } from '@/components/common/TodoPicker';
-import { parseISO } from 'date-fns';
 
 interface Props {
   initial: { date: string; startMin: number; endMin: number };
@@ -50,28 +48,11 @@ export const BlockEditor = ({
   const [endStr, setEndStr] = useState(
     minutesToTimeStr(existing?.endMin ?? initial.endMin),
   );
-  const [todoPickerOpen, setTodoPickerOpen] = useState(false);
-  const [selectedTodoTitle, setSelectedTodoTitle] = useState<string | undefined>(
-    undefined,
-  );
-
-  const isoweek = toIsoWeek(parseISO(initial.date));
+  const [dayTodos, setDayTodos] = useState<Todo[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!todoId) {
-      setSelectedTodoTitle(undefined);
-      return;
-    }
-    import('@/lib/db').then(({ db }) => {
-      db.todos.get(todoId).then((t) => {
-        if (!cancelled) setSelectedTodoTitle(t?.title);
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [todoId]);
+    listByDate(initial.date).then(setDayTodos);
+  }, [initial.date]);
 
   const save = async () => {
     const grid = settings?.gridMinutes ?? 30;
@@ -202,28 +183,33 @@ export const BlockEditor = ({
 
           <div>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
-              TODO 연결
+              TODO 연결 (이 날의 할 일)
             </label>
-            {todoId && selectedTodoTitle ? (
-              <div className="flex items-center gap-2 px-3 py-2 border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                <Link2 size={14} className="text-blue-600" />
-                <span className="flex-1 text-sm text-blue-900 dark:text-blue-200 truncate">
-                  {selectedTodoTitle}
-                </span>
-                <button
-                  onClick={() => setTodoId(undefined)}
-                  className="text-xs text-blue-700 dark:text-blue-300 hover:underline"
-                >
-                  해제
-                </button>
+            <select
+              value={todoId ?? ''}
+              onChange={(e) => {
+                const id = e.target.value || undefined;
+                setTodoId(id);
+                if (id && !text) {
+                  const t = dayTodos.find((x) => x.id === id);
+                  if (t) setText(t.title);
+                }
+              }}
+              className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">(연결 없음)</option>
+              {dayTodos.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.done ? '✓ ' : ''}
+                  {t.title || '(제목 없음)'}
+                </option>
+              ))}
+            </select>
+            {todoId && (
+              <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-600">
+                <Link2 size={12} />
+                <span>{dayTodos.find((t) => t.id === todoId)?.title ?? '...'}</span>
               </div>
-            ) : (
-              <button
-                onClick={() => setTodoPickerOpen(true)}
-                className="w-full text-left px-3 py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-500 hover:border-blue-400 hover:text-blue-600 transition"
-              >
-                + TODO 연결
-              </button>
             )}
           </div>
 
@@ -258,14 +244,6 @@ export const BlockEditor = ({
           </button>
         </div>
       </div>
-
-      <TodoPicker
-        isoweek={isoweek}
-        value={todoId}
-        onChange={setTodoId}
-        open={todoPickerOpen}
-        onClose={() => setTodoPickerOpen(false)}
-      />
     </div>
   );
 };

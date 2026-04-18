@@ -1,15 +1,21 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, NotebookPen, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  NotebookPen,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { useBinder } from '@/store';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
-import { listByPeriod } from '@/lib/repo/todos';
-import { weekKeyFromString } from '@/lib/utils/period';
+import { listByDate } from '@/lib/repo/todos';
 import { TimeBlock, Todo } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
-import { WeeklyTodoSidebar } from './WeeklyTodoSidebar';
+import { DayTodoColumn } from './DayTodoColumn';
 
 interface Props {
   isoweek: string;
@@ -32,9 +38,9 @@ export const DayListView = ({ isoweek }: Props) => {
   const [dayIdx, setDayIdx] = useState(0);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroOpen, setRetroOpen] = useState(false);
-  const [todoOpen, setTodoOpen] = useState(false);
-  const [weeklyTodoCount, setWeeklyTodoCount] = useState(0);
-  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+  const [todoOpen, setTodoOpen] = useState(true);
+  const [dayTodoCount, setDayTodoCount] = useState(0);
+  const [todoRefreshKey, setTodoRefreshKey] = useState(0);
 
   const dates = weekDates(isoweek);
   const today = toIsoDate(new Date());
@@ -56,14 +62,13 @@ export const DayListView = ({ isoweek }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeStart, rangeEnd]);
 
-  useEffect(() => {
-    listByPeriod('weekly', weekKeyFromString(isoweek)).then((ts) =>
-      setWeeklyTodoCount(ts.length),
-    );
-  }, [isoweek, sidebarRefreshKey]);
-
   const current = dates[dayIdx];
   const dateStr = toIsoDate(current);
+
+  useEffect(() => {
+    listByDate(dateStr).then((ts) => setDayTodoCount(ts.length));
+  }, [dateStr, todoRefreshKey]);
+
   const dayBlocks = blocks
     .filter((b) => b.date === dateStr)
     .sort((a, b) => a.startMin - b.startMin);
@@ -82,7 +87,7 @@ export const DayListView = ({ isoweek }: Props) => {
     const start = (settings?.dayStartHour ?? 9) * 60;
     const grid = settings?.gridMinutes ?? 30;
     setEditor({
-      date: dateStr,
+      date: todo.date,
       startMin: start,
       endMin: start + grid,
       prefilledTodoId: todo.id,
@@ -92,7 +97,7 @@ export const DayListView = ({ isoweek }: Props) => {
 
   const handleSaved = () => {
     reload();
-    setSidebarRefreshKey((k) => k + 1);
+    setTodoRefreshKey((k) => k + 1);
   };
 
   return (
@@ -134,8 +139,10 @@ export const DayListView = ({ isoweek }: Props) => {
           className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-50"
         >
           <span className="flex items-center gap-1.5">
-            📝 이번 주 TODO
-            <span className="text-xs text-zinc-500 font-normal">({weeklyTodoCount})</span>
+            📝 오늘 할 일
+            <span className="text-xs text-zinc-500 font-normal">
+              ({dayTodoCount})
+            </span>
           </span>
           <span className="text-xs text-zinc-500 flex items-center gap-0.5">
             {todoOpen ? (
@@ -150,11 +157,12 @@ export const DayListView = ({ isoweek }: Props) => {
           </span>
         </button>
         {todoOpen && (
-          <div className="border-t border-zinc-200 dark:border-zinc-800">
-            <WeeklyTodoSidebar
-              key={sidebarRefreshKey}
-              isoweek={isoweek}
+          <div className="border-t border-zinc-200 dark:border-zinc-800 max-h-64 overflow-y-auto">
+            <DayTodoColumn
+              dateStr={dateStr}
+              refreshKey={todoRefreshKey}
               onMakeBlock={openFromTodo}
+              onChanged={() => setTodoRefreshKey((k) => k + 1)}
             />
           </div>
         )}
