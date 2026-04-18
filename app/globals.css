@@ -1,20 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #ffffff;
-  --color-fg: #1a1a1a;
-  --color-border: #e5e7eb;
+  --color-bg: #fafaf9;          /* warm off-white */
+  --color-bg-surface: #ffffff;  /* pure white for cards */
+  --color-fg: #18181b;          /* zinc-900 */
+  --color-fg-muted: #71717a;    /* zinc-500 */
+  --color-border: #e4e4e7;      /* zinc-200 */
+  --color-border-subtle: #f4f4f5; /* zinc-100 */
+
+  --color-primary: #3b82f6;     /* blue-500 */
+  --color-primary-hover: #2563eb; /* blue-600 */
+  --color-primary-soft: #dbeafe;  /* blue-100 */
+
+  --color-today-bg: #eff6ff;    /* blue-50 */
+
+  /* Pastel category backgrounds (20% tint of source) — used by blocks */
+  --color-cat-blue-soft:   #eaf0fe;
+  --color-cat-green-soft:  #ebf4e9;
+  --color-cat-yellow-soft: #fffbec;
+  --color-cat-pink-soft:   #fdf0f5;
+  --color-cat-orange-soft: #fef5ec;
+  --color-cat-red-soft:    #fce6e6;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #0f0f0f;
-    --color-fg: #f3f4f6;
-    --color-border: #374151;
+    --color-bg: #0a0a0a;
+    --color-bg-surface: #161618;
+    --color-fg: #fafafa;
+    --color-fg-muted: #a1a1aa;
+    --color-border: #27272a;
+    --color-border-subtle: #1c1c1f;
+    --color-today-bg: #1e2a3f;
   }
 }
 
-body {
+html, body {
   background: var(--color-bg);
   color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tailwind v4 @theme inline — expose vars as Tailwind tokens */
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-bg-surface);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-primary: var(--color-primary);
+  --color-today: var(--color-today-bg);
 }
