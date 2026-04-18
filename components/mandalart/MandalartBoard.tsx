@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { X, Trash2 } from 'lucide-react';
 import { useBinder } from '@/store';
 import { buildMandalartMap, CORE_RING_POSITIONS, OUTER_CENTERS, SUB_OFFSETS } from '@/lib/mandalart';
 import { GoalCell } from './GoalCell';
@@ -92,9 +93,11 @@ export const MandalartBoard = () => {
     OUTER_CENTERS.some(([cr, cc]) => cr === r && cc === c);
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🎯 만다라트</h1>
-      <div className="grid grid-cols-9 gap-0.5">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">🎯 만다라트</h1>
+      <p className="text-sm text-zinc-500 mb-6">인생 한 문장 → 8개 핵심 목표 → 각 목표의 세부 8개</p>
+
+      <div className="grid grid-cols-9 gap-1 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {map.flatMap((row, r) => row.map((cell, c) => (
           <GoalCell key={`${r}-${c}`} goal={cell}
             isCenter={isCenter(r, c)} isCore={isCore(r, c)}
@@ -103,18 +106,47 @@ export const MandalartBoard = () => {
       </div>
 
       {edit && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={() => setEdit(null)}>
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-5 w-full max-w-sm space-y-3"
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl"
             onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold">{edit.goal ? '목표 편집' : '목표 추가'} [{edit.level}]</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-xs text-zinc-500 uppercase tracking-wide">
+                  {edit.level === 'oneThing' ? '원씽 (인생 한 문장)'
+                    : edit.level === 'mandalartCore' ? '코어 목표'
+                    : '서브 목표'}
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                  {edit.goal ? '목표 편집' : '목표 추가'}
+                </h3>
+              </div>
+              <button onClick={() => setEdit(null)}
+                className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500">
+                <X size={18} />
+              </button>
+            </div>
+
             <input value={title} autoFocus
               onChange={e => setTitle(e.target.value)}
-              className="border rounded px-2 py-1 w-full" />
-            <div className="flex gap-2 justify-end">
-              {edit.goal && <button onClick={remove} className="text-red-600 mr-auto">삭제</button>}
-              <button onClick={() => setEdit(null)} className="px-3 py-1 border rounded">취소</button>
-              <button onClick={save} className="px-3 py-1 bg-blue-600 text-white rounded">저장</button>
+              placeholder="목표 제목을 입력하세요"
+              className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+            <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              {edit.goal && (
+                <button onClick={remove}
+                  className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-sm font-medium mr-auto">
+                  <Trash2 size={14} /> 삭제
+                </button>
+              )}
+              <button onClick={() => setEdit(null)}
+                className="ml-auto px-4 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                취소
+              </button>
+              <button onClick={save}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                저장
+              </button>
             </div>
           </div>
         </div>

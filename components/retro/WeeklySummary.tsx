@@ -9,7 +9,16 @@ interface Props {
   goals: Goal[];
 }
 
+const DOW = ['월', '화', '수', '목', '금', '토', '일'];
+
 const hours = (m: number) => (m / 60).toFixed(1);
+
+const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-4">
+    <div className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">{title}</div>
+    {children}
+  </div>
+);
 
 export const WeeklySummary = ({ isoweek, blocks, categories, goals }: Props) => {
   const totalMin = blocks.reduce((s, b) => s + (b.endMin - b.startMin), 0);
@@ -20,50 +29,61 @@ export const WeeklySummary = ({ isoweek, blocks, categories, goals }: Props) => 
   const dayMax = Math.max(1, ...dates.map((d) => byDay.get(d) ?? 0));
 
   return (
-    <section className="grid md:grid-cols-3 gap-4 mb-6">
-      <div className="p-4 border rounded">
-        <div className="text-xs text-gray-500">총 기록 시간</div>
-        <div className="text-3xl font-bold">{hours(totalMin)}h</div>
-      </div>
-      <div className="p-4 border rounded">
-        <div className="text-xs text-gray-500 mb-2">카테고리별</div>
-        {byCat.size === 0 && <div className="text-xs text-gray-400">기록 없음</div>}
-        {Array.from(byCat.entries()).map(([cid, m]) => {
-          const cat = categories.find((c) => c.id === cid);
-          return (
-            <div key={cid} className="flex items-center gap-2 text-sm">
-              <span className="w-3 h-3 rounded" style={{ background: cat?.color ?? '#ccc' }} />
-              <span className="flex-1">{cat?.name ?? '?'}</span>
-              <span>{hours(m)}h</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="p-4 border rounded">
-        <div className="text-xs text-gray-500 mb-2">목표별</div>
-        {byGoal.size === 0 && <div className="text-xs text-gray-400">기록 없음</div>}
-        {Array.from(byGoal.entries()).map(([gid, m]) => (
-          <div key={gid ?? '_'} className="flex justify-between text-sm">
-            <span className="truncate">
-              {gid ? (goals.find((g) => g.id === gid)?.title ?? '(삭제됨)') : '(미지정)'}
-            </span>
-            <span>{hours(m)}h</span>
-          </div>
-        ))}
-      </div>
-      <div className="md:col-span-3 p-4 border rounded">
-        <div className="text-xs text-gray-500 mb-2">요일별</div>
-        <div className="grid grid-cols-7 gap-2 items-end h-32">
-          {dates.map((d) => {
-            const m = byDay.get(d) ?? 0;
+    <section className="grid md:grid-cols-3 gap-3 mb-6">
+      <Card title="총 기록 시간">
+        <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+          {hours(totalMin)}
+          <span className="text-lg font-medium text-zinc-500">h</span>
+        </div>
+      </Card>
+
+      <Card title="카테고리별">
+        {byCat.size === 0 && <div className="text-sm text-zinc-400">기록 없음</div>}
+        <div className="space-y-1.5">
+          {Array.from(byCat.entries()).map(([cid, m]) => {
+            const cat = categories.find((c) => c.id === cid);
             return (
-              <div key={d} className="flex flex-col items-center gap-1">
-                <div
-                  className="w-full bg-blue-500 rounded"
-                  style={{ height: `${(m / dayMax) * 100}%`, minHeight: m ? 2 : 0 }}
-                />
-                <div className="text-xs text-gray-600">{d.slice(-5)}</div>
-                <div className="text-[10px] text-gray-500">{hours(m)}h</div>
+              <div key={cid} className="flex items-center gap-2 text-sm">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: cat?.color ?? '#d4d4d8' }} />
+                <span className="flex-1 truncate text-zinc-700 dark:text-zinc-300">{cat?.name ?? '?'}</span>
+                <span className="text-zinc-600 dark:text-zinc-400 tabular-nums">{hours(m)}h</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card title="목표별">
+        {byGoal.size === 0 && <div className="text-sm text-zinc-400">기록 없음</div>}
+        <div className="space-y-1.5">
+          {Array.from(byGoal.entries()).map(([gid, m]) => (
+            <div key={gid ?? '_'} className="flex justify-between text-sm">
+              <span className="truncate text-zinc-700 dark:text-zinc-300">
+                {gid ? (goals.find((g) => g.id === gid)?.title ?? '(삭제됨)') : '(미지정)'}
+              </span>
+              <span className="text-zinc-600 dark:text-zinc-400 tabular-nums">{hours(m)}h</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="md:col-span-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-4">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">요일별 기록</div>
+        <div className="grid grid-cols-7 gap-3 items-end h-36">
+          {dates.map((d, i) => {
+            const m = byDay.get(d) ?? 0;
+            const today = toIsoDate(new Date());
+            const isToday = d === today;
+            return (
+              <div key={d} className="flex flex-col items-center gap-1.5">
+                <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-md relative" style={{ height: '100%' }}>
+                  <div
+                    className={`absolute bottom-0 inset-x-0 rounded-md transition-all ${isToday ? 'bg-blue-500' : 'bg-blue-400/80'}`}
+                    style={{ height: `${(m / dayMax) * 100}%`, minHeight: m ? 4 : 0 }}
+                  />
+                </div>
+                <div className={`text-xs ${isToday ? 'font-semibold text-blue-600' : 'text-zinc-600 dark:text-zinc-400'}`}>{DOW[i]}</div>
+                <div className="text-[10px] text-zinc-500 tabular-nums">{hours(m)}h</div>
               </div>
             );
           })}

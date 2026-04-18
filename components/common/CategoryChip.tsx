@@ -9,9 +9,9 @@ export const CategoryChip = ({
 }) => (
   <span
     style={{ backgroundColor: category.color }}
-    className={`inline-flex items-center rounded ${
-      size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-sm px-2 py-1'
-    } text-gray-800`}
+    className={`inline-flex items-center rounded-full ${
+      size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1'
+    } text-zinc-800 font-medium`}
   >
     {category.name}
   </span>

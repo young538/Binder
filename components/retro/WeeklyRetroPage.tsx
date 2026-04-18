@@ -44,10 +44,15 @@ export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">📝 주간 회고 — {isoweek}</h1>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <div className="text-xs text-zinc-500 uppercase tracking-wide">주간 회고</div>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">📝 {isoweek}</h1>
+      </div>
       <WeeklySummary isoweek={isoweek} blocks={blocks} categories={categories} goals={goals} />
-      <RetroTemplate value={value} onChange={patch} />
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-5">
+        <RetroTemplate value={value} onChange={patch} />
+      </div>
     </div>
   );
 };
