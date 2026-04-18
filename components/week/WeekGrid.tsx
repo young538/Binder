@@ -8,6 +8,7 @@ import { TimeBlock } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { BlockEditor } from './BlockEditor';
 import { GoalCoverageBar } from './GoalCoverageBar';
+import { DailyRetroSheet } from './DailyRetroSheet';
 
 interface Props {
   isoweek: string;
@@ -26,6 +27,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
   const { categories, settings, goals } = useBinder();
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [retroDate, setRetroDate] = useState<string | null>(null);
 
   const dates = weekDates(isoweek);
   const rangeStart = toIsoDate(dates[0]);
@@ -80,9 +82,14 @@ export const WeekGrid = ({ isoweek }: Props) => {
       >
         <div></div>
         {dates.map((d, i) => (
-          <div key={i} className="text-center py-2 border-b text-sm font-medium">
-            {DOW[i]} {d.getMonth() + 1}/{d.getDate()}
-          </div>
+          <button
+            key={i}
+            onClick={() => setRetroDate(toIsoDate(d))}
+            className="text-center py-2 border-b text-sm font-medium hover:bg-blue-50"
+          >
+            {DOW[i]} {d.getMonth() + 1}/{d.getDate()}{' '}
+            <span className="text-xs text-blue-600">📝</span>
+          </button>
         ))}
 
         {Array.from({ length: totalRows }).map((_, row) => {
@@ -123,6 +130,10 @@ export const WeekGrid = ({ isoweek }: Props) => {
           onClose={() => setEditor(null)}
           onSaved={reloadBlocks}
         />
+      )}
+
+      {retroDate && (
+        <DailyRetroSheet date={retroDate} onClose={() => setRetroDate(null)} />
       )}
     </div>
   );
