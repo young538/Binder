@@ -1,5 +1,6 @@
 import { CategoryEditor } from '@/components/settings/CategoryEditor';
 import { SettingsForm } from '@/components/settings/SettingsForm';
+import { DataImportPanel } from '@/components/settings/DataImportPanel';
 
 export default function SettingsPage() {
   return (
@@ -7,6 +8,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">설정</h1>
       <CategoryEditor />
       <SettingsForm />
+      <DataImportPanel />
     </div>
   );
 }
