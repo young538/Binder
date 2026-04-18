@@ -116,6 +116,17 @@ export interface HabitLog {
   createdAt: string;
 }
 
+export interface Routine {
+  id: string;
+  name: string;
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  categoryId?: string;
+  note?: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BinderData {
   version: number;
   updatedAt: string;

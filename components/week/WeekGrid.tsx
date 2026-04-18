@@ -14,6 +14,7 @@ import { GoalCoverageBar } from './GoalCoverageBar';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { DayTodoStrip } from './DayTodoStrip';
+import { RoutineStrip } from './RoutineStrip';
 
 interface Props {
   isoweek: string;
@@ -120,6 +121,8 @@ export const WeekGrid = ({ isoweek }: Props) => {
       <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
         <TodoListSection scope="week" scopeKey={isoweek} title="이번 주 TODO" />
       </div>
+
+      <RoutineStrip dates={dates} />
 
       <DayTodoStrip
         dates={dates}
