@@ -71,6 +71,53 @@ class BinderDb extends Dexie {
         }
       });
     });
+    this.version(3).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, date, parentGoalId, categoryId, done, order, [date+order]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+    }).upgrade(async tx => {
+      await tx.table('todos').toCollection().modify((t: {
+        period?: string;
+        periodKey?: string;
+        date?: string;
+      }) => {
+        if (t.date) return;
+        if (t.periodKey) {
+          if (t.periodKey.startsWith('month:')) {
+            const yyyymm = t.periodKey.slice(6);
+            t.date = `${yyyymm}-01`;
+          } else if (t.periodKey.startsWith('week:')) {
+            const m = t.periodKey.match(/^week:(\d{4})-W(\d{2})$/);
+            if (m) {
+              const [, y, w] = m;
+              const jan4 = new Date(Date.UTC(Number(y), 0, 4));
+              const dayOffset = (jan4.getUTCDay() + 6) % 7;
+              const mondayWeek1 = new Date(jan4.getTime() - dayOffset * 86400000);
+              const monday = new Date(mondayWeek1.getTime() + (Number(w) - 1) * 7 * 86400000);
+              const yyyy = monday.getUTCFullYear();
+              const mm = String(monday.getUTCMonth() + 1).padStart(2, '0');
+              const dd = String(monday.getUTCDate()).padStart(2, '0');
+              t.date = `${yyyy}-${mm}-${dd}`;
+            } else {
+              t.date = '2026-01-01';
+            }
+          } else {
+            t.date = '2026-01-01';
+          }
+        } else {
+          t.date = '2026-01-01';
+        }
+        delete t.period;
+        delete t.periodKey;
+      });
+    });
   }
 }
 

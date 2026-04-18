@@ -1,5 +1,5 @@
 import { db, markDirty } from '../db';
-import { Todo, TodoPeriod } from '../types';
+import { Todo } from '../types';
 import { newId } from '../utils/id';
 
 export const createTodo = async (
@@ -31,19 +31,22 @@ export const toggleDone = async (id: string): Promise<void> => {
   await updateTodo(id, { done: !t.done });
 };
 
-export const listByPeriod = async (period: TodoPeriod, periodKey: string): Promise<Todo[]> => {
-  const items = await db.todos.where({ period, periodKey }).toArray();
+export const listByDate = async (date: string): Promise<Todo[]> => {
+  const items = await db.todos.where('date').equals(date).toArray();
   return items.sort((a, b) => a.order - b.order);
+};
+
+export const listByDateRange = async (startDate: string, endDate: string): Promise<Todo[]> => {
+  const items = await db.todos.where('date').between(startDate, endDate, true, true).toArray();
+  return items.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.order - b.order;
+  });
 };
 
 export const listByParentGoal = async (parentGoalId: string): Promise<Todo[]> =>
   db.todos.where('parentGoalId').equals(parentGoalId).toArray();
 
-export const existsForPeriod = async (
-  period: TodoPeriod,
-  periodKey: string,
-  parentGoalId: string
-): Promise<boolean> => {
-  const items = await db.todos.where({ period, periodKey, parentGoalId }).toArray();
-  return items.length > 0;
-};
+// TEMPORARY stubs for v1.1 components not yet updated (Task B/C will replace them)
+export const listByPeriod = async (): Promise<Todo[]> => []; // v1.1 compat
+export const existsForPeriod = async (): Promise<boolean> => false; // v1.1 compat

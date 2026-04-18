@@ -11,16 +11,18 @@ export interface Goal {
   updatedAt: string;
 }
 
-export type TodoPeriod = 'monthly' | 'weekly';
+export type TodoPriority = 1 | 2 | 3;
 
 export interface Todo {
   id: string;
   title: string;
-  parentGoalId?: string;
-  period: TodoPeriod;
-  periodKey: string;
+  date: string;
   done: boolean;
   order: number;
+  parentGoalId?: string;
+  priority?: TodoPriority;
+  categoryId?: string;
+  note?: string;
   createdAt: string;
   updatedAt: string;
 }

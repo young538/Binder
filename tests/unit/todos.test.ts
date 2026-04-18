@@ -1,33 +1,50 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '@/lib/db';
-import { createTodo, toggleDone, listByPeriod, existsForPeriod } from '@/lib/repo/todos';
+import {
+  createTodo,
+  toggleDone,
+  listByDate,
+  listByDateRange,
+  listByParentGoal,
+} from '@/lib/repo/todos';
 
 beforeEach(async () => {
   await db.delete();
   await db.open();
 });
 
-describe('todos repo', () => {
-  it('creates and lists by period', async () => {
-    await createTodo({ title: 'A', period: 'weekly', periodKey: 'week:2026-W16', done: false, order: 0 });
-    await createTodo({ title: 'B', period: 'weekly', periodKey: 'week:2026-W16', done: false, order: 1 });
-    await createTodo({ title: 'C', period: 'weekly', periodKey: 'week:2026-W17', done: false, order: 0 });
-    const w16 = await listByPeriod('weekly', 'week:2026-W16');
-    expect(w16).toHaveLength(2);
-    expect(w16.map(t => t.title)).toEqual(['A', 'B']);
+describe('todos repo (date-based)', () => {
+  it('creates and lists by date', async () => {
+    await createTodo({ title: 'A', date: '2026-04-13', done: false, order: 0 });
+    await createTodo({ title: 'B', date: '2026-04-13', done: false, order: 1 });
+    await createTodo({ title: 'C', date: '2026-04-14', done: false, order: 0 });
+    const d13 = await listByDate('2026-04-13');
+    expect(d13).toHaveLength(2);
+    expect(d13.map(t => t.title)).toEqual(['A', 'B']);
+  });
+
+  it('listByDateRange returns todos within range sorted by date then order', async () => {
+    await createTodo({ title: 'Y', date: '2026-04-20', done: false, order: 0 });
+    await createTodo({ title: 'X', date: '2026-04-13', done: false, order: 1 });
+    await createTodo({ title: 'W', date: '2026-04-13', done: false, order: 0 });
+    await createTodo({ title: 'Z', date: '2026-04-25', done: false, order: 0 });
+    const range = await listByDateRange('2026-04-13', '2026-04-19');
+    expect(range.map(t => t.title)).toEqual(['W', 'X']);
   });
 
   it('toggles done', async () => {
-    const t = await createTodo({ title: 'X', period: 'monthly', periodKey: 'month:2026-04', done: false, order: 0 });
+    const t = await createTodo({ title: 'X', date: '2026-04-13', done: false, order: 0 });
     await toggleDone(t.id);
     const after = await db.todos.get(t.id);
     expect(after?.done).toBe(true);
   });
 
-  it('existsForPeriod detects duplicates', async () => {
-    await createTodo({ title: 'Y', parentGoalId: 'g1', period: 'monthly', periodKey: 'month:2026-04', done: false, order: 0 });
-    expect(await existsForPeriod('monthly', 'month:2026-04', 'g1')).toBe(true);
-    expect(await existsForPeriod('monthly', 'month:2026-05', 'g1')).toBe(false);
+  it('listByParentGoal filters by parentGoalId', async () => {
+    await createTodo({ title: 'A', date: '2026-04-13', parentGoalId: 'g1', done: false, order: 0 });
+    await createTodo({ title: 'B', date: '2026-04-14', parentGoalId: 'g1', done: false, order: 0 });
+    await createTodo({ title: 'C', date: '2026-04-15', parentGoalId: 'g2', done: false, order: 0 });
+    const g1 = await listByParentGoal('g1');
+    expect(g1).toHaveLength(2);
   });
 });
