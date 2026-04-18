@@ -50,7 +50,7 @@ export const RoutineEditor = () => {
 
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
-      <h2 className="text-base font-semibold mb-3 text-zinc-900 dark:text-zinc-50">
+      <h2 className="text-base font-semibold mb-3 text-zinc-800 dark:text-zinc-50">
         주간루틴
       </h2>
       <p className="text-xs text-zinc-500 mb-4">

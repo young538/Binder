@@ -89,7 +89,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
         >
           <ChevronLeft size={18} />
         </Link>
-        <h1 className="font-semibold flex-1 text-center text-zinc-900 dark:text-zinc-50">
+        <h1 className="font-semibold flex-1 text-center text-zinc-800 dark:text-zinc-50">
           {isoweek}
         </h1>
         <Link
@@ -154,7 +154,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
             <div
               key={`t-${row}`}
               className={`text-xs pr-2 text-right text-zinc-400 dark:text-zinc-600 border-r border-zinc-100 dark:border-zinc-900 ${
-                isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : ''
+                isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''
               }`}
               style={{ gridColumn: 1, gridRow: row + 2, height: ROW_HEIGHT }}
             >
@@ -191,7 +191,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                       })
                     }
                     className={`block w-full transition hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 ${
-                      isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : ''
+                      isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''
                     }`}
                     style={{ height: ROW_HEIGHT }}
                   />
@@ -224,7 +224,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                     title={b.text}
                   >
                     <div className="px-1.5 py-1">
-                      <div className="text-[11px] font-medium leading-tight text-zinc-900 dark:text-zinc-100 truncate">
+                      <div className="text-[11px] font-medium leading-tight text-zinc-800 dark:text-zinc-100 truncate">
                         {b.text || '(내용 없음)'}
                       </div>
                       {spanRows >= 2 && (

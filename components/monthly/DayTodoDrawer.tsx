@@ -64,7 +64,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}>
         <header className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
-          <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{title}</h3>
+          <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-50">{title}</h3>
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500">
             <X size={18} />
           </button>
@@ -92,7 +92,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
                       const v = e.target.value.trim();
                       if (v && v !== t.title) updateField(t, { title: v });
                     }}
-                    className={`flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-50 ${statusRowClass(t.status)}`} />
+                    className={`flex-1 bg-transparent border-none outline-none text-sm text-zinc-800 dark:text-zinc-50 ${statusRowClass(t.status)}`} />
                   <button onClick={() => remove(t.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition">
                     <Trash2 size={14} />

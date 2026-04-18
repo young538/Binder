@@ -40,7 +40,7 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
   return (
     <section className="grid md:grid-cols-3 gap-3 mb-6">
       <Card title="총 기록 시간">
-        <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+        <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
           {hours(totalMin)}
           <span className="text-lg font-medium text-zinc-500">h</span>
         </div>
@@ -51,7 +51,7 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
           <div className="text-sm text-zinc-400">TODO 없음</div>
         ) : (
           <div>
-            <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+            <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
               {doneTodos}
               <span className="text-lg font-medium text-zinc-500">/{totalTodos}</span>
               <span className="text-base font-normal text-zinc-500 ml-2">({completionPct}%)</span>

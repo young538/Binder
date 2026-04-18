@@ -4,19 +4,21 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --color-bg: #fafaf9;          /* warm off-white */
-  --color-bg-surface: #ffffff;  /* pure white for cards */
-  --color-fg: #18181b;          /* zinc-900 */
-  --color-fg-muted: #71717a;    /* zinc-500 */
-  --color-border: #e4e4e7;      /* zinc-200 */
+  --color-bg: #fafaf9;            /* warm off-white */
+  --color-bg-surface: #ffffff;    /* pure white for cards */
+  --color-fg: #27272a;            /* zinc-800 — softer body text */
+  --color-fg-strong: #18181b;     /* zinc-900 — use sparingly for emphasis */
+  --color-fg-muted: #71717a;      /* zinc-500 */
+  --color-fg-subtle: #a1a1aa;     /* zinc-400 */
+  --color-border: #e4e4e7;        /* zinc-200 */
   --color-border-subtle: #f4f4f5; /* zinc-100 */
 
-  --color-primary: #3b82f6;     /* blue-500 */
+  --color-primary: #3b82f6;       /* blue-500 */
   --color-primary-hover: #2563eb; /* blue-600 */
   --color-primary-soft: #dbeafe;  /* blue-100 */
 
-  --color-today-bg: #eff6ff;    /* blue-50 */
-  --color-today-border: #93c5fd; /* blue-300 */
+  --color-today-bg: #eff6ff;      /* blue-50 */
+  --color-today-border: #93c5fd;  /* blue-300 */
 
   /* Status (kept minimal) */
   --color-success: #10b981;       /* emerald-500 */
@@ -25,6 +27,10 @@
   --color-warning-soft: #fef3c7;  /* amber-100 */
   --color-danger: #dc2626;        /* red-600 */
   --color-danger-soft: #fee2e2;   /* red-100 */
+
+  /* Softer modal backdrop — warmer, lighter than pure black */
+  --color-backdrop: rgba(39, 39, 42, 0.35);        /* zinc-800 @ 35% */
+  --color-backdrop-strong: rgba(39, 39, 42, 0.5);  /* zinc-800 @ 50% */
 }
 
 /* Dark theme applied ONLY when explicitly requested via [data-theme="dark"] on <html>.

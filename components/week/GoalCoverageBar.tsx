@@ -24,7 +24,7 @@ const Bar = ({
   const max = Math.max(1, ...rows.map((r) => r.mins));
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">{title}</h3>
+      <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50 mb-3">{title}</h3>
       {rows.length === 0 && <p className="text-xs text-zinc-400">기록 없음</p>}
       <div className="space-y-2">
         {rows.map((r, i) => (

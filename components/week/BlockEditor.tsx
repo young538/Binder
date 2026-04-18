@@ -96,7 +96,7 @@ export const BlockEditor = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-zinc-900/25 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -104,7 +104,7 @@ export const BlockEditor = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-50">
             {existing ? '블록 편집' : '블록 추가'}
           </h3>
           <button

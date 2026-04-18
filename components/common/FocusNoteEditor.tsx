@@ -40,7 +40,7 @@ export const FocusNoteEditor = ({ scope, scopeKey, label, placeholder }: Props) 
         value={text}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? '한 문장으로 적어보세요'}
-        className="w-full text-lg font-medium bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400" />
+        className="w-full text-lg font-medium bg-transparent border-none outline-none text-zinc-800 dark:text-zinc-50 placeholder:text-zinc-400" />
     </div>
   );
 };

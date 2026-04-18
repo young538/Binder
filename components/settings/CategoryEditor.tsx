@@ -25,7 +25,7 @@ export const CategoryEditor = () => {
 
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
-      <h2 className="text-base font-semibold mb-4 text-zinc-900 dark:text-zinc-50">카테고리</h2>
+      <h2 className="text-base font-semibold mb-4 text-zinc-800 dark:text-zinc-50">카테고리</h2>
       <ul className="space-y-2">
         {categories.map((c) => (
           <li key={c.id} className="flex items-center gap-2">

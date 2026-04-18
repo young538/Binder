@@ -44,20 +44,24 @@ export const BottomNav = () => {
               key={basePath}
               href={href()}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors
-                ${active ? 'text-blue-600' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+                ${active ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
             >
-              <Icon size={22} strokeWidth={active ? 2.25 : 1.75} />
-              <span className="text-[10px] font-medium">{label}</span>
+              <span className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full transition-colors ${active ? 'bg-blue-50/70 dark:bg-blue-950/40' : ''}`}>
+                <Icon size={22} strokeWidth={active ? 2.25 : 1.75} />
+              </span>
+              <span className={`text-[10px] ${active ? 'font-semibold' : 'font-medium'}`}>{label}</span>
             </Link>
           );
         })}
         <button
           onClick={() => setOpen(true)}
           className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors
-            ${moreActive ? 'text-blue-600' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+            ${moreActive ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
         >
-          <MoreHorizontal size={22} strokeWidth={moreActive ? 2.25 : 1.75} />
-          <span className="text-[10px] font-medium">더보기</span>
+          <span className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full transition-colors ${moreActive ? 'bg-blue-50/70 dark:bg-blue-950/40' : ''}`}>
+            <MoreHorizontal size={22} strokeWidth={moreActive ? 2.25 : 1.75} />
+          </span>
+          <span className={`text-[10px] ${moreActive ? 'font-semibold' : 'font-medium'}`}>더보기</span>
         </button>
       </nav>
 
@@ -66,13 +70,13 @@ export const BottomNav = () => {
           className="lg:hidden fixed inset-0 z-40 flex items-end"
           onClick={() => setOpen(false)}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-zinc-900/25 backdrop-blur-sm" />
           <div
             className="relative w-full bg-white dark:bg-zinc-900 rounded-t-2xl p-3 pb-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3 px-2">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">더보기</h3>
+              <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">더보기</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-zinc-500 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"

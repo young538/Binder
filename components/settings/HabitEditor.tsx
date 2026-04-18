@@ -28,7 +28,7 @@ export const HabitEditor = () => {
 
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
-      <h2 className="text-base font-semibold mb-3 text-zinc-900 dark:text-zinc-50">습관</h2>
+      <h2 className="text-base font-semibold mb-3 text-zinc-800 dark:text-zinc-50">습관</h2>
       <ul className="space-y-2">
         {habits.length === 0 && (
           <li className="text-sm text-zinc-400 py-2">습관이 없어요. 추가해보세요.</li>

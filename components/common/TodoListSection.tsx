@@ -76,7 +76,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
 
   return (
     <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-4">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
+      <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50 mb-3">
         {title}
       </h3>
       <ul className="space-y-1.5">
@@ -114,7 +114,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                   type="text"
                   defaultValue={t.title}
                   onBlur={(e) => editTitle(t, e.target.value)}
-                  className={`w-full bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-50 ${statusRowClass(
+                  className={`w-full bg-transparent border-none outline-none text-sm text-zinc-800 dark:text-zinc-50 ${statusRowClass(
                     t.status,
                   )}`}
                 />

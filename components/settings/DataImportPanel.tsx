@@ -78,7 +78,7 @@ export const DataImportPanel = () => {
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 space-y-4">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">데이터 가져오기</h2>
+        <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">데이터 가져오기</h2>
         <p className="text-xs text-zinc-500 mt-1">
           2026년 바인더 시드 또는 JSON 파일을 IndexedDB에 불러옵니다.
         </p>
@@ -109,49 +109,49 @@ export const DataImportPanel = () => {
         <div className="space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-center">
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.goals?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">Goals</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.focusNotes?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">FocusNotes</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.todos?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">Todos</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.annualGoals?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">AnnualGoals</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.habits?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">Habits</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.habitLogs?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">HabitLogs</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.routines?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">Routines</div>
             </div>
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+              <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
                 {preview.books?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">Books</div>
@@ -178,7 +178,7 @@ export const DataImportPanel = () => {
                   className="sr-only"
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">병합</div>
+                  <div className="text-sm font-medium text-zinc-800 dark:text-zinc-50">병합</div>
                   <div className="text-[10px] text-zinc-500">기존 데이터 유지 + 추가</div>
                 </div>
               </label>
@@ -197,7 +197,7 @@ export const DataImportPanel = () => {
                   className="sr-only"
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">덮어쓰기</div>
+                  <div className="text-sm font-medium text-zinc-800 dark:text-zinc-50">덮어쓰기</div>
                   <div className="text-[10px] text-zinc-500">기존 모두 삭제</div>
                 </div>
               </label>

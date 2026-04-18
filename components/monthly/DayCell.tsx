@@ -24,8 +24,8 @@ export const DayCell = ({ date, isCurrentMonth, isToday, todos, categoryColor, o
     <button
       onClick={onClick}
       className={`
-        group relative flex flex-col items-stretch text-left min-h-[110px] p-1.5 border border-zinc-200 dark:border-zinc-800 rounded-md
-        ${isCurrentMonth ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50 dark:bg-zinc-950 opacity-50'}
+        group relative flex flex-col items-stretch text-left min-h-[110px] p-1.5 border border-stone-100 dark:border-zinc-800 rounded-md
+        ${isCurrentMonth ? 'bg-white dark:bg-zinc-900' : 'bg-stone-50 dark:bg-zinc-950 opacity-50'}
         ${isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}
         hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition
       `}>
@@ -44,7 +44,7 @@ export const DayCell = ({ date, isCurrentMonth, isToday, todos, categoryColor, o
           const color = t.categoryId ? categoryColor(t.categoryId) : null;
           return (
             <li key={t.id}
-              className={`flex items-center gap-1 text-[10px] leading-tight truncate rounded px-1 py-0.5 text-zinc-900 dark:text-zinc-50
+              className={`flex items-center gap-1 text-[10px] leading-tight truncate rounded px-1 py-0.5 text-zinc-800 dark:text-zinc-50
                 ${statusRowClass(t.status)}`}
               style={color ? {
                 background: tint.soft(color),

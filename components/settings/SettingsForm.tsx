@@ -17,7 +17,7 @@ export const SettingsForm = () => {
 
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 space-y-4">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">환경 설정</h2>
+      <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">환경 설정</h2>
       <label className="flex items-center gap-3">
         <span className="w-32 text-sm text-zinc-700 dark:text-zinc-300">주 시작일</span>
         <select

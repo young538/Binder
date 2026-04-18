@@ -82,7 +82,7 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 hover:shadow-sm transition">
-      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50 line-clamp-2 min-h-[2.5rem]">
+      <div className="text-sm font-medium text-zinc-800 dark:text-zinc-50 line-clamp-2 min-h-[2.5rem]">
         {sub.title}
       </div>
       <div className="flex items-center gap-1 flex-wrap mt-2">

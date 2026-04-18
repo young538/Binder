@@ -34,7 +34,7 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
           className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600">
           <ChevronLeft size={18} />
         </Link>
-        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-800 dark:text-zinc-50">
           {y}년 {mo}월
         </h1>
         <Link href={`/monthly/${next}`}

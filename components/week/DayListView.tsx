@@ -120,7 +120,7 @@ export const DayListView = ({ isoweek }: Props) => {
           <ChevronLeft size={20} />
         </button>
         <div className="text-center">
-          <div className="font-semibold text-zinc-900 dark:text-zinc-50">
+          <div className="font-semibold text-zinc-800 dark:text-zinc-50">
             {current.getMonth() + 1}월 {current.getDate()}일{' '}
             <span className="text-zinc-500 font-normal">({DOW[dayIdx]})</span>
           </div>
@@ -173,7 +173,7 @@ export const DayListView = ({ isoweek }: Props) => {
       <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <button
           onClick={() => setTodoOpen((o) => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-50"
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-zinc-800 dark:text-zinc-50"
         >
           <span className="flex items-center gap-1.5">
             📝 오늘 할 일
@@ -230,7 +230,7 @@ export const DayListView = ({ isoweek }: Props) => {
                 style={{ background: catColor(b.categoryId) }}
               />
               <div className="flex-1 p-3">
-                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
                   {b.text || '(내용 없음)'}
                 </div>
                 <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">

@@ -54,7 +54,7 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">습관 달력</h2>
+        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">습관 달력</h2>
         {habits.length === 0 && (
           <Link href="/settings" className="text-xs text-blue-600 hover:underline">
             설정에서 추가 →
@@ -141,7 +141,7 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
                               borderColor: cellDone ? h.color : 'var(--color-border)',
                             }}
                           >
-                            {cellDone && <span className="text-[10px] text-zinc-900">✓</span>}
+                            {cellDone && <span className="text-[10px] text-zinc-800">✓</span>}
                           </button>
                         </td>
                       );

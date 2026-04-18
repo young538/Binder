@@ -54,7 +54,7 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
       className="fixed inset-0 z-40 flex items-end lg:items-center justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-zinc-900/25 backdrop-blur-sm" />
       <div
         className="relative bg-white dark:bg-zinc-900 w-full lg:max-w-lg rounded-t-3xl lg:rounded-2xl p-6 max-h-[85vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -62,7 +62,7 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="text-xs text-zinc-500">일일 회고</div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">📝 {date}</h3>
+            <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-50">📝 {date}</h3>
           </div>
           <button
             onClick={onClose}

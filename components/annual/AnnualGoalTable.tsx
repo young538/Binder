@@ -57,7 +57,7 @@ export const AnnualGoalTable = ({ year }: Props) => {
   return (
     <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{year}년 목표</h2>
+        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">{year}년 목표</h2>
         <button
           onClick={addRow}
           className="hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -105,7 +105,7 @@ export const AnnualGoalTable = ({ year }: Props) => {
                     defaultValue={g.title}
                     onBlur={e => patch(g, 'title', e.target.value.trim())}
                     placeholder="이루고 싶은 일"
-                    className="w-full bg-transparent text-zinc-900 dark:text-zinc-50 font-medium outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded"
+                    className="w-full bg-transparent text-zinc-800 dark:text-zinc-50 font-medium outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded"
                   />
                 </td>
                 <td className="p-1 border-r border-zinc-100 dark:border-zinc-900">
@@ -219,7 +219,7 @@ export const AnnualGoalTable = ({ year }: Props) => {
                   defaultValue={g.title}
                   onBlur={(e) => patch(g, 'title', e.target.value.trim())}
                   placeholder="이루고 싶은 일"
-                  className="flex-1 bg-transparent font-semibold outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-2 py-1 rounded text-zinc-900 dark:text-zinc-50"
+                  className="flex-1 bg-transparent font-semibold outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-2 py-1 rounded text-zinc-800 dark:text-zinc-50"
                 />
                 <button
                   onClick={() => remove(g.id)}

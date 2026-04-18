@@ -94,7 +94,7 @@ export const MandalartBoard = () => {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">🎯 만다라트</h1>
+      <h1 className="text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-50">🎯 만다라트</h1>
       <p className="text-sm text-zinc-500 mb-6">인생 한 문장 → 8개 핵심 목표 → 각 목표의 세부 8개</p>
 
       <div className="grid grid-cols-9 gap-1 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -106,7 +106,7 @@ export const MandalartBoard = () => {
       </div>
 
       {edit && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        <div className="fixed inset-0 bg-zinc-900/25 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={() => setEdit(null)}>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl"
             onClick={e => e.stopPropagation()}>
@@ -117,7 +117,7 @@ export const MandalartBoard = () => {
                     : edit.level === 'mandalartCore' ? '코어 목표'
                     : '서브 목표'}
                 </div>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-50">
                   {edit.goal ? '목표 편집' : '목표 추가'}
                 </h3>
               </div>

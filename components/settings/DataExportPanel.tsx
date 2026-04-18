@@ -24,7 +24,7 @@ export const DataExportPanel = () => {
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 space-y-3">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">데이터 내보내기</h2>
+        <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">데이터 내보내기</h2>
         <p className="text-xs text-zinc-500 mt-1">
           전체 데이터를 JSON 파일로 다운로드합니다. 본인 PC/클라우드에 백업하거나 다른 기기로 옮길 때 사용하세요.
         </p>

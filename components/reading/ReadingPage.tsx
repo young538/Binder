@@ -48,7 +48,7 @@ export const ReadingPage = () => {
         >
           <ChevronLeft size={18} />
         </button>
-        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-800 dark:text-zinc-50">
           {year} 독서 리스트
         </h1>
         <button
@@ -63,7 +63,7 @@ export const ReadingPage = () => {
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
             총{' '}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+            <span className="font-semibold text-zinc-800 dark:text-zinc-50">
               {books.length}
             </span>
             권 · 완독{' '}
@@ -136,7 +136,7 @@ export const ReadingPage = () => {
                         autoFocus={editingId === b.id}
                         onBlur={e => update(b.id, { title: e.target.value.trim() })}
                         placeholder="도서 제목"
-                        className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded font-medium text-zinc-900 dark:text-zinc-50"
+                        className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded font-medium text-zinc-800 dark:text-zinc-50"
                       />
                     </td>
                     <td className="p-1 border-r border-zinc-100 dark:border-zinc-900">

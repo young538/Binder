@@ -76,7 +76,7 @@ export const SnapshotPanel = () => {
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 space-y-3">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">스냅샷 / 복구</h2>
+        <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">스냅샷 / 복구</h2>
         <p className="text-xs text-zinc-500 mt-1">
           로컬에 최대 5개의 자동 스냅샷이 롤링으로 저장됩니다. 실수로 데이터 삭제 시 여기서 복구하세요.
         </p>
