@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { MonthlyCalendar } from './MonthlyCalendar';
+import { HabitCalendar } from './HabitCalendar';
 import { monthKeyFromString } from '@/lib/utils/period';
 
 interface Props { yyyymm: string; }
@@ -51,6 +52,8 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
       <TodoListSection scope="month" scopeKey={yyyymm} title="이번 달 TODO" />
 
       <MonthlyCalendar yyyymm={yyyymm} />
+
+      <HabitCalendar yyyymm={yyyymm} />
     </div>
   );
 };

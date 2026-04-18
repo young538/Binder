@@ -100,6 +100,22 @@ export interface AnnualGoal {
   updatedAt: string;
 }
 
+export interface Habit {
+  id: string;
+  name: string;
+  color: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string;
+  createdAt: string;
+}
+
 export interface BinderData {
   version: number;
   updatedAt: string;

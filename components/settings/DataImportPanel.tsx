@@ -107,7 +107,7 @@ export const DataImportPanel = () => {
 
       {preview && (
         <div className="space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-4">
-          <div className="grid grid-cols-4 gap-3 text-center">
+          <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
               <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
                 {preview.goals?.length ?? 0}
@@ -131,6 +131,18 @@ export const DataImportPanel = () => {
                 {preview.annualGoals?.length ?? 0}
               </div>
               <div className="text-xs text-zinc-500 mt-1">AnnualGoals</div>
+            </div>
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                {preview.habits?.length ?? 0}
+              </div>
+              <div className="text-xs text-zinc-500 mt-1">Habits</div>
+            </div>
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3">
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                {preview.habitLogs?.length ?? 0}
+              </div>
+              <div className="text-xs text-zinc-500 mt-1">HabitLogs</div>
             </div>
           </div>
 
@@ -204,7 +216,7 @@ export const DataImportPanel = () => {
           <div className="text-sm text-emerald-800 dark:text-emerald-300">
             <div className="font-medium">가져오기 완료</div>
             <div className="text-xs mt-0.5">
-              Goals {result.goals} · FocusNotes {result.focusNotes} · Todos {result.todos} · AnnualGoals {result.annualGoals}
+              Goals {result.goals} · FocusNotes {result.focusNotes} · Todos {result.todos} · AnnualGoals {result.annualGoals} · Habits {result.habits} · HabitLogs {result.habitLogs}
             </div>
             <button onClick={() => setResult(null)} className="mt-2 text-xs underline">
               닫기

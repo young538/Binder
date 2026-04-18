@@ -72,6 +72,8 @@ export const restoreSnapshot = async (id: string): Promise<void> => {
       db.todos,
       db.focusNotes,
       db.annualGoals,
+      db.habits,
+      db.habitLogs,
       db.settings,
     ],
     async () => {
@@ -82,6 +84,8 @@ export const restoreSnapshot = async (id: string): Promise<void> => {
       await db.todos.clear();
       await db.focusNotes.clear();
       await db.annualGoals.clear();
+      await db.habits.clear();
+      await db.habitLogs.clear();
       await db.settings.clear();
       if (data.goals?.length) await db.goals.bulkPut(data.goals);
       if (data.categories?.length) await db.categories.bulkPut(data.categories);
@@ -90,6 +94,8 @@ export const restoreSnapshot = async (id: string): Promise<void> => {
       if (data.todos?.length) await db.todos.bulkPut(data.todos);
       if (data.focusNotes?.length) await db.focusNotes.bulkPut(data.focusNotes);
       if (data.annualGoals?.length) await db.annualGoals.bulkPut(data.annualGoals);
+      if (data.habits?.length) await db.habits.bulkPut(data.habits);
+      if (data.habitLogs?.length) await db.habitLogs.bulkPut(data.habitLogs);
       if (data.settings) {
         const s = data.settings;
         await db.settings.put({ key: 'main', ...s });

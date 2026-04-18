@@ -7,6 +7,8 @@ import type {
   Todo,
   FocusNote,
   AnnualGoal,
+  Habit,
+  HabitLog,
   Settings,
 } from './types';
 
@@ -20,6 +22,8 @@ export interface ExportData {
   todos: Todo[];
   focusNotes: FocusNote[];
   annualGoals: AnnualGoal[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
   settings: Settings | null;
 }
 
@@ -32,6 +36,8 @@ export const buildExport = async (): Promise<ExportData> => {
     todos,
     focusNotes,
     annualGoals,
+    habits,
+    habitLogs,
     settingsRow,
   ] = await Promise.all([
     db.goals.toArray(),
@@ -41,6 +47,8 @@ export const buildExport = async (): Promise<ExportData> => {
     db.todos.toArray(),
     db.focusNotes.toArray(),
     db.annualGoals.toArray(),
+    db.habits.toArray(),
+    db.habitLogs.toArray(),
     db.settings.get('main'),
   ]);
 
@@ -52,7 +60,7 @@ export const buildExport = async (): Promise<ExportData> => {
   }
 
   return {
-    version: 5,
+    version: 6,
     generatedAt: new Date().toISOString(),
     goals,
     categories,
@@ -61,6 +69,8 @@ export const buildExport = async (): Promise<ExportData> => {
     todos,
     focusNotes: focusNotes as unknown as FocusNote[],
     annualGoals,
+    habits,
+    habitLogs,
     settings,
   };
 };
