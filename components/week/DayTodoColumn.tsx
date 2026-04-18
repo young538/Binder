@@ -100,7 +100,7 @@ export const DayTodoColumn = ({
           return (
             <li
               key={t.id}
-              className="group flex items-start gap-1 text-[11px] leading-tight rounded overflow-hidden"
+              className="group flex items-start gap-1 text-[11px] leading-tight rounded relative"
               style={
                 color
                   ? {

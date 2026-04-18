@@ -89,7 +89,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
           return (
             <li
               key={t.id}
-              className="group flex items-start gap-2 rounded-md overflow-hidden"
+              className="group flex items-start gap-2 rounded-md relative"
               style={
                 cat
                   ? {
