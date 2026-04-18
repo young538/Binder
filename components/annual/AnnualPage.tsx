@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBinder } from '@/store';
 import { Goal } from '@/lib/types';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
+import { TodoListSection } from '@/components/common/TodoListSection';
 import { CoreSection } from './CoreSection';
 import { yearKeyFromString } from '@/lib/utils/period';
 
@@ -41,6 +42,8 @@ export const AnnualPage = ({ year }: Props) => {
         scopeKey={yearKeyFromString(year)}
         label="올해 한 문장"
         placeholder="예: 지속가능한 수익 구조를 만든다" />
+
+      <TodoListSection scope="year" scopeKey={year} title="올해 TODO" />
 
       {!hasMandalart ? (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center">

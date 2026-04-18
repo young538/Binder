@@ -13,7 +13,7 @@ export interface Goal {
 
 export type TodoPriority = 1 | 2 | 3;
 
-export type TodoScope = 'day' | 'week' | 'month';
+export type TodoScope = 'day' | 'week' | 'month' | 'year';
 
 export interface Todo {
   id: string;
