@@ -10,6 +10,7 @@ import {
   toggleDone,
 } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
+import { tint } from '@/lib/utils/color';
 
 interface Props {
   scope: TodoScope;
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
-  const { goals } = useBinder();
+  const { goals, categories } = useBinder();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
@@ -54,6 +55,11 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
     reload();
   };
 
+  const setCategory = async (id: string, categoryId: string | undefined) => {
+    await updateTodo(id, { categoryId });
+    reload();
+  };
+
   const remove = async (id: string) => {
     if (!confirm('삭제할까요?')) return;
     await deleteTodo(id);
@@ -62,6 +68,9 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
 
   const goalTitle = (id?: string) =>
     id ? goals.find((g) => g.id === id)?.title : null;
+
+  const category = (id?: string) =>
+    id ? categories.find((c) => c.id === id) : undefined;
 
   return (
     <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-4">
@@ -74,17 +83,30 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
         )}
         {todos.map((t) => {
           const pg = goalTitle(t.parentGoalId);
+          const cat = category(t.categoryId);
           return (
-            <li key={t.id} className="group flex items-start gap-2 py-0.5">
+            <li
+              key={t.id}
+              className="group flex items-start gap-2 rounded-md overflow-hidden"
+              style={
+                cat
+                  ? {
+                      borderLeft: `3px solid ${cat.color}`,
+                      background: tint.subtle(cat.color),
+                      paddingLeft: '0.5rem',
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="checkbox"
                 checked={t.done}
                 onChange={() => {
                   toggleDone(t.id).then(reload);
                 }}
-                className="mt-1 w-4 h-4 rounded border-zinc-300 text-blue-600"
+                className="mt-2 w-4 h-4 rounded border-zinc-300 text-blue-600 shrink-0"
               />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 py-1">
                 <input
                   type="text"
                   defaultValue={t.title}
@@ -95,15 +117,44 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                       : 'text-zinc-900 dark:text-zinc-50'
                   }`}
                 />
-                {pg && (
-                  <div className="text-[11px] text-blue-600 dark:text-blue-400 truncate">
-                    🎯 {pg}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  {cat && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
+                      style={{ background: tint.soft(cat.color) }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: cat.color }}
+                      />
+                      <span className="text-zinc-700 dark:text-zinc-300">
+                        {cat.name}
+                      </span>
+                    </span>
+                  )}
+                  {pg && (
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 truncate">
+                      🎯 {pg}
+                    </span>
+                  )}
+                </div>
               </div>
+              <select
+                value={t.categoryId ?? ''}
+                onChange={(e) => setCategory(t.id, e.target.value || undefined)}
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 mt-1.5 text-[10px] border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5 bg-white dark:bg-zinc-950 transition"
+                title="카테고리"
+              >
+                <option value="">카테고리</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={() => remove(t.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition"
+                className="opacity-0 group-hover:opacity-100 p-1 mt-1 text-zinc-400 hover:text-red-600 transition shrink-0"
               >
                 <Trash2 size={14} />
               </button>

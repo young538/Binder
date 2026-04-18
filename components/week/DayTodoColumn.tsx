@@ -10,6 +10,7 @@ import {
   toggleDone,
 } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
+import { tint } from '@/lib/utils/color';
 
 interface Props {
   dateStr: string;
@@ -77,6 +78,12 @@ export const DayTodoColumn = ({
     onChanged();
   };
 
+  const setCategory = async (id: string, categoryId: string | undefined) => {
+    await updateTodo(id, { categoryId });
+    reload();
+    onChanged();
+  };
+
   const catColor = (id?: string) =>
     id ? categories.find((c) => c.id === id)?.color : null;
 
@@ -91,24 +98,28 @@ export const DayTodoColumn = ({
           return (
             <li
               key={t.id}
-              className="group flex items-start gap-1 text-[11px] leading-tight hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded px-1 py-0.5"
+              className="group flex items-start gap-1 text-[11px] leading-tight rounded overflow-hidden"
+              style={
+                color
+                  ? {
+                      borderLeft: `2px solid ${color}`,
+                      background: tint.subtle(color),
+                      paddingLeft: '0.25rem',
+                      paddingRight: '0.25rem',
+                    }
+                  : { paddingLeft: '0.25rem', paddingRight: '0.25rem' }
+              }
             >
               <input
                 type="checkbox"
                 checked={t.done}
                 onChange={() => toggle(t.id)}
-                className="mt-0.5 w-3 h-3 rounded border-zinc-300 text-blue-600 shrink-0"
+                className="mt-1 w-3 h-3 rounded border-zinc-300 text-blue-600 shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-1">
-                  {color && (
-                    <span
-                      className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
-                      style={{ background: color }}
-                    />
-                  )}
                   {t.priority && (
-                    <span className="text-amber-500 text-[9px] shrink-0">
+                    <span className="text-amber-500 text-[9px] mt-0.5 shrink-0">
                       {'*'.repeat(t.priority)}
                     </span>
                   )}
@@ -116,23 +127,38 @@ export const DayTodoColumn = ({
                     type="text"
                     defaultValue={t.title}
                     onBlur={(e) => editTitle(t, e.target.value)}
-                    className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] ${
+                    className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] py-0.5 ${
                       t.done ? 'line-through text-zinc-400' : ''
                     }`}
                   />
                 </div>
               </div>
+              <select
+                value={t.categoryId ?? ''}
+                onChange={(e) =>
+                  setCategory(t.id, e.target.value || undefined)
+                }
+                title="카테고리"
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[9px] border border-zinc-200 dark:border-zinc-700 rounded bg-white dark:bg-zinc-950 transition shrink-0 mt-0.5"
+              >
+                <option value="">·</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={() => onMakeBlock(t)}
                 title="블록 만들기"
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition shrink-0"
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition shrink-0 mt-0.5"
               >
                 <Clock size={11} />
               </button>
               <button
                 onClick={() => remove(t.id)}
                 title="삭제"
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-red-600 transition shrink-0"
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-red-600 transition shrink-0 mt-0.5"
               >
                 <Trash2 size={11} />
               </button>
