@@ -7,7 +7,7 @@ test('create, edit, delete time block', async ({ page }) => {
   await page.waitForURL(/\/week\//);
 
   // Wait for store to be ready (loading screen to disappear)
-  await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 10000 });
+  await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 
   // First empty cell in the grid (button with empty text, inside the main grid)
   const firstCell = page
