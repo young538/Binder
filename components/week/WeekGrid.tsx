@@ -7,6 +7,7 @@ import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { TimeBlock } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { BlockEditor } from './BlockEditor';
+import { GoalCoverageBar } from './GoalCoverageBar';
 
 interface Props {
   isoweek: string;
@@ -22,7 +23,7 @@ interface EditorState {
 }
 
 export const WeekGrid = ({ isoweek }: Props) => {
-  const { categories, settings } = useBinder();
+  const { categories, settings, goals } = useBinder();
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
   const [editor, setEditor] = useState<EditorState | null>(null);
 
@@ -112,6 +113,8 @@ export const WeekGrid = ({ isoweek }: Props) => {
           );
         })}
       </div>
+
+      <GoalCoverageBar blocks={blocks} goals={goals} categories={categories} />
 
       {editor && (
         <BlockEditor
