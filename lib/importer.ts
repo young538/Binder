@@ -1,5 +1,5 @@
 import { db, markDirty } from './db';
-import { Goal, Todo, FocusNote, AnnualGoal, Habit, HabitLog, Routine } from './types';
+import { Goal, Todo, FocusNote, AnnualGoal, Habit, HabitLog, Routine, Book } from './types';
 
 type LegacyTodo = Todo & { date?: string };
 
@@ -13,6 +13,7 @@ export interface ImportData {
   habits?: Habit[];
   habitLogs?: HabitLog[];
   routines?: Routine[];
+  books?: Book[];
 }
 
 export interface ImportResult {
@@ -23,6 +24,7 @@ export interface ImportResult {
   habits: number;
   habitLogs: number;
   routines: number;
+  books: number;
 }
 
 const normalizeTodo = (raw: LegacyTodo): Todo => {
@@ -52,6 +54,7 @@ export const importData = async (
     await db.habits.clear();
     await db.habitLogs.clear();
     await db.routines.clear();
+    await db.books.clear();
   }
 
   const todos = (data.todos ?? []).map(normalizeTodo);
@@ -63,6 +66,7 @@ export const importData = async (
   if (data.habits?.length) await db.habits.bulkPut(data.habits);
   if (data.habitLogs?.length) await db.habitLogs.bulkPut(data.habitLogs);
   if (data.routines?.length) await db.routines.bulkPut(data.routines);
+  if (data.books?.length) await db.books.bulkPut(data.books);
 
   await markDirty();
 
@@ -74,6 +78,7 @@ export const importData = async (
     habits: data.habits?.length ?? 0,
     habitLogs: data.habitLogs?.length ?? 0,
     routines: data.routines?.length ?? 0,
+    books: data.books?.length ?? 0,
   };
 };
 

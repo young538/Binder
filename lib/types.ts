@@ -127,6 +127,21 @@ export interface Routine {
   updatedAt: string;
 }
 
+export interface Book {
+  id: string;
+  year: string;
+  order: number;
+  category?: string;
+  title: string;
+  oneThing?: string;
+  keywords?: string;
+  reviewUrl?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BinderData {
   version: number;
   updatedAt: string;

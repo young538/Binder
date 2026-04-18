@@ -10,6 +10,7 @@ import type {
   Habit,
   HabitLog,
   Routine,
+  Book,
   Settings,
 } from './types';
 
@@ -26,6 +27,7 @@ export interface ExportData {
   habits: Habit[];
   habitLogs: HabitLog[];
   routines: Routine[];
+  books: Book[];
   settings: Settings | null;
 }
 
@@ -41,6 +43,7 @@ export const buildExport = async (): Promise<ExportData> => {
     habits,
     habitLogs,
     routines,
+    books,
     settingsRow,
   ] = await Promise.all([
     db.goals.toArray(),
@@ -53,6 +56,7 @@ export const buildExport = async (): Promise<ExportData> => {
     db.habits.toArray(),
     db.habitLogs.toArray(),
     db.routines.toArray(),
+    db.books.toArray(),
     db.settings.get('main'),
   ]);
 
@@ -64,7 +68,7 @@ export const buildExport = async (): Promise<ExportData> => {
   }
 
   return {
-    version: 7,
+    version: 8,
     generatedAt: new Date().toISOString(),
     goals,
     categories,
@@ -76,6 +80,7 @@ export const buildExport = async (): Promise<ExportData> => {
     habits,
     habitLogs,
     routines,
+    books,
     settings,
   };
 };
