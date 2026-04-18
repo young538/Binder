@@ -17,6 +17,7 @@ import { TimeBlock, Todo, Routine } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
 import { DayTodoColumn } from './DayTodoColumn';
+import { tint } from '@/lib/utils/color';
 
 interface Props {
   isoweek: string;
@@ -151,7 +152,7 @@ export const DayListView = ({ isoweek }: Props) => {
                   key={r.id}
                   className="text-xs px-2 py-0.5 rounded-full border flex items-center gap-1"
                   style={{
-                    background: color ? `${color}22` : 'transparent',
+                    background: color ? tint.soft(color) : 'transparent',
                     borderColor: color ?? 'var(--color-border)',
                   }}
                 >

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Routine } from '@/lib/types';
 import { listAllRoutines } from '@/lib/repo/routines';
 import { useBinder } from '@/store';
+import { tint } from '@/lib/utils/color';
 
 interface Props {
   dates: Date[];
@@ -52,7 +53,7 @@ export const RoutineStrip = ({ dates }: Props) => {
                     key={r.id}
                     className="text-[11px] px-1.5 py-0.5 rounded flex items-center gap-1 border"
                     style={{
-                      background: color ? `${color}22` : 'transparent',
+                      background: color ? tint.soft(color) : 'transparent',
                       borderColor: color ?? 'var(--color-border)',
                     }}
                   >

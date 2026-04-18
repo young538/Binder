@@ -15,6 +15,7 @@ import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { DayTodoStrip } from './DayTodoStrip';
 import { RoutineStrip } from './RoutineStrip';
+import { tint } from '@/lib/utils/color';
 
 interface Props {
   isoweek: string;
@@ -30,15 +31,6 @@ interface EditorState {
   prefilledTodoId?: string;
   prefilledText?: string;
 }
-
-const tintBg = (hex: string, opacity = 0.22) => {
-  const h = hex.replace('#', '');
-  if (h.length !== 6) return `rgba(161,161,170,${opacity})`;
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(4, 6), 16);
-  return `rgba(${r},${g},${b},${opacity})`;
-};
 
 export const WeekGrid = ({ isoweek }: Props) => {
   const { categories, settings, goals } = useBinder();
@@ -226,8 +218,8 @@ export const WeekGrid = ({ isoweek }: Props) => {
                     style={{
                       top: topRow * ROW_HEIGHT + 1,
                       height: spanRows * ROW_HEIGHT - 2,
-                      background: tintBg(color, 0.22),
-                      borderLeft: `3px solid ${color}`,
+                      background: tint.soft(color),
+                      borderLeft: `3px solid ${tint.bar(color)}`,
                     }}
                     title={b.text}
                   >
