@@ -9,11 +9,8 @@ test('create, edit, delete time block', async ({ page }) => {
   // Wait for store to be ready (loading screen to disappear)
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 
-  // First empty cell in the grid (button with empty text, inside the main grid)
-  const firstCell = page
-    .locator('main button')
-    .filter({ hasNotText: /\d+\/\d+|이전주|다음주|📝|📅|🎯|⚙️|설정|주간|목표|회고|만다라트/ })
-    .first();
+  // First empty time slot in the grid
+  const firstCell = page.locator('[data-testid="time-slot"]').first();
   await firstCell.click();
 
   const textInput = page.getByPlaceholder('내용');

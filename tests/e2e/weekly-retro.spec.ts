@@ -12,10 +12,7 @@ test('weekly summary aggregates time blocks', async ({ page }) => {
   const isoweek = match![1];
 
   // Create a block (similar to week-input)
-  const firstCell = page
-    .locator('main button')
-    .filter({ hasNotText: /\d+\/\d+|이전주|다음주|📝|📅|🎯|⚙️|설정|주간|목표|회고|만다라트/ })
-    .first();
+  const firstCell = page.locator('[data-testid="time-slot"]').first();
   await firstCell.click();
   await page.getByPlaceholder('내용').fill('주간합산');
   await page.getByRole('button', { name: '저장' }).click();

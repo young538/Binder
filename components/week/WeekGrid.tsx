@@ -185,6 +185,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   return (
                     <button
                       key={row}
+                      data-testid="time-slot"
                       onClick={() =>
                         setEditor({
                           date: dateStr,
