@@ -1,32 +1,77 @@
 'use client';
-import { useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Trash2, Link2 } from 'lucide-react';
 import { TimeBlock } from '@/lib/types';
-import { createTimeBlock, updateTimeBlock, deleteTimeBlock } from '@/lib/repo/timeBlocks';
+import {
+  createTimeBlock,
+  updateTimeBlock,
+  deleteTimeBlock,
+} from '@/lib/repo/timeBlocks';
 import { useBinder } from '@/store';
-import { minutesToTimeStr, timeStrToMinutes, snapToGrid } from '@/lib/utils/date';
+import {
+  minutesToTimeStr,
+  timeStrToMinutes,
+  snapToGrid,
+  toIsoWeek,
+} from '@/lib/utils/date';
 import { GoalPicker } from '@/components/common/GoalPicker';
+import { TodoPicker } from '@/components/common/TodoPicker';
+import { parseISO } from 'date-fns';
 
 interface Props {
   initial: { date: string; startMin: number; endMin: number };
   existing?: TimeBlock;
+  prefilledTodoId?: string;
+  prefilledText?: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
+export const BlockEditor = ({
+  initial,
+  existing,
+  prefilledTodoId,
+  prefilledText,
+  onClose,
+  onSaved,
+}: Props) => {
   const { categories, settings } = useBinder();
-  const [text, setText] = useState(existing?.text ?? '');
+  const [text, setText] = useState(existing?.text ?? prefilledText ?? '');
   const [categoryId, setCategoryId] = useState(
     existing?.categoryId ?? categories[0]?.id ?? '',
   );
   const [goalId, setGoalId] = useState<string | undefined>(existing?.goalId);
+  const [todoId, setTodoId] = useState<string | undefined>(
+    existing?.todoId ?? prefilledTodoId,
+  );
   const [startStr, setStartStr] = useState(
     minutesToTimeStr(existing?.startMin ?? initial.startMin),
   );
   const [endStr, setEndStr] = useState(
     minutesToTimeStr(existing?.endMin ?? initial.endMin),
   );
+  const [todoPickerOpen, setTodoPickerOpen] = useState(false);
+  const [selectedTodoTitle, setSelectedTodoTitle] = useState<string | undefined>(
+    undefined,
+  );
+
+  const isoweek = toIsoWeek(parseISO(initial.date));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!todoId) {
+      setSelectedTodoTitle(undefined);
+      return;
+    }
+    import('@/lib/db').then(({ db }) => {
+      db.todos.get(todoId).then((t) => {
+        if (!cancelled) setSelectedTodoTitle(t?.title);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [todoId]);
 
   const save = async () => {
     const grid = settings?.gridMinutes ?? 30;
@@ -37,7 +82,14 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
       return;
     }
     if (existing) {
-      await updateTimeBlock(existing.id, { text, categoryId, goalId, startMin, endMin });
+      await updateTimeBlock(existing.id, {
+        text,
+        categoryId,
+        goalId,
+        todoId,
+        startMin,
+        endMin,
+      });
     } else {
       await createTimeBlock({
         date: initial.date,
@@ -46,6 +98,7 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
         text,
         categoryId,
         goalId,
+        todoId,
       });
     }
     onSaved();
@@ -66,7 +119,7 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl"
+        className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -149,6 +202,33 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
 
           <div>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              TODO 연결
+            </label>
+            {todoId && selectedTodoTitle ? (
+              <div className="flex items-center gap-2 px-3 py-2 border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <Link2 size={14} className="text-blue-600" />
+                <span className="flex-1 text-sm text-blue-900 dark:text-blue-200 truncate">
+                  {selectedTodoTitle}
+                </span>
+                <button
+                  onClick={() => setTodoId(undefined)}
+                  className="text-xs text-blue-700 dark:text-blue-300 hover:underline"
+                >
+                  해제
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setTodoPickerOpen(true)}
+                className="w-full text-left px-3 py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-500 hover:border-blue-400 hover:text-blue-600 transition"
+              >
+                + TODO 연결
+              </button>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
               목표 연결
             </label>
             <GoalPicker value={goalId} onChange={setGoalId} />
@@ -178,6 +258,14 @@ export const BlockEditor = ({ initial, existing, onClose, onSaved }: Props) => {
           </button>
         </div>
       </div>
+
+      <TodoPicker
+        isoweek={isoweek}
+        value={todoId}
+        onChange={setTodoId}
+        open={todoPickerOpen}
+        onClose={() => setTodoPickerOpen(false)}
+      />
     </div>
   );
 };
