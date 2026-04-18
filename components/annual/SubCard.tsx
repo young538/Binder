@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Plus, Check } from 'lucide-react';
 import { Goal, Todo } from '@/lib/types';
-import { createTodo, listByParentGoal, existsForPeriod } from '@/lib/repo/todos';
-import { monthKey } from '@/lib/utils/period';
+import { createTodo, listByParentGoal } from '@/lib/repo/todos';
+import { format } from 'date-fns';
 
 interface Props {
   sub: Goal;
@@ -13,37 +13,44 @@ interface Props {
 export const SubCard = ({ sub, currentMonth }: Props) => {
   const [linkedTodos, setLinkedTodos] = useState<Todo[]>([]);
   const [busy, setBusy] = useState(false);
-  const currentKey = monthKey(currentMonth);
+  const currentYm = format(currentMonth, 'yyyy-MM');
+  const firstDayOfCurrentMonth = `${currentYm}-01`;
 
   useEffect(() => {
-    listByParentGoal(sub.id).then(ts => setLinkedTodos(ts.filter(t => t.period === 'monthly')));
+    listByParentGoal(sub.id).then(setLinkedTodos);
   }, [sub.id]);
 
-  const monthBadges = linkedTodos.map(t => {
-    const m = t.periodKey.match(/^month:(\d{4})-(\d{2})$/);
-    if (!m) return null;
-    return { key: t.periodKey, label: `${parseInt(m[2])}월`, done: t.done };
-  }).filter(Boolean) as { key: string; label: string; done: boolean }[];
+  const monthBadges = Array.from(
+    linkedTodos.reduce((acc, t) => {
+      const ym = t.date.slice(0, 7);
+      const existing = acc.get(ym);
+      if (!existing) {
+        acc.set(ym, { ym, done: t.done });
+      } else if (existing.done && !t.done) {
+        acc.set(ym, { ym, done: false });
+      }
+      return acc;
+    }, new Map<string, { ym: string; done: boolean }>()).values()
+  ).sort((a, b) => a.ym.localeCompare(b.ym)).map(({ ym, done }) => {
+    const m = ym.match(/^(\d{4})-(\d{2})$/);
+    const label = m ? `${parseInt(m[2])}월` : ym;
+    return { key: ym, label, done };
+  });
 
-  const alreadyThisMonth = linkedTodos.some(t => t.periodKey === currentKey);
+  const alreadyThisMonth = linkedTodos.some(t => t.date.slice(0, 7) === currentYm);
 
   const assignThisMonth = async () => {
     if (alreadyThisMonth || busy) return;
     setBusy(true);
-    if (await existsForPeriod('monthly', currentKey, sub.id)) {
-      setBusy(false);
-      return;
-    }
     await createTodo({
       title: sub.title,
       parentGoalId: sub.id,
-      period: 'monthly',
-      periodKey: currentKey,
+      date: firstDayOfCurrentMonth,
       done: false,
       order: Date.now(),
     });
     const ts = await listByParentGoal(sub.id);
-    setLinkedTodos(ts.filter(t => t.period === 'monthly'));
+    setLinkedTodos(ts);
     setBusy(false);
   };
 

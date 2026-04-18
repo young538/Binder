@@ -47,6 +47,6 @@ export const listByDateRange = async (startDate: string, endDate: string): Promi
 export const listByParentGoal = async (parentGoalId: string): Promise<Todo[]> =>
   db.todos.where('parentGoalId').equals(parentGoalId).toArray();
 
-// TEMPORARY stubs for v1.1 components not yet updated (Task B/C will replace them)
-export const listByPeriod = async (): Promise<Todo[]> => []; // v1.1 compat
-export const existsForPeriod = async (): Promise<boolean> => false; // v1.1 compat
+// TEMPORARY stubs for v1.1 components not yet updated (Task C will replace them)
+export const listByPeriod = async (_period?: string, _periodKey?: string): Promise<Todo[]> => []; // v1.1 compat
+export const existsForPeriod = async (_period?: string, _periodKey?: string, _parentGoalId?: string): Promise<boolean> => false; // v1.1 compat

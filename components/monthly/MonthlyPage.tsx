@@ -1,12 +1,8 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Todo } from '@/lib/types';
-import { listByPeriod } from '@/lib/repo/todos';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
-import { MonthlyTodoList } from './MonthlyTodoList';
-import { SubCandidateList } from './SubCandidateList';
+import { MonthlyCalendar } from './MonthlyCalendar';
 import { monthKeyFromString } from '@/lib/utils/period';
 
 interface Props { yyyymm: string; }
@@ -24,18 +20,10 @@ const shiftMonth = (yyyymm: string, delta: number): string => {
 };
 
 export const MonthlyPage = ({ yyyymm }: Props) => {
-  const [todos, setTodos] = useState<Todo[]>([]);
   const periodKey = monthKeyFromString(yyyymm);
-
-  const reload = useCallback(async () => {
-    const ts = await listByPeriod('monthly', periodKey);
-    setTodos(ts);
-  }, [periodKey]);
-
-  useEffect(() => { reload(); }, [reload]);
-
   const prev = shiftMonth(yyyymm, -1);
   const next = shiftMonth(yyyymm, 1);
+  const [y, mo] = parseYm(yyyymm);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4">
@@ -44,7 +32,9 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
           className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600">
           <ChevronLeft size={18} />
         </Link>
-        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-900 dark:text-zinc-50">{yyyymm}</h1>
+        <h1 className="text-2xl font-bold flex-1 text-center text-zinc-900 dark:text-zinc-50">
+          {y}년 {mo}월
+        </h1>
         <Link href={`/monthly/${next}`}
           className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600">
           <ChevronRight size={18} />
@@ -57,16 +47,7 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
         label="이번 달 한 문장"
         placeholder="예: 릴스 업로드 주 2회 시작" />
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <MonthlyTodoList
-          periodKey={periodKey}
-          todos={todos}
-          onChange={reload} />
-        <SubCandidateList
-          periodKey={periodKey}
-          todos={todos}
-          onChange={reload} />
-      </div>
+      <MonthlyCalendar yyyymm={yyyymm} />
     </div>
   );
 };

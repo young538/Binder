@@ -11,7 +11,7 @@ import {
 } from '@/lib/repo/todos';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { weekKeyFromString, monthKeyFromString } from '@/lib/utils/period';
-import { fromIsoWeek } from '@/lib/utils/date';
+import { fromIsoWeek, toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 import { useBinder } from '@/store';
 
@@ -65,8 +65,7 @@ export const WeeklyTodoSidebar = ({ isoweek, onMakeBlock }: Props) => {
     }
     await createTodo({
       title: draft.trim(),
-      period: 'weekly',
-      periodKey: weekKey,
+      date: toIsoDate(monday),
       done: false,
       order: Date.now(),
     });
@@ -79,8 +78,7 @@ export const WeeklyTodoSidebar = ({ isoweek, onMakeBlock }: Props) => {
     await createTodo({
       title: m.title,
       parentGoalId: m.parentGoalId,
-      period: 'weekly',
-      periodKey: weekKey,
+      date: toIsoDate(monday),
       done: false,
       order: Date.now(),
     });
