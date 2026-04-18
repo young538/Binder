@@ -118,6 +118,29 @@ class BinderDb extends Dexie {
         delete t.periodKey;
       });
     });
+    this.version(4).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, scope, scopeKey, parentGoalId, categoryId, done, order, [scope+scopeKey]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+    }).upgrade(async tx => {
+      await tx.table('todos').toCollection().modify((t: {
+        date?: string;
+        scope?: string;
+        scopeKey?: string;
+      }) => {
+        if (t.scope) return;
+        t.scope = 'day';
+        t.scopeKey = t.date ?? '2026-01-01';
+        delete t.date;
+      });
+    });
   }
 }
 

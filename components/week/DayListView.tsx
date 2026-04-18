@@ -11,7 +11,7 @@ import {
 import { useBinder } from '@/store';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
-import { listByDate } from '@/lib/repo/todos';
+import { listByScope } from '@/lib/repo/todos';
 import { TimeBlock, Todo } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
@@ -66,7 +66,7 @@ export const DayListView = ({ isoweek }: Props) => {
   const dateStr = toIsoDate(current);
 
   useEffect(() => {
-    listByDate(dateStr).then((ts) => setDayTodoCount(ts.length));
+    listByScope('day', dateStr).then((ts) => setDayTodoCount(ts.length));
   }, [dateStr, todoRefreshKey]);
 
   const dayBlocks = blocks
@@ -87,7 +87,7 @@ export const DayListView = ({ isoweek }: Props) => {
     const start = (settings?.dayStartHour ?? 9) * 60;
     const grid = settings?.gridMinutes ?? 30;
     setEditor({
-      date: todo.date,
+      date: todo.scopeKey,
       startMin: start,
       endMin: start + grid,
       prefilledTodoId: todo.id,

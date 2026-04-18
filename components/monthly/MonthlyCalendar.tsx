@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { Todo } from '@/lib/types';
-import { listByDateRange } from '@/lib/repo/todos';
+import { listDayTodosInRange } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { toIsoDate } from '@/lib/utils/date';
 import { DayCell } from './DayCell';
@@ -29,7 +29,7 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
   }
 
   const reload = () => {
-    listByDateRange(toIsoDate(gridStart), toIsoDate(gridEnd)).then(setTodos);
+    listDayTodosInRange(toIsoDate(gridStart), toIsoDate(gridEnd)).then(setTodos);
   };
 
   useEffect(() => { reload(); // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,9 +42,9 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
   const todosByDate = useMemo(() => {
     const map = new Map<string, Todo[]>();
     for (const t of todos) {
-      const arr = map.get(t.date) ?? [];
+      const arr = map.get(t.scopeKey) ?? [];
       arr.push(t);
-      map.set(t.date, arr);
+      map.set(t.scopeKey, arr);
     }
     return map;
   }, [todos]);

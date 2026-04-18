@@ -36,7 +36,11 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
 
   const monthBadges = Array.from(
     linkedTodos.reduce((acc, t) => {
-      const ym = t.date.slice(0, 7);
+      let ym: string | null = null;
+      if (t.scope === 'day') ym = t.scopeKey.slice(0, 7);
+      else if (t.scope === 'month') ym = t.scopeKey;
+      // week-scoped todos are not pinned to a specific month → skip
+      if (!ym || ym.length !== 7) return acc;
       const existing = acc.get(ym);
       if (!existing) {
         acc.set(ym, { ym, done: t.done });
@@ -53,7 +57,9 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
 
   const assignForDate = async (dateStr: string) => {
     if (busy) return;
-    const existing = linkedTodos.some(t => t.date === dateStr);
+    const existing = linkedTodos.some(
+      (t) => t.scope === 'day' && t.scopeKey === dateStr,
+    );
     if (existing) {
       alert('이미 그 날짜에 있어요');
       return;
@@ -62,7 +68,8 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
     await createTodo({
       title: sub.title,
       parentGoalId: sub.id,
-      date: dateStr,
+      scope: 'day',
+      scopeKey: dateStr,
       done: false,
       order: Date.now(),
     });

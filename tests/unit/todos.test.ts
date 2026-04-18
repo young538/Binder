@@ -4,8 +4,8 @@ import { db } from '@/lib/db';
 import {
   createTodo,
   toggleDone,
-  listByDate,
-  listByDateRange,
+  listByScope,
+  listDayTodosInRange,
   listByParentGoal,
 } from '@/lib/repo/todos';
 
@@ -14,37 +14,33 @@ beforeEach(async () => {
   await db.open();
 });
 
-describe('todos repo (date-based)', () => {
-  it('creates and lists by date', async () => {
-    await createTodo({ title: 'A', date: '2026-04-13', done: false, order: 0 });
-    await createTodo({ title: 'B', date: '2026-04-13', done: false, order: 1 });
-    await createTodo({ title: 'C', date: '2026-04-14', done: false, order: 0 });
-    const d13 = await listByDate('2026-04-13');
-    expect(d13).toHaveLength(2);
-    expect(d13.map(t => t.title)).toEqual(['A', 'B']);
+describe('todos (scoped)', () => {
+  it('creates day, week, month todos', async () => {
+    await createTodo({ title: 'day', scope: 'day', scopeKey: '2026-04-13', done: false, order: 0 });
+    await createTodo({ title: 'week', scope: 'week', scopeKey: '2026-W16', done: false, order: 0 });
+    await createTodo({ title: 'month', scope: 'month', scopeKey: '2026-04', done: false, order: 0 });
+    expect((await listByScope('day', '2026-04-13'))[0].title).toBe('day');
+    expect((await listByScope('week', '2026-W16'))[0].title).toBe('week');
+    expect((await listByScope('month', '2026-04'))[0].title).toBe('month');
   });
 
-  it('listByDateRange returns todos within range sorted by date then order', async () => {
-    await createTodo({ title: 'Y', date: '2026-04-20', done: false, order: 0 });
-    await createTodo({ title: 'X', date: '2026-04-13', done: false, order: 1 });
-    await createTodo({ title: 'W', date: '2026-04-13', done: false, order: 0 });
-    await createTodo({ title: 'Z', date: '2026-04-25', done: false, order: 0 });
-    const range = await listByDateRange('2026-04-13', '2026-04-19');
-    expect(range.map(t => t.title)).toEqual(['W', 'X']);
+  it('listDayTodosInRange only returns day scope within range', async () => {
+    await createTodo({ title: 'a', scope: 'day', scopeKey: '2026-04-13', done: false, order: 0 });
+    await createTodo({ title: 'b', scope: 'day', scopeKey: '2026-04-20', done: false, order: 0 });
+    await createTodo({ title: 'c', scope: 'week', scopeKey: '2026-W16', done: false, order: 0 });
+    const r = await listDayTodosInRange('2026-04-13', '2026-04-19');
+    expect(r.map(t => t.title)).toEqual(['a']);
   });
 
   it('toggles done', async () => {
-    const t = await createTodo({ title: 'X', date: '2026-04-13', done: false, order: 0 });
+    const t = await createTodo({ title: 'X', scope: 'day', scopeKey: '2026-04-13', done: false, order: 0 });
     await toggleDone(t.id);
-    const after = await db.todos.get(t.id);
-    expect(after?.done).toBe(true);
+    expect((await db.todos.get(t.id))?.done).toBe(true);
   });
 
-  it('listByParentGoal filters by parentGoalId', async () => {
-    await createTodo({ title: 'A', date: '2026-04-13', parentGoalId: 'g1', done: false, order: 0 });
-    await createTodo({ title: 'B', date: '2026-04-14', parentGoalId: 'g1', done: false, order: 0 });
-    await createTodo({ title: 'C', date: '2026-04-15', parentGoalId: 'g2', done: false, order: 0 });
-    const g1 = await listByParentGoal('g1');
-    expect(g1).toHaveLength(2);
+  it('listByParentGoal returns across scopes', async () => {
+    await createTodo({ title: 'd', scope: 'day', scopeKey: '2026-04-13', parentGoalId: 'g1', done: false, order: 0 });
+    await createTodo({ title: 'w', scope: 'week', scopeKey: '2026-W16', parentGoalId: 'g1', done: false, order: 0 });
+    expect((await listByParentGoal('g1')).length).toBe(2);
   });
 });

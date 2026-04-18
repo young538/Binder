@@ -7,7 +7,7 @@ import {
   updateTimeBlock,
   deleteTimeBlock,
 } from '@/lib/repo/timeBlocks';
-import { listByDate } from '@/lib/repo/todos';
+import { listByScope } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import {
   minutesToTimeStr,
@@ -51,7 +51,7 @@ export const BlockEditor = ({
   const [dayTodos, setDayTodos] = useState<Todo[]>([]);
 
   useEffect(() => {
-    listByDate(initial.date).then(setDayTodos);
+    listByScope('day', initial.date).then(setDayTodos);
   }, [initial.date]);
 
   const save = async () => {

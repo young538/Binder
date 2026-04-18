@@ -1,5 +1,5 @@
 import { db, markDirty } from '../db';
-import { Todo } from '../types';
+import { Todo, TodoScope } from '../types';
 import { newId } from '../utils/id';
 
 export const createTodo = async (
@@ -31,15 +31,19 @@ export const toggleDone = async (id: string): Promise<void> => {
   await updateTodo(id, { done: !t.done });
 };
 
-export const listByDate = async (date: string): Promise<Todo[]> => {
-  const items = await db.todos.where('date').equals(date).toArray();
+export const listByScope = async (scope: TodoScope, scopeKey: string): Promise<Todo[]> => {
+  const items = await db.todos.where({ scope, scopeKey }).toArray();
   return items.sort((a, b) => a.order - b.order);
 };
 
-export const listByDateRange = async (startDate: string, endDate: string): Promise<Todo[]> => {
-  const items = await db.todos.where('date').between(startDate, endDate, true, true).toArray();
+// Day todos within a date range (for weekly strip and weekly retro aggregation)
+export const listDayTodosInRange = async (startDate: string, endDate: string): Promise<Todo[]> => {
+  const items = await db.todos
+    .where('scope').equals('day')
+    .and(t => t.scopeKey >= startDate && t.scopeKey <= endDate)
+    .toArray();
   return items.sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.scopeKey !== b.scopeKey) return a.scopeKey < b.scopeKey ? -1 : 1;
     return a.order - b.order;
   });
 };

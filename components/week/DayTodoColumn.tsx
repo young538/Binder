@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Clock, Trash2 } from 'lucide-react';
 import { Todo } from '@/lib/types';
 import {
-  listByDate,
+  listByScope,
   createTodo,
   updateTodo,
   deleteTodo,
@@ -29,7 +29,7 @@ export const DayTodoColumn = ({
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
 
-  const reload = () => listByDate(dateStr).then(setTodos);
+  const reload = () => listByScope('day', dateStr).then(setTodos);
 
   useEffect(() => {
     reload();
@@ -45,7 +45,8 @@ export const DayTodoColumn = ({
     }
     await createTodo({
       title: trimmed,
-      date: dateStr,
+      scope: 'day',
+      scopeKey: dateStr,
       done: false,
       order: todos.length,
     });

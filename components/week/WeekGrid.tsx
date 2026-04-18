@@ -12,6 +12,7 @@ import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
 import { GoalCoverageBar } from './GoalCoverageBar';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
+import { TodoListSection } from '@/components/common/TodoListSection';
 import { DayTodoStrip } from './DayTodoStrip';
 
 interface Props {
@@ -72,7 +73,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
   const openFromTodo = (todo: Todo) => {
     const startMin = dayStartHour * 60;
     setEditor({
-      date: todo.date,
+      date: todo.scopeKey,
       startMin,
       endMin: startMin + gridMinutes,
       prefilledTodoId: todo.id,
@@ -114,6 +115,10 @@ export const WeekGrid = ({ isoweek }: Props) => {
           label="이번 주 한 문장"
           placeholder="예: 릴스 제작 루틴 실행"
         />
+      </div>
+
+      <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+        <TodoListSection scope="week" scopeKey={isoweek} title="이번 주 TODO" />
       </div>
 
       <DayTodoStrip

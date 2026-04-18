@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
+import { TodoListSection } from '@/components/common/TodoListSection';
 import { MonthlyCalendar } from './MonthlyCalendar';
 import { monthKeyFromString } from '@/lib/utils/period';
 
@@ -46,6 +47,8 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
         scopeKey={periodKey}
         label="이번 달 한 문장"
         placeholder="예: 릴스 업로드 주 2회 시작" />
+
+      <TodoListSection scope="month" scopeKey={yyyymm} title="이번 달 TODO" />
 
       <MonthlyCalendar yyyymm={yyyymm} />
     </div>

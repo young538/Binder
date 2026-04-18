@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { X, Plus, Trash2, Link2 } from 'lucide-react';
 import { Todo } from '@/lib/types';
-import { listByDate, createTodo, updateTodo, deleteTodo, toggleDone } from '@/lib/repo/todos';
+import { listByScope, createTodo, updateTodo, deleteTodo, toggleDone } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -23,14 +23,15 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
   const dayDate = parseISO(dateStr);
   const title = format(dayDate, 'M월 d일', { locale: ko }) + ' (' + DOW_KO[dayDate.getDay()] + ')';
 
-  const reload = () => listByDate(dateStr).then(setTodos);
+  const reload = () => listByScope('day', dateStr).then(setTodos);
   useEffect(() => { reload(); }, [dateStr]);
 
   const addTodo = async () => {
     if (!draft.trim()) { setAdding(false); setDraft(''); return; }
     await createTodo({
       title: draft.trim(),
-      date: dateStr,
+      scope: 'day',
+      scopeKey: dateStr,
       done: false,
       order: todos.length,
     });

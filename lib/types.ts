@@ -13,10 +13,13 @@ export interface Goal {
 
 export type TodoPriority = 1 | 2 | 3;
 
+export type TodoScope = 'day' | 'week' | 'month';
+
 export interface Todo {
   id: string;
   title: string;
-  date: string;
+  scope: TodoScope;
+  scopeKey: string;
   done: boolean;
   order: number;
   parentGoalId?: string;
