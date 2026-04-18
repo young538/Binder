@@ -41,10 +41,11 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
       else if (t.scope === 'month') ym = t.scopeKey;
       // week-scoped todos are not pinned to a specific month → skip
       if (!ym || ym.length !== 7) return acc;
+      const isDone = t.status === 'done';
       const existing = acc.get(ym);
       if (!existing) {
-        acc.set(ym, { ym, done: t.done });
-      } else if (existing.done && !t.done) {
+        acc.set(ym, { ym, done: isDone });
+      } else if (existing.done && !isDone) {
         acc.set(ym, { ym, done: false });
       }
       return acc;
@@ -70,7 +71,7 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
       parentGoalId: sub.id,
       scope: 'day',
       scopeKey: dateStr,
-      done: false,
+      status: 'pending',
       order: Date.now(),
     });
     const ts = await listByParentGoal(sub.id);

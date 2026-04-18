@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react';
 import { X, Plus, Trash2, Link2 } from 'lucide-react';
 import { Todo } from '@/lib/types';
-import { listByScope, createTodo, updateTodo, deleteTodo, toggleDone } from '@/lib/repo/todos';
+import { listByScope, createTodo, updateTodo, deleteTodo, setStatus } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { TodoStatusButton } from '@/components/common/TodoStatusButton';
+import { statusRowClass } from '@/lib/utils/todoStatus';
 
 interface Props {
   dateStr: string;
@@ -32,7 +34,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
       title: draft.trim(),
       scope: 'day',
       scopeKey: dateStr,
-      done: false,
+      status: 'pending',
       order: todos.length,
     });
     setDraft('');
@@ -78,15 +80,19 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
             return (
               <div key={t.id} className="group rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 space-y-2">
                 <div className="flex items-start gap-2">
-                  <input type="checkbox" checked={t.done}
-                    onChange={() => { toggleDone(t.id).then(reload); }}
-                    className="mt-1 w-4 h-4 rounded border-zinc-300 text-blue-600" />
+                  <div className="mt-0.5">
+                    <TodoStatusButton
+                      status={t.status}
+                      onChange={(next) => { setStatus(t.id, next).then(reload); }}
+                      size="sm"
+                    />
+                  </div>
                   <input type="text" defaultValue={t.title}
                     onBlur={e => {
                       const v = e.target.value.trim();
                       if (v && v !== t.title) updateField(t, { title: v });
                     }}
-                    className={`flex-1 bg-transparent border-none outline-none text-sm ${t.done ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-50'}`} />
+                    className={`flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-50 ${statusRowClass(t.status)}`} />
                   <button onClick={() => remove(t.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition">
                     <Trash2 size={14} />

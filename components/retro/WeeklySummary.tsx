@@ -31,7 +31,10 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
   const dayMax = Math.max(1, ...dates.map((d) => byDay.get(d) ?? 0));
 
   const totalTodos = todos.length;
-  const doneTodos = todos.filter((t) => t.done).length;
+  const doneTodos = todos.filter((t) => t.status === 'done').length;
+  const postponedTodos = todos.filter((t) => t.status === 'postponed').length;
+  const delegatedTodos = todos.filter((t) => t.status === 'delegated').length;
+  const cancelledTodos = todos.filter((t) => t.status === 'cancelled').length;
   const completionPct = totalTodos > 0 ? Math.round((doneTodos / totalTodos) * 100) : 0;
 
   return (
@@ -58,6 +61,12 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
                 className="h-full bg-emerald-500 rounded-full transition-all"
                 style={{ width: `${completionPct}%` }}
               />
+            </div>
+            <div className="text-[10px] text-zinc-500 mt-2 flex flex-wrap gap-2">
+              <span>완료 {doneTodos}</span>
+              {postponedTodos > 0 && <span>연기 {postponedTodos}</span>}
+              {delegatedTodos > 0 && <span>위임 {delegatedTodos}</span>}
+              {cancelledTodos > 0 && <span>취소 {cancelledTodos}</span>}
             </div>
           </div>
         )}
@@ -102,7 +111,7 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
             return (
               <div key={tid ?? '_'} className="flex justify-between text-sm">
                 <span className="truncate text-zinc-700 dark:text-zinc-300">
-                  {todo?.done && <span className="text-emerald-600 mr-1">✓</span>}
+                  {todo?.status === 'done' && <span className="text-emerald-600 mr-1">✓</span>}
                   {label}
                 </span>
                 <span className="text-zinc-600 dark:text-zinc-400 tabular-nums">{hours(m)}h</span>

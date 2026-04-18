@@ -1,7 +1,7 @@
 import { db, markDirty } from './db';
-import { Goal, Todo, FocusNote, AnnualGoal, Habit, HabitLog, Routine, Book } from './types';
+import { Goal, Todo, TodoStatus, FocusNote, AnnualGoal, Habit, HabitLog, Routine, Book } from './types';
 
-type LegacyTodo = Todo & { date?: string };
+type LegacyTodo = Todo & { date?: string; done?: boolean };
 
 export interface ImportData {
   version: number;
@@ -27,18 +27,27 @@ export interface ImportResult {
   books: number;
 }
 
+const normalizeStatus = (raw: LegacyTodo): TodoStatus => {
+  if (raw.status) return raw.status;
+  return raw.done === true ? 'done' : 'pending';
+};
+
 const normalizeTodo = (raw: LegacyTodo): Todo => {
+  const status = normalizeStatus(raw);
   if (raw.scope) {
-    // Already new shape — strip legacy date if present
-    const { date: _legacy, ...rest } = raw;
+    // Already new shape — strip legacy date/done if present
+    const { date: _legacy, done: _legacyDone, ...rest } = raw;
     void _legacy;
-    return rest as Todo;
+    void _legacyDone;
+    return { ...(rest as Omit<Todo, 'status'>), status };
   }
-  const { date, ...rest } = raw;
+  const { date, done: _legacyDone, ...rest } = raw;
+  void _legacyDone;
   return {
-    ...(rest as Omit<Todo, 'scope' | 'scopeKey'>),
+    ...(rest as Omit<Todo, 'scope' | 'scopeKey' | 'status'>),
     scope: 'day',
     scopeKey: date ?? '2026-01-01',
+    status,
   };
 };
 

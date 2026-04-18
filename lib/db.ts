@@ -207,6 +207,29 @@ class BinderDb extends Dexie {
       routines: 'id, dayOfWeek, order',
       books: 'id, year, order, finishedAt',
     });
+    this.version(9).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, scope, scopeKey, parentGoalId, categoryId, status, order, [scope+scopeKey]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+      annualGoals: 'id, year, order',
+      habits: 'id, order',
+      habitLogs: 'id, habitId, date, [habitId+date]',
+      routines: 'id, dayOfWeek, order',
+      books: 'id, year, order, finishedAt',
+    }).upgrade(async tx => {
+      await tx.table('todos').toCollection().modify((t: { done?: boolean; status?: string }) => {
+        if (t.status) return;
+        t.status = t.done === true ? 'done' : 'pending';
+        delete t.done;
+      });
+    });
   }
 }
 

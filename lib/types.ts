@@ -15,12 +15,30 @@ export type TodoPriority = 1 | 2 | 3;
 
 export type TodoScope = 'day' | 'week' | 'month' | 'year';
 
+export type TodoStatus = 'pending' | 'done' | 'postponed' | 'delegated' | 'cancelled';
+
+export const STATUS_LABEL: Record<TodoStatus, string> = {
+  pending: '대기',
+  done: '완료',
+  postponed: '연기',
+  delegated: '위임',
+  cancelled: '취소',
+};
+
+export const STATUS_ICON: Record<TodoStatus, string> = {
+  pending: '⬜',
+  done: '✅',
+  postponed: '⏳',
+  delegated: '👥',
+  cancelled: '❌',
+};
+
 export interface Todo {
   id: string;
   title: string;
   scope: TodoScope;
   scopeKey: string;
-  done: boolean;
+  status: TodoStatus;
   order: number;
   parentGoalId?: string;
   priority?: TodoPriority;

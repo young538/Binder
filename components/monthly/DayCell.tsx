@@ -1,6 +1,7 @@
 'use client';
-import { Todo } from '@/lib/types';
+import { Todo, STATUS_ICON } from '@/lib/types';
 import { tint } from '@/lib/utils/color';
+import { statusRowClass } from '@/lib/utils/todoStatus';
 
 interface Props {
   date: Date;
@@ -43,12 +44,15 @@ export const DayCell = ({ date, isCurrentMonth, isToday, todos, categoryColor, o
           const color = t.categoryId ? categoryColor(t.categoryId) : null;
           return (
             <li key={t.id}
-              className={`flex items-center gap-1 text-[10px] leading-tight truncate rounded px-1 py-0.5
-                ${t.done ? 'line-through text-zinc-500' : 'text-zinc-900 dark:text-zinc-50'}`}
+              className={`flex items-center gap-1 text-[10px] leading-tight truncate rounded px-1 py-0.5 text-zinc-900 dark:text-zinc-50
+                ${statusRowClass(t.status)}`}
               style={color ? {
                 background: tint.soft(color),
                 borderLeft: `2px solid ${color}`,
               } : undefined}>
+              {t.status !== 'pending' && t.status !== 'done' && (
+                <span className="text-[9px] shrink-0">{STATUS_ICON[t.status]}</span>
+              )}
               {t.priority && (
                 <span className="text-amber-700 text-[9px] shrink-0 font-bold">
                   {'*'.repeat(t.priority)}

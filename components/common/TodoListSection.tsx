@@ -7,10 +7,12 @@ import {
   createTodo,
   updateTodo,
   deleteTodo,
-  toggleDone,
+  setStatus,
 } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { tint } from '@/lib/utils/color';
+import { TodoStatusButton } from '@/components/common/TodoStatusButton';
+import { statusRowClass } from '@/lib/utils/todoStatus';
 
 interface Props {
   scope: TodoScope;
@@ -40,7 +42,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
       title: draft.trim(),
       scope,
       scopeKey,
-      done: false,
+      status: 'pending',
       order: todos.length,
     });
     setDraft('');
@@ -98,24 +100,23 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                   : undefined
               }
             >
-              <input
-                type="checkbox"
-                checked={t.done}
-                onChange={() => {
-                  toggleDone(t.id).then(reload);
-                }}
-                className="mt-2 w-4 h-4 rounded border-zinc-300 text-blue-600 shrink-0"
-              />
+              <div className="mt-1.5">
+                <TodoStatusButton
+                  status={t.status}
+                  onChange={(next) => {
+                    setStatus(t.id, next).then(reload);
+                  }}
+                  size="sm"
+                />
+              </div>
               <div className="flex-1 min-w-0 py-1">
                 <input
                   type="text"
                   defaultValue={t.title}
                   onBlur={(e) => editTitle(t, e.target.value)}
-                  className={`w-full bg-transparent border-none outline-none text-sm ${
-                    t.done
-                      ? 'line-through text-zinc-400'
-                      : 'text-zinc-900 dark:text-zinc-50'
-                  }`}
+                  className={`w-full bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-50 ${statusRowClass(
+                    t.status,
+                  )}`}
                 />
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
                   {cat && (

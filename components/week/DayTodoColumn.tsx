@@ -7,10 +7,12 @@ import {
   createTodo,
   updateTodo,
   deleteTodo,
-  toggleDone,
+  setStatus,
 } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { tint } from '@/lib/utils/color';
+import { TodoStatusButton } from '@/components/common/TodoStatusButton';
+import { statusRowClass } from '@/lib/utils/todoStatus';
 
 interface Props {
   dateStr: string;
@@ -48,7 +50,7 @@ export const DayTodoColumn = ({
       title: trimmed,
       scope: 'day',
       scopeKey: dateStr,
-      done: false,
+      status: 'pending',
       order: todos.length,
     });
     setDraft('');
@@ -57,8 +59,8 @@ export const DayTodoColumn = ({
     onChanged();
   };
 
-  const toggle = async (id: string) => {
-    await toggleDone(id);
+  const changeStatus = async (id: string, next: Todo['status']) => {
+    await setStatus(id, next);
     reload();
     onChanged();
   };
@@ -110,12 +112,13 @@ export const DayTodoColumn = ({
                   : { paddingLeft: '0.25rem', paddingRight: '0.25rem' }
               }
             >
-              <input
-                type="checkbox"
-                checked={t.done}
-                onChange={() => toggle(t.id)}
-                className="mt-1 w-3 h-3 rounded border-zinc-300 text-blue-600 shrink-0"
-              />
+              <div className="mt-0.5">
+                <TodoStatusButton
+                  status={t.status}
+                  onChange={(next) => changeStatus(t.id, next)}
+                  size="sm"
+                />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-1">
                   {t.priority && (
@@ -127,9 +130,7 @@ export const DayTodoColumn = ({
                     type="text"
                     defaultValue={t.title}
                     onBlur={(e) => editTitle(t, e.target.value)}
-                    className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] py-0.5 ${
-                      t.done ? 'line-through text-zinc-400' : ''
-                    }`}
+                    className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] py-0.5 ${statusRowClass(t.status)}`}
                   />
                 </div>
               </div>

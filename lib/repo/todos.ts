@@ -1,5 +1,5 @@
 import { db, markDirty } from '../db';
-import { Todo, TodoScope } from '../types';
+import { Todo, TodoScope, TodoStatus } from '../types';
 import { newId } from '../utils/id';
 
 export const createTodo = async (
@@ -25,10 +25,14 @@ export const deleteTodo = async (id: string): Promise<void> => {
   await markDirty();
 };
 
+export const setStatus = async (id: string, status: TodoStatus): Promise<void> => {
+  await updateTodo(id, { status });
+};
+
 export const toggleDone = async (id: string): Promise<void> => {
   const t = await db.todos.get(id);
   if (!t) return;
-  await updateTodo(id, { done: !t.done });
+  await setStatus(id, t.status === 'done' ? 'pending' : 'done');
 };
 
 export const listByScope = async (scope: TodoScope, scopeKey: string): Promise<Todo[]> => {

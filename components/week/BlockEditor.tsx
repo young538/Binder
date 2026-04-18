@@ -200,7 +200,7 @@ export const BlockEditor = ({
               <option value="">(연결 없음)</option>
               {dayTodos.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.done ? '✓ ' : ''}
+                  {t.status === 'done' ? '✓ ' : ''}
                   {t.title || '(제목 없음)'}
                 </option>
               ))}
