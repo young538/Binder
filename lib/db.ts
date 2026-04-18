@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Goal, TimeBlock, Category, Retrospective, Settings, Todo } from './types';
+import { Goal, TimeBlock, Category, Retrospective, Settings, Todo, AnnualGoal } from './types';
 
 export interface SyncMeta {
   key: 'main';
@@ -40,6 +40,7 @@ class BinderDb extends Dexie {
   snapshots!: Table<Snapshot, string>;
   todos!: Table<Todo, string>;
   focusNotes!: Table<FocusNoteRow, string>;
+  annualGoals!: Table<AnnualGoal, string>;
 
   constructor() {
     super('BinderDb');
@@ -140,6 +141,19 @@ class BinderDb extends Dexie {
         t.scopeKey = t.date ?? '2026-01-01';
         delete t.date;
       });
+    });
+    this.version(5).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, scope, scopeKey, parentGoalId, categoryId, done, order, [scope+scopeKey]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+      annualGoals: 'id, year, order',
     });
   }
 }

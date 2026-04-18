@@ -85,6 +85,21 @@ export interface Settings {
   theme: 'light' | 'dark' | 'auto';
 }
 
+export interface AnnualGoal {
+  id: string;
+  year: string;
+  order: number;
+  title: string;
+  deadline?: string;
+  action?: string;
+  metric?: string;
+  target?: number;
+  monthlyTargets: (number | null)[];
+  monthlyActuals: (number | null)[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BinderData {
   version: number;
   updatedAt: string;

@@ -1,5 +1,5 @@
 import { db, markDirty } from './db';
-import { Goal, Todo, FocusNote } from './types';
+import { Goal, Todo, FocusNote, AnnualGoal } from './types';
 
 type LegacyTodo = Todo & { date?: string };
 
@@ -9,12 +9,14 @@ export interface ImportData {
   goals: Goal[];
   focusNotes: FocusNote[];
   todos: LegacyTodo[];
+  annualGoals?: AnnualGoal[];
 }
 
 export interface ImportResult {
   goals: number;
   focusNotes: number;
   todos: number;
+  annualGoals: number;
 }
 
 const normalizeTodo = (raw: LegacyTodo): Todo => {
@@ -40,6 +42,7 @@ export const importData = async (
     await db.goals.clear();
     await db.focusNotes.clear();
     await db.todos.clear();
+    await db.annualGoals.clear();
   }
 
   const todos = (data.todos ?? []).map(normalizeTodo);
@@ -47,6 +50,7 @@ export const importData = async (
   if (data.goals?.length) await db.goals.bulkPut(data.goals);
   if (data.focusNotes?.length) await db.focusNotes.bulkPut(data.focusNotes);
   if (todos.length) await db.todos.bulkPut(todos);
+  if (data.annualGoals?.length) await db.annualGoals.bulkPut(data.annualGoals);
 
   await markDirty();
 
@@ -54,6 +58,7 @@ export const importData = async (
     goals: data.goals?.length ?? 0,
     focusNotes: data.focusNotes?.length ?? 0,
     todos: todos.length,
+    annualGoals: data.annualGoals?.length ?? 0,
   };
 };
 

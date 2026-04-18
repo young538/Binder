@@ -249,57 +249,91 @@ function parseOneThing() {
   return notes;
 }
 
-// ───── 연간 (annual goals → todos) ─────
+// ───── 연간 (annual goals + todos) ─────
+// Returns { todos, annualGoals } — todos for back-compat, annualGoals for v1.4 table.
 function parseAnnualGoals() {
   const $ = loadHtml('연간.html');
-  if (!$) return [];
+  if (!$) return { todos: [], annualGoals: [] };
   const todos = [];
+  const annualGoals = [];
 
   // 첫 번째 "2026년 목표" 섹션의 row 6-12 (우선순위 1-7)
-  // 각 row는 col 2 (s15)='우선순위 숫자', col 3 (colspan=6, s16)='이루고 싶은 일', col 9 (s16)='달성기한', ...
+  // 각 row: col 2 = 우선순위, col 3 (cs=6) = 이루고 싶은 일, col 9 = 달성 기한,
+  // col 10 (cs=6) = 실천 내용, col 16 = 수치화(연간목표 라벨), col 17 = 연간목표 숫자,
+  // col 18 = 단위, col 19 = 상반기목표, col 20..25 = 1~6월, col 26..31 = 7~12월 (약식)
   let inFirstSection = false;
   let foundHeader = false;
   $('tr').each((_, tr) => {
     const cells = extractRowCells($, $(tr));
-    // "2026년 목표" 헤더 감지
     if (cells.some((c) => c.text === '2026년 목표')) {
       inFirstSection = true;
       foundHeader = false;
       return;
     }
-    // "2026년 상반기 실적" 등장 시 첫 섹션 끝
     if (cells.some((c) => /상반기 실적|최종 실적/.test(c.text))) {
       inFirstSection = false;
       return;
     }
     if (!inFirstSection) return;
-    // 우선순위 라벨이 있는 헤더 행 (우선순위/이루고 싶은 일 등) 스킵
     if (cells.some((c) => c.text.startsWith('우선'))) {
       foundHeader = true;
       return;
     }
     if (!foundHeader) return;
 
-    // 데이터 행: col 2가 숫자 (우선순위), col 3에 colspan=6 = '이루고 싶은 일'
     const priorityCell = cells.find((c) => c.col === 2);
     const goalCell = cells.find((c) => c.col === 3 && c.cs === 6);
     if (!priorityCell || !goalCell) return;
     if (!isNumberOnly(priorityCell.text)) return;
+    const order = parseInt(priorityCell.text, 10);
     const title = goalCell.text;
     if (!title) return;
+
+    // 추가 필드 추출
+    const deadlineCell = cells.find((c) => c.col === 9);
+    const actionCell = cells.find((c) => c.col === 10 && c.cs === 6);
+    const metricCell = cells.find((c) => c.col === 16);
+    const targetCell = cells.find((c) => c.col === 17);
+    const toNumOrNull = (s) => {
+      if (!s || s === '-') return null;
+      const n = Number(s.replace(/,/g, ''));
+      return Number.isFinite(n) ? n : null;
+    };
+    const monthlyTargets = [];
+    // 월별 타겟: col 20..25 (상반기 1~6월) + col 27..32 (하반기 7~12월, 하반기목표 셀은 col 26)
+    const monthCols = [20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 32];
+    for (const mc of monthCols) {
+      const mCell = cells.find((c) => c.col === mc);
+      monthlyTargets.push(toNumOrNull(mCell?.text));
+    }
+
+    annualGoals.push({
+      id: ulid(),
+      year: String(YEAR),
+      order,
+      title,
+      deadline: deadlineCell?.text && deadlineCell.text !== '-' ? deadlineCell.text : undefined,
+      action: actionCell?.text && actionCell.text !== '-' ? actionCell.text : undefined,
+      metric: metricCell?.text && metricCell.text !== '-' ? metricCell.text : undefined,
+      target: toNumOrNull(targetCell?.text) ?? undefined,
+      monthlyTargets,
+      monthlyActuals: Array(12).fill(null),
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
 
     todos.push({
       id: ulid(),
       title: `[연간] ${title}`,
       date: `${YEAR}-12-31`,
       done: false,
-      order: parseInt(priorityCell.text, 10) - 1,
+      order: order - 1,
       createdAt: NOW,
       updatedAt: NOW,
     });
   });
 
-  return todos;
+  return { todos, annualGoals };
 }
 
 // ───── 주간 TODO 파일 (W2.html ~ W16.html) ─────
@@ -464,8 +498,8 @@ function main() {
   console.log(`  notes(year+month): ${onethingNotes.length}`);
 
   console.log('▶ 연간 목표 파싱...');
-  const annualTodos = parseAnnualGoals();
-  console.log(`  annual todos: ${annualTodos.length}`);
+  const { todos: annualTodos, annualGoals } = parseAnnualGoals();
+  console.log(`  annual todos: ${annualTodos.length}, annualGoals: ${annualGoals.length}`);
 
   const allTodos = [...annualTodos];
   const weekNotes = [];
@@ -508,11 +542,12 @@ function main() {
     goals,
     focusNotes,
     todos: dedupTodos,
+    annualGoals,
   };
 
   writeFileSync(OUTPUT, JSON.stringify(output, null, 2), 'utf-8');
   console.log(`\n✅ 작성 완료: ${OUTPUT}`);
-  console.log(`   goals=${goals.length}, focusNotes=${focusNotes.length}, todos=${dedupTodos.length}`);
+  console.log(`   goals=${goals.length}, focusNotes=${focusNotes.length}, todos=${dedupTodos.length}, annualGoals=${annualGoals.length}`);
 
   // 샘플
   console.log('\n=== 샘플 goals (mandalartSub 5개) ===');

@@ -5,6 +5,7 @@ import { useBinder } from '@/store';
 import { Goal } from '@/lib/types';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
+import { AnnualGoalTable } from './AnnualGoalTable';
 import { CoreSection } from './CoreSection';
 import { yearKeyFromString } from '@/lib/utils/period';
 
@@ -24,7 +25,7 @@ export const AnnualPage = ({ year }: Props) => {
   const nextYear = String(Number(year) + 1);
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
       <header className="flex items-center gap-3">
         <Link href={`/annual/${prevYear}`}
           className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600">
@@ -45,24 +46,22 @@ export const AnnualPage = ({ year }: Props) => {
 
       <TodoListSection scope="year" scopeKey={year} title="올해 TODO" />
 
-      {!hasMandalart ? (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center">
-          <div className="text-zinc-500 mb-3">먼저 만다라트에서 원씽과 코어 목표를 입력해주세요.</div>
-          <Link href="/mandalart" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium">
-            만다라트로 가기
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {cores.map(core => {
-            const subs: Goal[] = goals.filter(g => g.level === 'mandalartSub' && g.parentId === core.id);
-            return <CoreSection key={core.id} core={core} subs={subs} currentMonth={currentMonth} />;
-          })}
-          {cores.length < 8 && (
-            <div className="text-xs text-zinc-500 text-center py-2">
-              만다라트 코어 {8 - cores.length}개가 아직 비어있어요. <Link href="/mandalart" className="text-blue-600">만다라트에서 채우기 →</Link>
-            </div>
-          )}
+      <AnnualGoalTable year={year} />
+
+      {hasMandalart && (
+        <div className="pt-2">
+          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 mb-2">만다라트 참조</h2>
+          <div className="space-y-3">
+            {cores.map(core => {
+              const subs: Goal[] = goals.filter(g => g.level === 'mandalartSub' && g.parentId === core.id);
+              return <CoreSection key={core.id} core={core} subs={subs} currentMonth={currentMonth} />;
+            })}
+            {cores.length < 8 && (
+              <div className="text-xs text-zinc-500 text-center py-2">
+                만다라트 코어 {8 - cores.length}개가 아직 비어있어요. <Link href="/mandalart" className="text-blue-600">만다라트에서 채우기 →</Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

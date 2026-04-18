@@ -1,1417 +1,1491 @@
 {
   "version": 1,
-  "generatedAt": "2026-04-18T18:01:34.694Z",
+  "generatedAt": "2026-04-18T18:33:42.196Z",
   "goals": [
     {
-      "id": "01KPGW2MR00MSPZR67EG82D6A5",
+      "id": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "title": "순수 연봉 2억만들기",
       "level": "oneThing",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR1JPK72S3DMX17FFCG",
+      "id": "01KPGXXF2FM8RBZ4P1G9WJWYXJ",
       "title": "체중 85Kg\n(For 체력)",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR1CJ14DH6QAAQDH1BR",
+      "id": "01KPGXXF2FSV1SYC7MR1BANQW7",
       "title": "전공 필독서 30권 읽기",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR1032S9VARC7PNSWMQ",
+      "id": "01KPGXXF2FAQH2WJXM3TKR7N8Z",
       "title": "회사 영향력 높이기",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR11DW7G3N12CQSGWC5",
+      "id": "01KPGXXF2FA84EBSXR7XM0TNHM",
       "title": "팀원관리",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 3,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR1FNJ8CK9YWS1VNS6W",
+      "id": "01KPGXXF2FS4T4A4G12FMCS59C",
       "title": "제2수입 만들기",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 4,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2CX914T32BM3PHJRM",
+      "id": "01KPGXXF2FQXWMGSA9EBPSP5HP",
       "title": "인지도 높이기\n(스카웃제의!)",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 5,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2ZZ23WMEBKTT1G5TH",
+      "id": "01KPGXXF2FFXNSNXWN0CVT4R1Z",
       "title": "수학 수준 높이기",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 6,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2BQJK6FY7NN2JZSTH",
+      "id": "01KPGXXF2FG8V3TW4CS2RGK9GQ",
       "title": "데이터 비주얼 관련 프로되기",
-      "parentId": "01KPGW2MR00MSPZR67EG82D6A5",
+      "parentId": "01KPGXXF2EVBRGT8EJZYVKH7PJ",
       "level": "mandalartCore",
       "order": 7,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2X5P87E5NHPWXDJVG",
+      "id": "01KPGXXF2G220B2J5J32SF0BW5",
       "title": "출퇴근 자전거 이용하기",
-      "parentId": "01KPGW2MR1JPK72S3DMX17FFCG",
+      "parentId": "01KPGXXF2FM8RBZ4P1G9WJWYXJ",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2K3ADDSMXED7C52D2",
+      "id": "01KPGXXF2GKSPFW26T5MACJE7Q",
       "title": "헬스장 등록하기\n주1회 하드 트레이닝",
-      "parentId": "01KPGW2MR1JPK72S3DMX17FFCG",
+      "parentId": "01KPGXXF2FM8RBZ4P1G9WJWYXJ",
       "level": "mandalartSub",
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2EZJYWRZ8M8FER0MV",
+      "id": "01KPGXXF2GYY8PJBKCZJ0YJJK3",
       "title": "아침 운동 간단하게",
-      "parentId": "01KPGW2MR1JPK72S3DMX17FFCG",
+      "parentId": "01KPGXXF2FM8RBZ4P1G9WJWYXJ",
       "level": "mandalartSub",
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2M2X32XBBK3HM4EN5",
+      "id": "01KPGXXF2GYW2NNA8S3HQGASR0",
       "title": "주당 1권의 책 읽기",
-      "parentId": "01KPGW2MR1CJ14DH6QAAQDH1BR",
+      "parentId": "01KPGXXF2FSV1SYC7MR1BANQW7",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2RH3Y39GPVHC9FKRR",
+      "id": "01KPGXXF2GHT035E6XRR9QYNMH",
       "title": "회사내 일을 프로세스화하기",
-      "parentId": "01KPGW2MR1032S9VARC7PNSWMQ",
+      "parentId": "01KPGXXF2FAQH2WJXM3TKR7N8Z",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2M83CJART0B7V61JB",
+      "id": "01KPGXXF2GFB2PWE15F9PJ2S4W",
       "title": "팀장에 대한 도서 읽기",
-      "parentId": "01KPGW2MR11DW7G3N12CQSGWC5",
+      "parentId": "01KPGXXF2FA84EBSXR7XM0TNHM",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2D44BZCPYXCEB4J5T",
+      "id": "01KPGXXF2GHWVDJCB808ZZYCPX",
       "title": "블로그 발행하기\n에드센스수익",
-      "parentId": "01KPGW2MR1FNJ8CK9YWS1VNS6W",
+      "parentId": "01KPGXXF2FS4T4A4G12FMCS59C",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2WYQR1140Z78YS94D",
+      "id": "01KPGXXF2GG32481SD56W60RHA",
       "title": "유튜브 제작 기술 익히기",
-      "parentId": "01KPGW2MR1FNJ8CK9YWS1VNS6W",
+      "parentId": "01KPGXXF2FS4T4A4G12FMCS59C",
       "level": "mandalartSub",
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2BQ0TSBFZRWB4K8XN",
+      "id": "01KPGXXF2GV0PY5ZSDKGQDFTSS",
       "title": "장비관련 블로그작성",
-      "parentId": "01KPGW2MR2CX914T32BM3PHJRM",
+      "parentId": "01KPGXXF2FQXWMGSA9EBPSP5HP",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2E88RVV399W9RF33W",
+      "id": "01KPGXXF2HX9YHAMBRTT4X4XJR",
       "title": "데이터 비주얼 관련 블로그 발행",
-      "parentId": "01KPGW2MR2CX914T32BM3PHJRM",
+      "parentId": "01KPGXXF2FQXWMGSA9EBPSP5HP",
       "level": "mandalartSub",
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2T5GTNYEKKCXC0ZP2",
+      "id": "01KPGXXF2H9V3GFX24P69GS8VN",
       "title": "다크프로그래머 블로그 내용이해 및 똑같이 발행하기",
-      "parentId": "01KPGW2MR2CX914T32BM3PHJRM",
+      "parentId": "01KPGXXF2FQXWMGSA9EBPSP5HP",
       "level": "mandalartSub",
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR2YNJ3YY5VEH3FJA6Z",
+      "id": "01KPGXXF2H9V24SM4B5AF3K0AH",
       "title": "50일의 수학공부하기",
-      "parentId": "01KPGW2MR2ZZ23WMEBKTT1G5TH",
+      "parentId": "01KPGXXF2FFXNSNXWN0CVT4R1Z",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR36MY75KRNT9P9TVX3",
+      "id": "01KPGXXF2H7M86KBB4AAXQ0T40",
       "title": "파이썬공부하기",
-      "parentId": "01KPGW2MR2BQJK6FY7NN2JZSTH",
+      "parentId": "01KPGXXF2FG8V3TW4CS2RGK9GQ",
       "level": "mandalartSub",
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MR3ZQV808BTYGPDQYSF",
+      "id": "01KPGXXF2HAM73S59N2MCQS7TE",
       "title": "파이썬으로 데이터 비주얼화하기",
-      "parentId": "01KPGW2MR2BQJK6FY7NN2JZSTH",
+      "parentId": "01KPGXXF2FG8V3TW4CS2RGK9GQ",
       "level": "mandalartSub",
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     }
   ],
   "focusNotes": [
     {
-      "id": "01KPGW2MRACSY6TS34VJE65808",
+      "id": "01KPGXXF2SH97DM21BNDX5T6HX",
       "scope": "year",
       "scopeKey": "year:2026",
       "text": "먼저 제안받는 '인바운드(Inbound) 엔지니어' 되기",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRBK5T1K86EDP8XMCHF",
+      "id": "01KPGXXF2TKP66ABMPEMT0HVAS",
       "scope": "month",
       "scopeKey": "month:2026-01",
       "text": "회사유틸리티개발\n- 조명제어",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRB7CN1YXFJVSJY01AK",
+      "id": "01KPGXXF2TEDSRCRQEKEQFG9WA",
       "scope": "month",
       "scopeKey": "month:2026-02",
       "text": "모션,IO 유틸개발",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRB4Y792R4K112RKRTG",
+      "id": "01KPGXXF2V5NZQ3EM5BB8KGS81",
       "scope": "month",
       "scopeKey": "month:2026-03",
       "text": "영상확인",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRB91JJYBM89YWJKZHP",
+      "id": "01KPGXXF2V1JS6NGQZHW7BWT7Y",
       "scope": "month",
       "scopeKey": "month:2026-04",
       "text": "파이썬 학습방식",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRB2XQENB7S10BQY46Y",
+      "id": "01KPGXXF2VDY764EF3M269D93W",
       "scope": "month",
       "scopeKey": "month:2026-05",
       "text": "C# GUI 개발",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRC63NTX4C567QRP2RD",
+      "id": "01KPGXXF2VB3JYBSD1BMB9K2R3",
       "scope": "month",
       "scopeKey": "month:2026-06",
       "text": "c++ 연동 개발",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     }
   ],
   "todos": [
     {
-      "id": "01KPGW2MRPQGJSCF1QGBGXEWGT",
+      "id": "01KPGXXF355NDY8MH0RVCBGKTC",
       "title": "[연간] c# 유틸리티 만들기",
       "date": "2026-12-31",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MRQM291KVVA7GW9MDX5",
+      "id": "01KPGXXF35B8BYHBYVCYR9B92S",
       "title": "[연간] YOLO 딥러닝 시스템 만들기",
       "date": "2026-12-31",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJ1ZC10TF5RBH6AABN",
+      "id": "01KPGXXF405R71WKK9GZ13KCFE",
       "title": "K패스 설정",
       "date": "2026-01-05",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJ8ZCRW8J18BH4FBK1",
+      "id": "01KPGXXF40S36P8S4SP46GFAFD",
       "title": "모터 GUI 개발 - HW",
       "date": "2026-01-06",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJN3HDNPE147D0NP39",
+      "id": "01KPGXXF4069SSKRGE9WWTVV38",
       "title": "메모자료정리",
       "date": "2026-01-07",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJVJHEA496QZDH5VBY",
+      "id": "01KPGXXF40YNAK5QNNVHYXE0YW",
       "title": "VOC 확인",
       "date": "2026-01-08",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJJXYDKAJ63QJTWYAT",
+      "id": "01KPGXXF40BD18K2XT02X0F9KM",
       "title": "소스확인",
       "date": "2026-01-09",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSJT86SKXKM4MYGT89Y",
+      "id": "01KPGXXF40PBKEWHRFC03WZ3MC",
       "title": "주간피드백",
       "date": "2026-01-11",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSK0TCW9RDB83FVX7XS",
+      "id": "01KPGXXF402CAWV3EGME39SZ6Z",
       "title": "수학공부루틴 만들기",
       "date": "2026-01-05",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKCNERSPJD8TED4QGD",
+      "id": "01KPGXXF40XJE79NA0F1AV5VCB",
       "title": "모터 GUI 개발 - SPD",
       "date": "2026-01-06",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSK0K50RRJM6QK7Y8JQ",
+      "id": "01KPGXXF40JRW9K425M167MWXT",
       "title": "모터 GUI 개발 - SPD",
       "date": "2026-01-07",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKC9S712D57AX2CVMZ",
+      "id": "01KPGXXF40TPPGXMGVEV5RGAC9",
       "title": "C# 기본교육 - 1",
       "date": "2026-01-08",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKYGQT9GW7XQ462TVR",
+      "id": "01KPGXXF41MMR057KE27PWG67E",
       "title": "C# 기본교육 - 2",
       "date": "2026-01-09",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKQ560PF66M3T5K0PY",
+      "id": "01KPGXXF418TAV8ZCJF0GTCFYV",
       "title": "C# 기본교육 - 2",
       "date": "2026-01-10",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSK6146TBFG65WSTP74",
+      "id": "01KPGXXF41FPJ35N0RAW0WXR9D",
       "title": "C# 기본교육 - 2",
       "date": "2026-01-11",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKJ4824XQBM6B853TR",
+      "id": "01KPGXXF41V05BFSSN7M9PSFFV",
       "title": "모터 GUI 개발 - 바탕만들기",
       "date": "2026-01-05",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKC6R4AE3X1T8424VZ",
+      "id": "01KPGXXF41H15MKXMK86GER90E",
       "title": "ㄴ 연동 확인",
       "date": "2026-01-07",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKB8MRRYBJJT239JJX",
+      "id": "01KPGXXF418W9SDGDSVNNKF1MQ",
       "title": "ㄴ 기본문법",
       "date": "2026-01-08",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSK3AXARJ04KZXZ1T2V",
+      "id": "01KPGXXF41FYSEYQWGX6A001WY",
       "title": "ㄴ 기본 Winform",
       "date": "2026-01-09",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSKJ8GCJ2H1Q26SJ1Q6",
+      "id": "01KPGXXF41XF5A0SRC09GXQR18",
       "title": "ㄴ MetroGUI",
       "date": "2026-01-10",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSK3PDB81HNCCRECK9X",
+      "id": "01KPGXXF41KQ65R3FPW4HWZ0AV",
       "title": "ㄴ Git",
       "date": "2026-01-11",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MSMMW09VV9E0RS6V992",
+      "id": "01KPGXXF41C6BRGN8D5ZPRF1GD",
       "title": "보험정보 전달",
       "date": "2026-01-05",
       "done": false,
       "order": 3,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTADQD6GZ6Z40KV92YX",
+      "id": "01KPGXXF4Q5SGMJ3VTWZJ7AKJ6",
       "title": "수요일 검수대비 PPT 정리",
       "date": "2026-01-12",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBRA34CCJ7F309D3Z2",
+      "id": "01KPGXXF4Q81RMSKNXVYC8GMV4",
       "title": "메모자료정리",
       "date": "2026-01-14",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBF6102FSBP2MEJ9KC",
+      "id": "01KPGXXF4Q4J3G8Z6QFSYJRTEF",
       "title": "VOC 확인",
       "date": "2026-01-15",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBQF17NWE2XZ6ECN91",
+      "id": "01KPGXXF4QRPXVVX3RY3PTR4EN",
       "title": "소스확인",
       "date": "2026-01-16",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBZ0HQ9E7216Y53ABA",
+      "id": "01KPGXXF4QGPY69GMMVGHD4WV9",
       "title": "운동하는날PT&gt;&gt;",
       "date": "2026-01-17",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBJG7DAFJMF3YDKTRB",
+      "id": "01KPGXXF4QC9B2JV5WHW2N1261",
       "title": "주간피드백",
       "date": "2026-01-18",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTBA6NASVM16NF4ZQT6",
+      "id": "01KPGXXF4RG7ATJEC7P3ACEKKY",
       "title": "운동하는날PT&gt;&gt;",
       "date": "2026-01-14",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTB4NB2GZM3BR3HSGZQ",
+      "id": "01KPGXXF4RFHEM8HJF9SM73A81",
       "title": "문지훈 확인",
       "date": "2026-01-15",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTB0JWP47JMJ0RR5A77",
+      "id": "01KPGXXF4RQB8Q5MVE5CTFPSEV",
       "title": "김민준 평가서 작성",
       "date": "2026-01-16",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MTCD9K71317XCX8MWJN",
+      "id": "01KPGXXF4R4RVTXF5FV7K3ZR74",
       "title": "루멘스 포커스축",
       "date": "2026-01-16",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV2CFNM14C3XPJD73F2",
+      "id": "01KPGXXF5FMRJYV3JYB5ATGWAW",
       "title": "VD 일정 수립",
       "date": "2026-01-19",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV2ZDB07X6WMTDMR2G6",
+      "id": "01KPGXXF5FE4F3VHCFWRW5FH1Y",
       "title": "메모자료정리",
       "date": "2026-01-21",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV28H5NBPVEAA9XPSCP",
+      "id": "01KPGXXF5F4CN0M96VF94WQ2YX",
       "title": "VOC 확인",
       "date": "2026-01-22",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV2V2NFVT9JFZ5AJ2ZB",
+      "id": "01KPGXXF5FNEM5VNPRF9JX1GZG",
       "title": "소스확인",
       "date": "2026-01-23",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV287NDJQSY6KDEPMHK",
+      "id": "01KPGXXF5FN45BF8KARGER060Y",
       "title": "주간피드백",
       "date": "2026-01-25",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV28SZ5WNAPGYJY00MH",
+      "id": "01KPGXXF5GZ5X4HRSXS3ACDAPQ",
       "title": "운동하는날PT",
       "date": "2026-01-21",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV3MPZWNFB17R7YEVB8",
+      "id": "01KPGXXF5G3H1R1VPPPMKCFEDF",
       "title": "딥러닝 기본 Tool 테스트",
       "date": "2026-01-22",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV3T9HJSKA5FG21616E",
+      "id": "01KPGXXF5G4G21SX497F0NNQEZ",
       "title": "박상완 일정 수립 - VD",
       "date": "2026-01-21",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV3TRN5E171Y7SW0F2T",
+      "id": "01KPGXXF5G0H456GS9HW3324H1",
       "title": "LabelImg 사용하여, 학습Tool",
       "date": "2026-01-22",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MV31NGE7BCD1V867X86",
+      "id": "01KPGXXF5GJ139RYREYACZBVTF",
       "title": "조명테스트",
       "date": "2026-01-21",
       "done": false,
       "order": 3,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVPGNSADJA8ZK9D692E",
+      "id": "01KPGXXF63RBJZ8YQJJGQ3H72Q",
       "title": "와이솔 SF 02",
       "date": "2026-01-27",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVPZVGVK9SGDWPE8BRY",
+      "id": "01KPGXXF6368H3DBTTTQDE15QH",
       "title": "메모자료정리",
       "date": "2026-01-28",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVP4PVHHAAAGMESX4B1",
+      "id": "01KPGXXF63JPVW9E26N4WBKNQB",
       "title": "VOC 확인",
       "date": "2026-01-29",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVP72WPHXPA1T63TSP8",
+      "id": "01KPGXXF630ND0HHKP2QNPTMSR",
       "title": "소스확인",
       "date": "2026-01-30",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVPK2FFQYKF5FXSWZ38",
+      "id": "01KPGXXF63NVSFMB9EQY1FJVE0",
       "title": "주간피드백",
       "date": "2026-02-01",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVQFVWZBVMGCBFAPE7A",
+      "id": "01KPGXXF635T9SJA9D77CKQ4HD",
       "title": "운동하는날PT",
       "date": "2026-01-28",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVQAHPT39B7YWNT3X86",
+      "id": "01KPGXXF63RQ9PXV3EY34NERGT",
       "title": "sum 파일 분석 관련 소스파악",
       "date": "2026-01-29",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MVQVN920N6SBB9EH4A3",
+      "id": "01KPGXXF64YRZN5HB5WG0NV6ZZ",
       "title": "옵토마인드 소스확인",
       "date": "2026-01-28",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWC6BE3BZZ7Y8TRVA9R",
+      "id": "01KPGXXF6RVRJ1PQ7NFKTH06D2",
       "title": "현재소스정리",
       "date": "2026-02-03",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCMDVRM3XJA6ETPA18",
+      "id": "01KPGXXF6R4ZDNRF2A7A3AZZKZ",
       "title": "메모자료정리",
       "date": "2026-02-04",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWC6A50F01D7T129R9E",
+      "id": "01KPGXXF6R05YMFYQ9YH2EEBCV",
       "title": "VOC 확인",
       "date": "2026-02-05",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWC12Y6DC55EN54X496",
+      "id": "01KPGXXF6RS0KTNRMA25S6DEJQ",
       "title": "소스확인",
       "date": "2026-02-06",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCB7KB34SEQBCCC4AC",
+      "id": "01KPGXXF6RH6AG9CVHG81W2P14",
       "title": "주간피드백",
       "date": "2026-02-08",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCR2ATE0QQ8DMADJGP",
+      "id": "01KPGXXF6R63PSPVVNM972MP2H",
       "title": "소스확인",
       "date": "2026-02-04",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCG4E7DVQRPNQ47PM3",
+      "id": "01KPGXXF6RH8TSWG0JAE7NTN76",
       "title": "운동하는날PT",
       "date": "2026-02-05",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWC01174PFY5GH02N0H",
+      "id": "01KPGXXF6SPHZ3S7DVNBSABZQP",
       "title": "50일의수학",
       "date": "2026-02-06",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCXN5744SE97CSG148",
+      "id": "01KPGXXF6SGCVQ9XKD4RZ1WF95",
       "title": "딥러닝소스확인-Label.py",
       "date": "2026-02-05",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MWCHN8FKG27946NT112",
+      "id": "01KPGXXF6S8PTAR26G4YHD38G5",
       "title": "딥러닝소스확인-preprocessing.py",
       "date": "2026-02-05",
       "done": false,
       "order": 3,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1TENV7QXDWW9YV19C",
+      "id": "01KPGXXF7E6140DZJNHAHJ8W3Z",
       "title": "메모자료정리",
       "date": "2026-02-11",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1XNVNFRWK245VBJ4A",
+      "id": "01KPGXXF7EVH3ZQ9TPZ8WSJA0Z",
       "title": "VOC 확인",
       "date": "2026-02-12",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1HCDG0N53A0GGYEQG",
+      "id": "01KPGXXF7EBQSPZWW97EJMQWV8",
       "title": "소스확인",
       "date": "2026-02-13",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1SZ36QMMDC9QJAJFV",
+      "id": "01KPGXXF7EEHWXEQ1XK4BXTN07",
       "title": "주간피드백",
       "date": "2026-02-15",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1V22HPJADD7Q5G1PS",
+      "id": "01KPGXXF7EJZQ6S4G91GVSE6HV",
       "title": "운동하는날PT",
       "date": "2026-02-11",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MX1K1DP8563K995QGPZ",
+      "id": "01KPGXXF7E405XVCYPZP1399NQ",
       "title": "온라인 미팅 일정 추가",
       "date": "2026-02-13",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXG3RC5Q1KY593KF75V",
+      "id": "01KPGXXF7W3YYVMX27RY25VD9Q",
       "title": "메모자료정리",
       "date": "2026-02-18",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXGNE2WQQTTSKP11P45",
+      "id": "01KPGXXF7W7R8ARJV07VS7E2SA",
       "title": "VOC 확인",
       "date": "2026-02-19",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXGM3X0Q3VNQF7E9THH",
+      "id": "01KPGXXF7WYV2NG262QF51M7K8",
       "title": "소스확인",
       "date": "2026-02-20",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXGQKM7365XW9M78NB1",
+      "id": "01KPGXXF7W5G0XTHFC3W6JRS2H",
       "title": "주간피드백",
       "date": "2026-02-22",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXGK66W019SBA890WGT",
+      "id": "01KPGXXF7XA2MZYS15J7QRDDBY",
       "title": "운동하는날PT",
       "date": "2026-02-18",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MXGA7XS98GHMCPNB9HE",
+      "id": "01KPGXXF7XYC2T7V9MDMPGAFJG",
       "title": "온라인 일정협의",
       "date": "2026-02-19",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MY05Q9D6NZQK8AVG7HF",
+      "id": "01KPGXXF8CRWWRTR6R1B7TNF36",
       "title": "LG 잔여일정 수립",
       "date": "2026-03-03",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MY0DWQYDFT7BGK7S2DW",
+      "id": "01KPGXXF8CS3VWYT19J15CQG5A",
       "title": "카메라 버그 수정",
       "date": "2026-03-04",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MY01TEWN9KPAKC5RCVM",
+      "id": "01KPGXXF8C24JWV2Q92035K942",
       "title": "리무버 스캔기능 구현",
       "date": "2026-03-05",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MY0Y923HTZ8AF0S46VE",
+      "id": "01KPGXXF8DKMYAQ4SJV2FS69BV",
       "title": "리무버 시퀀스변경",
       "date": "2026-03-06",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MY066ZCW3N6XB0VNWRK",
+      "id": "01KPGXXF8D0HMTM1YN2GEJXQ6K",
       "title": "내방신청",
       "date": "2026-03-03",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYK4V9T15DR5MMJDXSQ",
+      "id": "01KPGXXF94XDFJFG089HK4GMHX",
       "title": "딥러닝Tool 구현 일정 수립",
       "date": "2026-03-10",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYKD3BXWT0NEJTM1BCB",
+      "id": "01KPGXXF94CY8E80AMSKG0QVP3",
       "title": "메모자료정리",
       "date": "2026-03-11",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYKVB3T4TA8098V6B8V",
+      "id": "01KPGXXF94MWVNGSTZ5FR1SBWD",
       "title": "VOC 확인",
       "date": "2026-03-12",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYKAT961ENCJEGWCN12",
+      "id": "01KPGXXF9457KJX4NVNBPW6HX1",
       "title": "소스확인",
       "date": "2026-03-13",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYK1N917Z8XZDZ2YC36",
+      "id": "01KPGXXF94NNWYAXQT9MK07F0T",
       "title": "주간피드백",
       "date": "2026-03-15",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYMD7ZJE2XB5H5M4W3N",
+      "id": "01KPGXXF9492AZTAZP4MTXER29",
       "title": "딥러닝항목 추가",
       "date": "2026-03-10",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYM8PG628VD2XVY4JNB",
+      "id": "01KPGXXF94F15BNGSB2M0B79TH",
       "title": "고해상도 맵빠짐검사(일정)",
       "date": "2026-03-11",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MYM1HMVV926AJ04QXVW",
+      "id": "01KPGXXF94NYB2SMYAJB36KEDZ",
       "title": "SVC 딥러닝회의",
       "date": "2026-03-12",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZ2YYJFSMFNKFNFRZKE",
+      "id": "01KPGXXF9J7NJFA4S2B9Z5PF70",
       "title": "메모자료정리",
       "date": "2026-03-18",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZ2PA73M94DCRCZWM4B",
+      "id": "01KPGXXF9JMN0KKXFPSSH9PMV0",
       "title": "VOC 확인",
       "date": "2026-03-19",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZ2ZT628HDHFBTAYBS6",
+      "id": "01KPGXXF9J501H5MY6BKFY2FB3",
       "title": "소스확인",
       "date": "2026-03-20",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZ2VPHC84YQJTZMJHE6",
+      "id": "01KPGXXF9JCJNXJWJ85XR6YVJP",
       "title": "주간피드백",
       "date": "2026-03-22",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZ2S6ZA3B2AKNDY4BPS",
+      "id": "01KPGXXF9JZYA8FNG76ZR8MCNE",
       "title": "운동하는날PT",
       "date": "2026-03-18",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJ7RC8H4XJNBP045JK",
+      "id": "01KPGXXFA1K490S19QGDF19JHA",
       "title": "메모자료정리",
       "date": "2026-03-25",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJRCPB0JQN6QZ75GTP",
+      "id": "01KPGXXFA13FKDZPDX4AY5XFN0",
       "title": "VOC 확인",
       "date": "2026-03-26",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJK3TX7CX40S0XXZ3X",
+      "id": "01KPGXXFA18VMV3D1NFAAH344J",
       "title": "소스확인",
       "date": "2026-03-27",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJ6AAZFXAM540TE01E",
+      "id": "01KPGXXFA1PC9C2E234DBESQNS",
       "title": "Skill 개념",
       "date": "2026-03-28",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJAHXKAVJK18PEEV7G",
+      "id": "01KPGXXFA170QW79SN8ZA09VGZ",
       "title": "주간피드백",
       "date": "2026-03-29",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJ31JHD9ZAS8DV1F7W",
+      "id": "01KPGXXFA159EQS7BQP1BXPX27",
       "title": "에이전트개념",
       "date": "2026-03-28",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2MZJ42DNSP9JC8GJFVZ3",
+      "id": "01KPGXXFA1RWHBK4FH2K1JPNG9",
       "title": "노트북LM 사용법",
       "date": "2026-03-28",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06NRSQZABFPR5B05N5",
+      "id": "01KPGXXFAMAWS1HD9EQ6EJYQ1G",
       "title": "4월일정수립",
       "date": "2026-03-31",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06VT1J1FN6BXHN1QGW",
+      "id": "01KPGXXFAM02YHVWFEAMVSA18Q",
       "title": "메모자료정리",
       "date": "2026-04-01",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06GTXTX028P89DXVZH",
+      "id": "01KPGXXFAM5WP00RHDBKFJV6NS",
       "title": "VOC 확인",
       "date": "2026-04-02",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N068M1VCSJGX6Z0PQ0E",
+      "id": "01KPGXXFAMG499WCR98K48YV9T",
       "title": "소스확인",
       "date": "2026-04-03",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06T3BY61XGRGD4Q3TC",
+      "id": "01KPGXXFAMZHVZA85YNQ52VGW4",
       "title": "주간피드백",
       "date": "2026-04-05",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06X8CW1WZKZNANJ8QM",
+      "id": "01KPGXXFAMTXHKDNHGK4DFR6WJ",
       "title": "4월개인일정수립",
       "date": "2026-03-31",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06XRXG93JJ7T8H7MXC",
+      "id": "01KPGXXFAMHMG1FJ2P0C6NCAF6",
       "title": "팀원 월간계획 지시",
       "date": "2026-04-02",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N06BPMFDC3T5WMXMP8W",
+      "id": "01KPGXXFAMFVWPD0SB10MVZX0Q",
       "title": "팀원 월간계획 확인",
       "date": "2026-04-03",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N060443Y407J2GK7HT2",
+      "id": "01KPGXXFAMCT6RCB4300BSVP1S",
       "title": "3월 피드백",
       "date": "2026-03-31",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MES4BEKQM1SM0BY3H",
+      "id": "01KPGXXFB262ERSE98GXDK1765",
       "title": "스케줄러 마무리!!",
       "date": "2026-04-06",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MM53GPG8D25NEQSKW",
+      "id": "01KPGXXFB2DE4N2J3XFNRA4FAH",
       "title": "켈리퍼 테스트 프로젝트",
       "date": "2026-04-07",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MRB92DQEA4HR3R9NT",
+      "id": "01KPGXXFB226KBJ1FFV71037B3",
       "title": "사각형Finder VD 이식",
       "date": "2026-04-08",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MC1AVBCRY8GBFG0T6",
+      "id": "01KPGXXFB23CSGA3GMY2R10FCB",
       "title": "주간계획",
       "date": "2026-04-06",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MBHJ6Z1YCD0Y0JP6Y",
+      "id": "01KPGXXFB2CTRNA2RD0P5Y6AH3",
       "title": "라이브러리 설명 프로젝트",
       "date": "2026-04-07",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0MCARGCQNV2ANXFPNT",
+      "id": "01KPGXXFB28T4XV87WG7JTQJS3",
       "title": "ㄴ 검사Item 구조확인",
       "date": "2026-04-08",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0NDNVAJYB9CD16N2G9",
+      "id": "01KPGXXFB27KYEW4FPRGFPSQPC",
       "title": "LG 일정 재수립",
       "date": "2026-04-06",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0N6NAJSKA1PZ11QVQH",
+      "id": "01KPGXXFB2N8B1GKQQYWXC4PWG",
       "title": "사각형Finder 적용",
       "date": "2026-04-07",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N0N9NAB01TQ7ZMREF9T",
+      "id": "01KPGXXFB2J7GC5CBB4DB681MF",
       "title": "임혜란 작성",
       "date": "2026-04-08",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N129VC5V45REA3MM1JY",
+      "id": "01KPGXXFBFTKFHGTNQ78X46GCC",
       "title": "임혜란 업무평가작성",
       "date": "2026-04-14",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N12B93YX8D38M1CFS4A",
+      "id": "01KPGXXFBFYGT4EXK2FQTMJQMP",
       "title": "iU-pf Sawnics",
       "date": "2026-04-16",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N12ZCAJE4FCKQBZQ739",
+      "id": "01KPGXXFBFQJDSKG7FFDKN0T88",
       "title": "일정체크",
       "date": "2026-04-17",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N122YF9A9VVBYPGRV7S",
+      "id": "01KPGXXFBGT9XHTMSXYKW30VPV",
       "title": "소스관리 절차 진행 작성",
       "date": "2026-04-14",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N12170HJ8DZ7PK473M5",
+      "id": "01KPGXXFBG56MW30JN6TJRB1FY",
       "title": "iU-pf SVC",
       "date": "2026-04-16",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1228QCP5RY73VTP2WT",
+      "id": "01KPGXXFBGMR0B2H21AM6VAAJF",
       "title": "임혜란 업무평가작성",
       "date": "2026-04-17",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1NCZW1XYWXRSQXCBGW",
+      "id": "01KPGXXFC33HWWS4RN6TM7EXGW",
       "title": "장비관련블로그 작성",
       "date": "2026-01-10",
       "done": false,
       "order": 2,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1PDJ5BP1X5SGC0YWQA",
+      "id": "01KPGXXFC4CWXA46MHESVZQPZM",
       "title": "장비관련블로그 작성",
       "date": "2026-01-11",
       "done": false,
       "order": 3,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1QG3S2F6BR1TDY0QZC",
+      "id": "01KPGXXFC5AXC3YQE76117AZM8",
       "title": "장비관련 블로그 생각",
       "date": "2026-01-23",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1QJH6D4820HSGPXRCW",
+      "id": "01KPGXXFC5HNXW4GC8GJRXFS6Z",
       "title": "장비관련블로그 작성",
       "date": "2026-01-24",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N1QNAPPDGA69JDTNP4E",
+      "id": "01KPGXXFC51PN45C1TEQ526F0D",
       "title": "장비관련블로그 작성",
       "date": "2026-01-25",
       "done": false,
       "order": 1,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N2Y39RNZTPP7N08B6B3",
+      "id": "01KPGXXFDD4M92STEBB363Q8RZ",
       "title": "김민준교육",
       "date": "2026-04-22",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     },
     {
-      "id": "01KPGW2N2Z2DD8AG4477PR3GA3",
+      "id": "01KPGXXFDDNZDZCX6WG0Y575DW",
       "title": "블로그 자료 만들기",
       "date": "2026-04-26",
       "done": false,
       "order": 0,
-      "createdAt": "2026-04-18T18:01:34.694Z",
-      "updatedAt": "2026-04-18T18:01:34.694Z"
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
+    }
+  ],
+  "annualGoals": [
+    {
+      "id": "01KPGXXF35QE0SCXN87M43S64V",
+      "year": "2026",
+      "order": 1,
+      "title": "c# 유틸리티 만들기",
+      "monthlyTargets": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "monthlyActuals": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
+    },
+    {
+      "id": "01KPGXXF35789J4BSZ3R8NQ47H",
+      "year": "2026",
+      "order": 2,
+      "title": "YOLO 딥러닝 시스템 만들기",
+      "monthlyTargets": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "monthlyActuals": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "createdAt": "2026-04-18T18:33:42.196Z",
+      "updatedAt": "2026-04-18T18:33:42.196Z"
     }
   ]
 }
