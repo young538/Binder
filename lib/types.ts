@@ -114,6 +114,7 @@ export interface AnnualGoal {
   target?: number;
   monthlyTargets: (number | null)[];
   monthlyActuals: (number | null)[];
+  parentGoalId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +124,7 @@ export interface Habit {
   name: string;
   color: string;
   order: number;
+  parentGoalId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +143,7 @@ export interface Routine {
   categoryId?: string;
   note?: string;
   order: number;
+  parentGoalId?: string;
   createdAt: string;
   updatedAt: string;
 }

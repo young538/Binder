@@ -1,11 +1,19 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useBinder } from '@/store';
 import { buildMandalartMap, CORE_RING_POSITIONS, OUTER_CENTERS, SUB_OFFSETS } from '@/lib/mandalart';
 import { GoalCell } from './GoalCell';
 import { createGoal, updateGoal, deleteGoal } from '@/lib/repo/goals';
 import { Goal, GoalLevel } from '@/lib/types';
+import { listByParentGoal as listTodosByGoal, createTodo } from '@/lib/repo/todos';
+import { listHabits, createHabit } from '@/lib/repo/habits';
+import { listAllRoutines, createRoutine } from '@/lib/repo/routines';
+import {
+  listByYear as listAnnualGoalsByYear,
+  createAnnualGoal,
+  updateAnnualGoal,
+} from '@/lib/repo/annualGoals';
 
 interface PendingEdit {
   row: number;
@@ -16,13 +24,69 @@ interface PendingEdit {
   order: number;
 }
 
+interface ConnectedCounts {
+  todos: number;
+  habits: number;
+  routines: number;
+  annualGoals: number;
+}
+
 export const MandalartBoard = () => {
   const { goals, reload } = useBinder();
   const [edit, setEdit] = useState<PendingEdit | null>(null);
   const [title, setTitle] = useState('');
+  const [connectedCounts, setConnectedCounts] = useState<ConnectedCounts>({
+    todos: 0,
+    habits: 0,
+    routines: 0,
+    annualGoals: 0,
+  });
+  const [allCounts, setAllCounts] = useState<Map<string, number>>(new Map());
 
   const map = buildMandalartMap(goals);
   const oneThing = goals.find(g => g.level === 'oneThing');
+
+  const recomputeAllCounts = async () => {
+    const year = String(new Date().getFullYear());
+    const [habits, routines, ags] = await Promise.all([
+      listHabits(),
+      listAllRoutines(),
+      listAnnualGoalsByYear(year),
+    ]);
+    const m = new Map<string, number>();
+    const bump = (id?: string) => {
+      if (!id) return;
+      m.set(id, (m.get(id) ?? 0) + 1);
+    };
+    for (const h of habits) bump(h.parentGoalId);
+    for (const r of routines) bump(r.parentGoalId);
+    for (const a of ags) bump(a.parentGoalId);
+    setAllCounts(m);
+  };
+
+  useEffect(() => {
+    recomputeAllCounts();
+  }, [goals]);
+
+  useEffect(() => {
+    if (!edit?.goal) return;
+    const goalId = edit.goal.id;
+    (async () => {
+      const year = String(new Date().getFullYear());
+      const [todos, habits, routines, ags] = await Promise.all([
+        listTodosByGoal(goalId),
+        listHabits().then(hs => hs.filter(h => h.parentGoalId === goalId)),
+        listAllRoutines().then(rs => rs.filter(r => r.parentGoalId === goalId)),
+        listAnnualGoalsByYear(year).then(as => as.filter(a => a.parentGoalId === goalId)),
+      ]);
+      setConnectedCounts({
+        todos: todos.length,
+        habits: habits.length,
+        routines: routines.length,
+        annualGoals: ags.length,
+      });
+    })();
+  }, [edit?.goal?.id]);
 
   const classify = (r: number, c: number): Pick<PendingEdit, 'level' | 'parentId' | 'order'> | null => {
     if (r === 4 && c === 4) return { level: 'oneThing', order: 0 };
@@ -87,6 +151,61 @@ export const MandalartBoard = () => {
     setEdit(null);
   };
 
+  const addAnnualGoalForGoal = async () => {
+    if (!edit?.goal) return;
+    const year = String(new Date().getFullYear());
+    const existing = await listAnnualGoalsByYear(year);
+    const order = existing.length > 0 ? Math.max(...existing.map(g => g.order)) + 1 : 1;
+    const created = await createAnnualGoal(year, order);
+    await updateAnnualGoal(created.id, {
+      parentGoalId: edit.goal.id,
+      title: edit.goal.title,
+    });
+    setConnectedCounts(c => ({ ...c, annualGoals: c.annualGoals + 1 }));
+    await recomputeAllCounts();
+  };
+
+  const addHabitForGoal = async () => {
+    if (!edit?.goal) return;
+    const habits = await listHabits();
+    await createHabit({
+      name: edit.goal.title || '새 습관',
+      color: edit.goal.color || '#d9ead3',
+      order: habits.length,
+      parentGoalId: edit.goal.id,
+    });
+    setConnectedCounts(c => ({ ...c, habits: c.habits + 1 }));
+    await recomputeAllCounts();
+  };
+
+  const addRoutineForGoal = async () => {
+    if (!edit?.goal) return;
+    const routines = await listAllRoutines();
+    const dayRoutines = routines.filter(r => r.dayOfWeek === 1);
+    await createRoutine({
+      name: edit.goal.title || '새 루틴',
+      dayOfWeek: 1,
+      order: dayRoutines.length,
+      parentGoalId: edit.goal.id,
+    });
+    setConnectedCounts(c => ({ ...c, routines: c.routines + 1 }));
+    await recomputeAllCounts();
+  };
+
+  const addTodoForGoal = async () => {
+    if (!edit?.goal) return;
+    const year = String(new Date().getFullYear());
+    await createTodo({
+      title: edit.goal.title || '새 할 일',
+      scope: 'year',
+      scopeKey: year,
+      status: 'pending',
+      order: 0,
+      parentGoalId: edit.goal.id,
+    });
+    setConnectedCounts(c => ({ ...c, todos: c.todos + 1 }));
+  };
+
   const isCenter = (r: number, c: number) => r === 4 && c === 4;
   const isCore = (r: number, c: number) =>
     CORE_RING_POSITIONS.some(([cr, cc]) => cr === r && cc === c) ||
@@ -101,6 +220,7 @@ export const MandalartBoard = () => {
         {map.flatMap((row, r) => row.map((cell, c) => (
           <GoalCell key={`${r}-${c}`} goal={cell}
             isCenter={isCenter(r, c)} isCore={isCore(r, c)}
+            connectionCount={cell ? (allCounts.get(cell.id) ?? 0) : 0}
             onClick={() => open(r, c)} />
         )))}
       </div>
@@ -108,7 +228,7 @@ export const MandalartBoard = () => {
       {edit && (
         <div className="fixed inset-0 bg-zinc-900/25 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={() => setEdit(null)}>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl"
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -131,6 +251,37 @@ export const MandalartBoard = () => {
               onChange={e => setTitle(e.target.value)}
               placeholder="목표 제목을 입력하세요"
               className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+            {edit.goal && (
+              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-3 mt-3 space-y-1.5">
+                <div className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">
+                  이 목표에 연결된 것들
+                </div>
+                <button onClick={addAnnualGoalForGoal}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 text-sm transition">
+                  <span>🎯 연간 수치 목표 추가</span>
+                  <span className="text-xs text-zinc-500 tabular-nums">현재 {connectedCounts.annualGoals}개</span>
+                </button>
+                <button onClick={addHabitForGoal}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 text-sm transition">
+                  <span>🔁 습관 추가</span>
+                  <span className="text-xs text-zinc-500 tabular-nums">현재 {connectedCounts.habits}개</span>
+                </button>
+                <button onClick={addRoutineForGoal}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:border-amber-300 text-sm transition">
+                  <span>📅 주간 루틴 추가</span>
+                  <span className="text-xs text-zinc-500 tabular-nums">현재 {connectedCounts.routines}개</span>
+                </button>
+                <button onClick={addTodoForGoal}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 text-sm transition">
+                  <span>✅ TODO 추가</span>
+                  <span className="text-xs text-zinc-500 tabular-nums">현재 {connectedCounts.todos}개</span>
+                </button>
+                <p className="text-[10px] text-zinc-400 pt-1">
+                  추가 후 설정/해당 페이지에서 세부 정보를 편집하세요.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
               {edit.goal && (

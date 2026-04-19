@@ -34,4 +34,11 @@ describe('annualGoals repo', () => {
     const updated = await db.annualGoals.get(g.id);
     expect(updated?.title).toBe('인스타 1만팔');
   });
+
+  it('stores and retrieves parentGoalId', async () => {
+    const g = await createAnnualGoal('2026', 1);
+    await updateAnnualGoal(g.id, { parentGoalId: 'goal-xyz' });
+    const updated = await db.annualGoals.get(g.id);
+    expect(updated?.parentGoalId).toBe('goal-xyz');
+  });
 });

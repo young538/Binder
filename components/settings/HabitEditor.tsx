@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Habit } from '@/lib/types';
 import { listHabits, createHabit, updateHabit, deleteHabit } from '@/lib/repo/habits';
+import { useBinder } from '@/store';
 
 export const HabitEditor = () => {
+  const { goals } = useBinder();
   const [habits, setHabits] = useState<Habit[]>([]);
 
   const reload = () => listHabits().then(setHabits);
@@ -34,7 +36,7 @@ export const HabitEditor = () => {
           <li className="text-sm text-zinc-400 py-2">습관이 없어요. 추가해보세요.</li>
         )}
         {habits.map((h) => (
-          <li key={h.id} className="flex items-center gap-2">
+          <li key={h.id} className="flex items-center gap-2 flex-wrap">
             <input
               type="color"
               value={h.color}
@@ -45,8 +47,31 @@ export const HabitEditor = () => {
               type="text"
               defaultValue={h.name}
               onBlur={(e) => update(h.id, { name: e.target.value.trim() || '습관' })}
-              className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-[140px] border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <select
+              value={h.parentGoalId ?? ''}
+              onChange={(e) => update(h.id, { parentGoalId: e.target.value || undefined })}
+              className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-white dark:bg-zinc-950 max-w-[160px]"
+              title="상위 목표"
+            >
+              <option value="">(상위 목표 없음)</option>
+              <optgroup label="원씽">
+                {goals.filter((g) => g.level === 'oneThing').map((g) => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </optgroup>
+              <optgroup label="코어">
+                {goals.filter((g) => g.level === 'mandalartCore').map((g) => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </optgroup>
+              <optgroup label="서브">
+                {goals.filter((g) => g.level === 'mandalartSub').map((g) => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </optgroup>
+            </select>
             <button
               onClick={() => remove(h.id)}
               aria-label="삭제"

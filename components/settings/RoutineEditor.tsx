@@ -13,7 +13,7 @@ import { useBinder } from '@/store';
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
 export const RoutineEditor = () => {
-  const { categories } = useBinder();
+  const { categories, goals } = useBinder();
   const [routines, setRoutines] = useState<Routine[]>([]);
 
   const reload = () => listAllRoutines().then(setRoutines);
@@ -78,14 +78,14 @@ export const RoutineEditor = () => {
             ) : (
               <ul className="space-y-1.5">
                 {items.map((r) => (
-                  <li key={r.id} className="flex items-center gap-2">
+                  <li key={r.id} className="flex items-center gap-2 flex-wrap">
                     <input
                       type="text"
                       defaultValue={r.name}
                       onBlur={(e) =>
                         update(r.id, { name: e.target.value.trim() || '루틴' })
                       }
-                      className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 min-w-[120px] border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <select
                       value={r.categoryId ?? ''}
@@ -100,6 +100,31 @@ export const RoutineEditor = () => {
                           {c.name}
                         </option>
                       ))}
+                    </select>
+                    <select
+                      value={r.parentGoalId ?? ''}
+                      onChange={(e) =>
+                        update(r.id, { parentGoalId: e.target.value || undefined })
+                      }
+                      className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-1 bg-white dark:bg-zinc-950 max-w-[140px]"
+                      title="상위 목표"
+                    >
+                      <option value="">(상위 목표 없음)</option>
+                      <optgroup label="원씽">
+                        {goals.filter((g) => g.level === 'oneThing').map((g) => (
+                          <option key={g.id} value={g.id}>{g.title}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="코어">
+                        {goals.filter((g) => g.level === 'mandalartCore').map((g) => (
+                          <option key={g.id} value={g.id}>{g.title}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="서브">
+                        {goals.filter((g) => g.level === 'mandalartSub').map((g) => (
+                          <option key={g.id} value={g.id}>{g.title}</option>
+                        ))}
+                      </optgroup>
                     </select>
                     <button
                       onClick={() => remove(r.id)}

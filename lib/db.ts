@@ -252,6 +252,23 @@ class BinderDb extends Dexie {
         if (s.theme !== 'light' && s.theme !== 'dark') s.theme = 'light';
       });
     });
+    this.version(11).stores({
+      goals: 'id, parentId, level, order',
+      categories: 'id, order',
+      timeBlocks: 'id, date, categoryId, goalId, todoId',
+      retrospectives: 'id, type, dateOrWeek, [type+dateOrWeek]',
+      settings: 'key',
+      syncMeta: 'key',
+      authTokens: 'key',
+      snapshots: 'id, createdAt',
+      todos: 'id, scope, scopeKey, parentGoalId, categoryId, status, order, [scope+scopeKey]',
+      focusNotes: 'id, scope, scopeKey, [scope+scopeKey]',
+      annualGoals: 'id, year, parentGoalId, order',
+      habits: 'id, parentGoalId, order',
+      habitLogs: 'id, habitId, date, [habitId+date]',
+      routines: 'id, dayOfWeek, parentGoalId, order',
+      books: 'id, year, order, finishedAt',
+    });
   }
 }
 

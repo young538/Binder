@@ -33,4 +33,16 @@ describe('habits', () => {
     const logs = await listLogsForRange('2026-04-01', '2026-04-30');
     expect(logs).toHaveLength(0);
   });
+
+  it('stores and retrieves parentGoalId', async () => {
+    const h = await createHabit({
+      name: 'parented',
+      color: '#000',
+      order: 0,
+      parentGoalId: 'goal-123',
+    });
+    const hs = await listHabits();
+    const found = hs.find(x => x.id === h.id);
+    expect(found?.parentGoalId).toBe('goal-123');
+  });
 });

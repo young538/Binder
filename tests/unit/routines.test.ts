@@ -28,4 +28,16 @@ describe('routines', () => {
     expect(mon).toHaveLength(1);
     expect(mon[0].name).toBe('A');
   });
+
+  it('stores and retrieves parentGoalId', async () => {
+    const r = await createRoutine({
+      name: 'parented',
+      dayOfWeek: 1,
+      order: 0,
+      parentGoalId: 'goal-abc',
+    });
+    const all = await listAllRoutines();
+    const found = all.find((x) => x.id === r.id);
+    expect(found?.parentGoalId).toBe('goal-abc');
+  });
 });

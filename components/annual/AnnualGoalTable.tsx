@@ -9,6 +9,7 @@ import {
   deleteAnnualGoal,
   ensureSeven,
 } from '@/lib/repo/annualGoals';
+import { useBinder } from '@/store';
 
 interface Props { year: string; }
 
@@ -17,6 +18,7 @@ const H1 = [0, 1, 2, 3, 4, 5];
 const H2 = [6, 7, 8, 9, 10, 11];
 
 export const AnnualGoalTable = ({ year }: Props) => {
+  const { goals: mandalartGoals } = useBinder();
   const [goals, setGoals] = useState<AnnualGoal[]>([]);
 
   const reload = () => listByYear(year).then(setGoals);
@@ -73,6 +75,7 @@ export const AnnualGoalTable = ({ year }: Props) => {
             <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400">
               <th className="p-2 w-8 border-r border-zinc-200 dark:border-zinc-800">#</th>
               <th className="p-2 text-left border-r border-zinc-200 dark:border-zinc-800 min-w-[180px]">이루고 싶은 일</th>
+              <th className="p-2 text-left border-r border-zinc-200 dark:border-zinc-800 min-w-[140px]">상위 목표</th>
               <th className="p-2 w-24 border-r border-zinc-200 dark:border-zinc-800">달성 기한</th>
               <th className="p-2 text-left border-r border-zinc-200 dark:border-zinc-800 min-w-[160px]">실천 내용</th>
               <th className="p-2 text-left border-r border-zinc-200 dark:border-zinc-800 min-w-[120px]">수치화</th>
@@ -83,7 +86,7 @@ export const AnnualGoalTable = ({ year }: Props) => {
               <th rowSpan={2} className="p-2 w-8"></th>
             </tr>
             <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 text-[10px]">
-              <th colSpan={6} className="border-r border-zinc-200 dark:border-zinc-800"></th>
+              <th colSpan={7} className="border-r border-zinc-200 dark:border-zinc-800"></th>
               {H1.map(i => (
                 <th key={i} className="p-1 w-14 border-r border-zinc-100 dark:border-zinc-900 bg-blue-50/50 dark:bg-blue-950/20">{MONTHS[i]}</th>
               ))}
@@ -107,6 +110,30 @@ export const AnnualGoalTable = ({ year }: Props) => {
                     placeholder="이루고 싶은 일"
                     className="w-full bg-transparent text-zinc-800 dark:text-zinc-50 font-medium outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded"
                   />
+                </td>
+                <td className="p-1 border-r border-zinc-100 dark:border-zinc-900">
+                  <select
+                    value={g.parentGoalId ?? ''}
+                    onChange={e => patch(g, 'parentGoalId', e.target.value || undefined)}
+                    className="w-full bg-transparent text-xs outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 py-0.5 rounded text-zinc-700 dark:text-zinc-300"
+                  >
+                    <option value="">(없음)</option>
+                    <optgroup label="원씽">
+                      {mandalartGoals.filter(mg => mg.level === 'oneThing').map(mg => (
+                        <option key={mg.id} value={mg.id}>{mg.title}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="코어">
+                      {mandalartGoals.filter(mg => mg.level === 'mandalartCore').map(mg => (
+                        <option key={mg.id} value={mg.id}>{mg.title}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="서브">
+                      {mandalartGoals.filter(mg => mg.level === 'mandalartSub').map(mg => (
+                        <option key={mg.id} value={mg.id}>{mg.title}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </td>
                 <td className="p-1 border-r border-zinc-100 dark:border-zinc-900">
                   <input
@@ -229,6 +256,32 @@ export const AnnualGoalTable = ({ year }: Props) => {
                   <Trash2 size={16} />
                 </button>
               </div>
+
+              <label className="flex flex-col text-xs mb-2">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wide">상위 목표</span>
+                <select
+                  value={g.parentGoalId ?? ''}
+                  onChange={(e) => patch(g, 'parentGoalId', e.target.value || undefined)}
+                  className="bg-zinc-50 dark:bg-zinc-800/50 rounded px-2 py-1 mt-0.5 outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">(없음)</option>
+                  <optgroup label="원씽">
+                    {mandalartGoals.filter(mg => mg.level === 'oneThing').map(mg => (
+                      <option key={mg.id} value={mg.id}>{mg.title}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="코어">
+                    {mandalartGoals.filter(mg => mg.level === 'mandalartCore').map(mg => (
+                      <option key={mg.id} value={mg.id}>{mg.title}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="서브">
+                    {mandalartGoals.filter(mg => mg.level === 'mandalartSub').map(mg => (
+                      <option key={mg.id} value={mg.id}>{mg.title}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </label>
 
               <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                 <label className="flex flex-col">

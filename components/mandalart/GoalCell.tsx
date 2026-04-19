@@ -6,12 +6,13 @@ interface Props {
   goal: Goal | null;
   isCenter: boolean;
   isCore: boolean;
+  connectionCount?: number;
   onClick: () => void;
 }
 
-export const GoalCell = ({ goal, isCenter, isCore, onClick }: Props) => {
+export const GoalCell = ({ goal, isCenter, isCore, connectionCount = 0, onClick }: Props) => {
   const base =
-    'aspect-square p-1.5 text-[10px] sm:text-xs overflow-hidden transition cursor-pointer flex items-center justify-center text-center leading-tight rounded-md';
+    'relative aspect-square p-1.5 text-[10px] sm:text-xs overflow-hidden transition cursor-pointer flex items-center justify-center text-center leading-tight rounded-md';
   const classes = isCenter
     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold shadow-md hover:shadow-lg'
     : isCore
@@ -21,6 +22,11 @@ export const GoalCell = ({ goal, isCenter, isCore, onClick }: Props) => {
   return (
     <button onClick={onClick} className={`${base} ${classes}`}>
       {goal?.title ?? <Plus size={14} className="text-zinc-300 dark:text-zinc-600" />}
+      {goal && connectionCount > 0 && (
+        <div className="absolute bottom-0 right-0 text-[8px] bg-blue-500 text-white rounded-tl px-1 font-semibold leading-tight">
+          {connectionCount}
+        </div>
+      )}
     </button>
   );
 };
