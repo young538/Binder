@@ -6,12 +6,12 @@ import { toIsoWeek } from '@/lib/utils/date';
 import { format } from 'date-fns';
 
 const primaryLinks = [
-  { label: '주간',    Icon: Calendar,       basePath: '/week',          href: () => `/week/${toIsoWeek(new Date())}` },
-  { label: '월간',    Icon: CalendarDays,   basePath: '/monthly',       href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
-  { label: '연간',    Icon: CalendarRange,  basePath: '/annual',        href: () => `/annual/${format(new Date(), 'yyyy')}` },
   { label: '만다라트', Icon: Target,         basePath: '/mandalart',     href: () => '/mandalart' },
-  { label: '독서',    Icon: BookOpen,       basePath: '/reading',       href: () => '/reading' },
+  { label: '연간',    Icon: CalendarRange,  basePath: '/annual',        href: () => `/annual/${format(new Date(), 'yyyy')}` },
+  { label: '월간',    Icon: CalendarDays,   basePath: '/monthly',       href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
+  { label: '주간',    Icon: Calendar,       basePath: '/week',          href: () => `/week/${toIsoWeek(new Date())}` },
   { label: '회고',    Icon: NotebookPen,    basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
+  { label: '독서',    Icon: BookOpen,       basePath: '/reading',       href: () => '/reading' },
 ];
 
 export const TopNav = () => {
