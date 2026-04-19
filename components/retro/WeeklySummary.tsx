@@ -2,12 +2,20 @@ import { TimeBlock, Category, Goal, Todo } from '@/lib/types';
 import { aggregateByCategory, aggregateByGoal, aggregateByDay, aggregateByTodo } from '@/lib/aggregate';
 import { weekDates, toIsoDate } from '@/lib/utils/date';
 
+export interface HabitStats {
+  total: number;
+  logs: number;
+  expected: number;
+  percent: number;
+}
+
 interface Props {
   isoweek: string;
   blocks: TimeBlock[];
   todos: Todo[];
   categories: Category[];
   goals: Goal[];
+  habitStats: HabitStats;
 }
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
@@ -21,7 +29,7 @@ const Card = ({ title, children }: { title: string; children: React.ReactNode })
   </div>
 );
 
-export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Props) => {
+export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals, habitStats }: Props) => {
   const totalMin = blocks.reduce((s, b) => s + (b.endMin - b.startMin), 0);
   const byCat = aggregateByCategory(blocks);
   const byGoal = aggregateByGoal(blocks);
@@ -39,13 +47,6 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
 
   return (
     <section className="grid md:grid-cols-3 gap-3 mb-6">
-      <Card title="총 기록 시간">
-        <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
-          {hours(totalMin)}
-          <span className="text-lg font-medium text-zinc-500">h</span>
-        </div>
-      </Card>
-
       <Card title="TODO 완료율">
         {totalTodos === 0 ? (
           <div className="text-sm text-zinc-400">TODO 없음</div>
@@ -70,6 +71,35 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals }: Pro
             </div>
           </div>
         )}
+      </Card>
+
+      <Card title="🔁 습관 달성률">
+        {habitStats.total === 0 ? (
+          <div className="text-sm text-zinc-400">습관 없음</div>
+        ) : (
+          <div>
+            <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
+              {habitStats.percent}
+              <span className="text-lg font-medium text-zinc-500">%</span>
+            </div>
+            <div className="mt-2 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all"
+                style={{ width: `${habitStats.percent}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-zinc-500 mt-2">
+              {habitStats.logs}/{habitStats.expected} 체크 · 습관 {habitStats.total}개
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card title="총 기록 시간">
+        <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-50 tabular-nums">
+          {hours(totalMin)}
+          <span className="text-lg font-medium text-zinc-500">h</span>
+        </div>
       </Card>
 
       <Card title="카테고리별">

@@ -5,6 +5,7 @@ import { Goal, Todo } from '@/lib/types';
 import { createTodo, listByParentGoal } from '@/lib/repo/todos';
 import { toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
+import { computeGoalProgress, GoalProgress } from '@/lib/progress';
 
 interface Props {
   sub: Goal;
@@ -25,9 +26,11 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
   const [busy, setBusy] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [pickedDate, setPickedDate] = useState(() => defaultPickedDate(currentMonth));
+  const [progress, setProgress] = useState<GoalProgress | null>(null);
 
   useEffect(() => {
     listByParentGoal(sub.id).then(setLinkedTodos);
+    computeGoalProgress(sub.id).then(setProgress);
   }, [sub.id]);
 
   useEffect(() => {
@@ -76,6 +79,8 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
     });
     const ts = await listByParentGoal(sub.id);
     setLinkedTodos(ts);
+    const p = await computeGoalProgress(sub.id);
+    setProgress(p);
     setBusy(false);
     setShowPicker(false);
   };
@@ -85,6 +90,20 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
       <div className="text-sm font-medium text-zinc-800 dark:text-zinc-50 line-clamp-2 min-h-[2.5rem]">
         {sub.title}
       </div>
+      {progress && progress.overall > 0 && (
+        <div className="mt-1">
+          <div className="flex items-center justify-between text-[10px] text-zinc-600 dark:text-zinc-400 mb-0.5">
+            <span>진행</span>
+            <span className="font-semibold tabular-nums text-blue-600">{progress.overall}%</span>
+          </div>
+          <div className="h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full"
+              style={{ width: `${progress.overall}%` }}
+            />
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-1 flex-wrap mt-2">
         {monthBadges.map(b => (
           <span key={b.key}

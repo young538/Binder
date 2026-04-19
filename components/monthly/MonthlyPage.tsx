@@ -5,6 +5,7 @@ import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { MonthlyCalendar } from './MonthlyCalendar';
 import { HabitCalendar } from './HabitCalendar';
+import { GoalSummaryStrip } from './GoalSummaryStrip';
 import { monthKeyFromString } from '@/lib/utils/period';
 
 interface Props { yyyymm: string; }
@@ -49,11 +50,13 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
         label="이번 달 한 문장"
         placeholder="예: 릴스 업로드 주 2회 시작" />
 
-      <TodoListSection scope="month" scopeKey={yyyymm} title="이번 달 TODO" />
+      <GoalSummaryStrip />
+
+      <HabitCalendar yyyymm={yyyymm} />
 
       <MonthlyCalendar yyyymm={yyyymm} />
 
-      <HabitCalendar yyyymm={yyyymm} />
+      <TodoListSection scope="month" scopeKey={yyyymm} title="이번 달 TODO" />
     </div>
   );
 };
