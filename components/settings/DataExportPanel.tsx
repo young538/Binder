@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { Download, Check, AlertTriangle } from 'lucide-react';
-import { downloadExportJson } from '@/lib/exporter';
 
 export const DataExportPanel = () => {
   const [busy, setBusy] = useState(false);
@@ -12,7 +11,18 @@ export const DataExportPanel = () => {
     setBusy(true);
     setErr(null);
     try {
-      await downloadExportJson();
+      const res = await fetch('/api/export', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`내보내기 실패: ${res.status}`);
+      const json = await res.text();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `super-planner-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       setNote('내보내기 완료 — 다운로드 폴더를 확인하세요');
     } catch (e) {
       setErr(e instanceof Error ? e.message : '실패');
@@ -26,7 +36,7 @@ export const DataExportPanel = () => {
       <div>
         <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">데이터 내보내기</h2>
         <p className="text-xs text-zinc-500 mt-1">
-          전체 데이터를 JSON 파일로 다운로드합니다. 본인 PC/클라우드에 백업하거나 다른 기기로 옮길 때 사용하세요.
+          서버 DB의 전체 데이터를 JSON 파일로 다운로드합니다. 수동 백업 용도.
         </p>
       </div>
       <button

@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import { Category, Goal, Settings } from '@/lib/types';
 import { listCategories } from '@/lib/repo/categories';
+import { listAllGoals } from '@/lib/repo/goals';
 import { getSettings } from '@/lib/repo/settings';
-import { db } from '@/lib/db';
-import { seedIfEmpty } from '@/lib/seed';
 
 interface BinderStore {
   categories: Category[];
@@ -20,10 +19,9 @@ export const useBinder = create<BinderStore>((set) => ({
   settings: null,
   ready: false,
   init: async () => {
-    await seedIfEmpty();
     const [categories, goals, settings] = await Promise.all([
       listCategories(),
-      db.goals.toArray(),
+      listAllGoals(),
       getSettings(),
     ]);
     set({ categories, goals, settings, ready: true });
@@ -31,7 +29,7 @@ export const useBinder = create<BinderStore>((set) => ({
   reload: async () => {
     const [categories, goals, settings] = await Promise.all([
       listCategories(),
-      db.goals.toArray(),
+      listAllGoals(),
       getSettings(),
     ]);
     set({ categories, goals, settings });

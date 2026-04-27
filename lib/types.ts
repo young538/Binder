@@ -58,12 +58,15 @@ export interface FocusNote {
   updatedAt: string;
 }
 
+export type TimeBlockKind = 'plan' | 'actual';
+
 export interface TimeBlock {
   id: string;
   date: string;
   startMin: number;
   endMin: number;
   text: string;
+  kind: TimeBlockKind;
   categoryId: string;
   goalId?: string;
   todoId?: string;
@@ -119,12 +122,26 @@ export interface AnnualGoal {
   updatedAt: string;
 }
 
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type HabitSchedule =
+  | { kind: 'daily' }
+  | { kind: 'weekdays'; days: Weekday[] }
+  | { kind: 'perWeek'; count: number }
+  | { kind: 'perMonth'; count: number };
+
+export const defaultSchedule = (): HabitSchedule => ({ kind: 'daily' });
+
 export interface Habit {
   id: string;
   name: string;
   color: string;
   order: number;
+  schedule?: HabitSchedule;
+  categoryId?: string;
+  note?: string;
   parentGoalId?: string;
+  annualGoalId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,18 +151,6 @@ export interface HabitLog {
   habitId: string;
   date: string;
   createdAt: string;
-}
-
-export interface Routine {
-  id: string;
-  name: string;
-  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  categoryId?: string;
-  note?: string;
-  order: number;
-  parentGoalId?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Book {

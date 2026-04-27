@@ -1,34 +1,34 @@
-import { db, markDirty } from '../db';
 import { Habit } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
+
+// Server automatically syncs linked annual goals on create/update/delete.
+// This function remains exported for legacy callers but is now a no-op
+// (server-side repos handle the sync transparently).
+export const syncAnnualGoalFromHabits = async (_annualGoalId: string): Promise<void> => {
+  // server handles it; keep exported symbol for compatibility
+  void _annualGoalId;
+};
+
+export const listHabits = (): Promise<Habit[]> => http.get<Habit[]>('/api/habits');
 
 export const createHabit = async (
   data: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Habit> => {
-  const now = new Date().toISOString();
-  const h: Habit = { ...data, id: newId(), createdAt: now, updatedAt: now };
-  await db.habits.put(h);
-  await markDirty();
-  return h;
+  const row = await http.post<Habit>('/api/habits', data);
+  notifyMutation();
+  return row;
 };
 
 export const updateHabit = async (
   id: string,
   patch: Partial<Omit<Habit, 'id' | 'createdAt'>>
-) => {
-  await db.habits.update(id, { ...patch, updatedAt: new Date().toISOString() });
-  await markDirty();
+): Promise<void> => {
+  await http.patch<Habit>(`/api/habits/${id}`, patch);
+  notifyMutation();
 };
 
-export const deleteHabit = async (id: string) => {
-  await db.transaction('rw', [db.habits, db.habitLogs], async () => {
-    await db.habits.delete(id);
-    await db.habitLogs.where('habitId').equals(id).delete();
-  });
-  await markDirty();
-};
-
-export const listHabits = async (): Promise<Habit[]> => {
-  const items = await db.habits.toArray();
-  return items.sort((a, b) => a.order - b.order);
+export const deleteHabit = async (id: string): Promise<void> => {
+  await http.del(`/api/habits/${id}`);
+  notifyMutation();
 };

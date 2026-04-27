@@ -1,34 +1,23 @@
-import { db, markDirty } from '../db';
 import { FocusNote, FocusScope } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
+
+export const getFocus = async (
+  scope: FocusScope,
+  scopeKey: string
+): Promise<FocusNote | undefined> => {
+  const row = await http.get<FocusNote | null>(
+    `/api/focus-notes?scope=${encodeURIComponent(scope)}&scopeKey=${encodeURIComponent(scopeKey)}`
+  );
+  return row ?? undefined;
+};
 
 export const upsertFocus = async (
   scope: FocusScope,
   scopeKey: string,
   text: string
 ): Promise<FocusNote> => {
-  const existing = await db.focusNotes.where({ scope, scopeKey }).first();
-  const now = new Date().toISOString();
-  if (existing) {
-    const updated: FocusNote = { ...existing, text, updatedAt: now };
-    await db.focusNotes.put(updated);
-    await markDirty();
-    return updated;
-  }
-  const created: FocusNote = {
-    id: newId(),
-    scope,
-    scopeKey,
-    text,
-    updatedAt: now,
-  };
-  await db.focusNotes.put(created);
-  await markDirty();
-  return created;
+  const row = await http.put<FocusNote>('/api/focus-notes', { scope, scopeKey, text });
+  notifyMutation();
+  return row;
 };
-
-export const getFocus = async (
-  scope: FocusScope,
-  scopeKey: string
-): Promise<FocusNote | undefined> =>
-  db.focusNotes.where({ scope, scopeKey }).first();

@@ -1,31 +1,20 @@
-import { db, markDirty } from '../db';
 import { HabitLog } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
 
 export const toggleHabit = async (
   habitId: string,
   date: string
 ): Promise<boolean> => {
-  const existing = await db.habitLogs.where({ habitId, date }).first();
-  if (existing) {
-    await db.habitLogs.delete(existing.id);
-    await markDirty();
-    return false;
-  }
-  const log: HabitLog = {
-    id: newId(),
-    habitId,
-    date,
-    createdAt: new Date().toISOString(),
-  };
-  await db.habitLogs.put(log);
-  await markDirty();
-  return true;
+  const res = await http.post<{ added: boolean }>('/api/habit-logs', { habitId, date });
+  notifyMutation();
+  return res.added;
 };
 
-export const listLogsForRange = async (
+export const listLogsForRange = (
   startDate: string,
   endDate: string
-): Promise<HabitLog[]> => {
-  return db.habitLogs.where('date').between(startDate, endDate, true, true).toArray();
-};
+): Promise<HabitLog[]> =>
+  http.get<HabitLog[]>(
+    `/api/habit-logs?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+  );

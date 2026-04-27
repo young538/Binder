@@ -1,31 +1,27 @@
-import { db, markDirty } from '../db';
 import { Book } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
+
+export const listByYear = (year: string): Promise<Book[]> =>
+  http.get<Book[]>(`/api/books?year=${encodeURIComponent(year)}`);
 
 export const createBook = async (
   data: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Book> => {
-  const now = new Date().toISOString();
-  const b: Book = { ...data, id: newId(), createdAt: now, updatedAt: now };
-  await db.books.put(b);
-  await markDirty();
-  return b;
+  const row = await http.post<Book>('/api/books', data);
+  notifyMutation();
+  return row;
 };
 
 export const updateBook = async (
   id: string,
   patch: Partial<Omit<Book, 'id' | 'createdAt'>>
-) => {
-  await db.books.update(id, { ...patch, updatedAt: new Date().toISOString() });
-  await markDirty();
+): Promise<void> => {
+  await http.patch<Book>(`/api/books/${id}`, patch);
+  notifyMutation();
 };
 
-export const deleteBook = async (id: string) => {
-  await db.books.delete(id);
-  await markDirty();
-};
-
-export const listByYear = async (year: string): Promise<Book[]> => {
-  const items = await db.books.where('year').equals(year).toArray();
-  return items.sort((a, b) => a.order - b.order);
+export const deleteBook = async (id: string): Promise<void> => {
+  await http.del(`/api/books/${id}`);
+  notifyMutation();
 };

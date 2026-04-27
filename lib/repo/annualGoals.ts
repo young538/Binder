@@ -1,51 +1,38 @@
-import { db, markDirty } from '../db';
 import { AnnualGoal } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
 
-const EMPTY_12 = (): (number | null)[] => Array(12).fill(null);
+export const listByYear = (year: string): Promise<AnnualGoal[]> =>
+  http.get<AnnualGoal[]>(`/api/annual-goals?year=${encodeURIComponent(year)}`);
 
-export const createAnnualGoal = async (year: string, order: number): Promise<AnnualGoal> => {
-  const now = new Date().toISOString();
-  const goal: AnnualGoal = {
-    id: newId(),
-    year,
-    order,
-    title: '',
-    monthlyTargets: EMPTY_12(),
-    monthlyActuals: EMPTY_12(),
-    createdAt: now,
-    updatedAt: now,
-  };
-  await db.annualGoals.put(goal);
-  await markDirty();
-  return goal;
+export const createAnnualGoal = async (
+  year: string,
+  order: number
+): Promise<AnnualGoal> => {
+  const row = await http.post<AnnualGoal>('/api/annual-goals', { year, order });
+  notifyMutation();
+  return row;
 };
 
 export const updateAnnualGoal = async (
   id: string,
   patch: Partial<Omit<AnnualGoal, 'id' | 'createdAt'>>
 ): Promise<void> => {
-  await db.annualGoals.update(id, { ...patch, updatedAt: new Date().toISOString() });
-  await markDirty();
+  await http.patch<AnnualGoal>(`/api/annual-goals/${id}`, patch);
+  notifyMutation();
 };
 
 export const deleteAnnualGoal = async (id: string): Promise<void> => {
-  await db.annualGoals.delete(id);
-  await markDirty();
-};
-
-export const listByYear = async (year: string): Promise<AnnualGoal[]> => {
-  const items = await db.annualGoals.where('year').equals(year).toArray();
-  return items.sort((a, b) => a.order - b.order);
+  await http.del(`/api/annual-goals/${id}`);
+  notifyMutation();
 };
 
 export const ensureSeven = async (year: string): Promise<AnnualGoal[]> => {
-  const existing = await listByYear(year);
-  if (existing.length >= 7) return existing;
-  const toCreate = 7 - existing.length;
-  const startOrder = existing.length > 0 ? Math.max(...existing.map(g => g.order)) + 1 : 1;
-  for (let i = 0; i < toCreate; i++) {
-    await createAnnualGoal(year, startOrder + i);
-  }
-  return listByYear(year);
+  const rows = await http.post<AnnualGoal[]>('/api/annual-goals', {
+    year,
+    order: 0,
+    ensureSeven: true,
+  });
+  notifyMutation();
+  return rows;
 };

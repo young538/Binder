@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { X, Trash2, Link2 } from 'lucide-react';
-import { TimeBlock, Todo } from '@/lib/types';
+import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
 import {
   createTimeBlock,
   updateTimeBlock,
@@ -17,7 +17,7 @@ import {
 import { GoalPicker } from '@/components/common/GoalPicker';
 
 interface Props {
-  initial: { date: string; startMin: number; endMin: number };
+  initial: { date: string; startMin: number; endMin: number; kind?: TimeBlockKind };
   existing?: TimeBlock;
   prefilledTodoId?: string;
   prefilledText?: string;
@@ -39,6 +39,9 @@ export const BlockEditor = ({
     existing?.categoryId ?? categories[0]?.id ?? '',
   );
   const [goalId, setGoalId] = useState<string | undefined>(existing?.goalId);
+  const [kind, setKind] = useState<TimeBlockKind>(
+    existing?.kind ?? initial.kind ?? 'plan'
+  );
   const [todoId, setTodoId] = useState<string | undefined>(
     existing?.todoId ?? prefilledTodoId,
   );
@@ -65,6 +68,7 @@ export const BlockEditor = ({
     if (existing) {
       await updateTimeBlock(existing.id, {
         text,
+        kind,
         categoryId,
         goalId,
         todoId,
@@ -77,6 +81,7 @@ export const BlockEditor = ({
         startMin,
         endMin,
         text,
+        kind,
         categoryId,
         goalId,
         todoId,
@@ -118,6 +123,36 @@ export const BlockEditor = ({
         <div className="text-xs text-zinc-500 mb-4">{initial.date}</div>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
+              종류
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setKind('plan')}
+                className={`flex-1 py-2 rounded-lg border text-sm font-medium transition ${
+                  kind === 'plan'
+                    ? 'bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-950/40 dark:border-blue-600 dark:text-blue-300'
+                    : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                🗓️ 계획
+              </button>
+              <button
+                type="button"
+                onClick={() => setKind('actual')}
+                className={`flex-1 py-2 rounded-lg border text-sm font-medium transition ${
+                  kind === 'actual'
+                    ? 'bg-emerald-50 border-emerald-400 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300'
+                    : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                ✅ 실제
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
               시간

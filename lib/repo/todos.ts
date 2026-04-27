@@ -1,28 +1,26 @@
-import { db, markDirty } from '../db';
 import { Todo, TodoScope, TodoStatus } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
 
 export const createTodo = async (
   data: Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Todo> => {
-  const now = new Date().toISOString();
-  const todo: Todo = { ...data, id: newId(), createdAt: now, updatedAt: now };
-  await db.todos.put(todo);
-  await markDirty();
-  return todo;
+  const row = await http.post<Todo>('/api/todos', data);
+  notifyMutation();
+  return row;
 };
 
 export const updateTodo = async (
   id: string,
   patch: Partial<Omit<Todo, 'id' | 'createdAt'>>
 ): Promise<void> => {
-  await db.todos.update(id, { ...patch, updatedAt: new Date().toISOString() });
-  await markDirty();
+  await http.patch<Todo>(`/api/todos/${id}`, patch);
+  notifyMutation();
 };
 
 export const deleteTodo = async (id: string): Promise<void> => {
-  await db.todos.delete(id);
-  await markDirty();
+  await http.del(`/api/todos/${id}`);
+  notifyMutation();
 };
 
 export const setStatus = async (id: string, status: TodoStatus): Promise<void> => {
@@ -30,27 +28,19 @@ export const setStatus = async (id: string, status: TodoStatus): Promise<void> =
 };
 
 export const toggleDone = async (id: string): Promise<void> => {
-  const t = await db.todos.get(id);
-  if (!t) return;
-  await setStatus(id, t.status === 'done' ? 'pending' : 'done');
+  await http.post(`/api/todos/${id}/toggle-done`);
+  notifyMutation();
 };
 
-export const listByScope = async (scope: TodoScope, scopeKey: string): Promise<Todo[]> => {
-  const items = await db.todos.where({ scope, scopeKey }).toArray();
-  return items.sort((a, b) => a.order - b.order);
-};
+export const listByScope = (scope: TodoScope, scopeKey: string): Promise<Todo[]> =>
+  http.get<Todo[]>(
+    `/api/todos?scope=${encodeURIComponent(scope)}&scopeKey=${encodeURIComponent(scopeKey)}`
+  );
 
-// Day todos within a date range (for weekly strip and weekly retro aggregation)
-export const listDayTodosInRange = async (startDate: string, endDate: string): Promise<Todo[]> => {
-  const items = await db.todos
-    .where('scope').equals('day')
-    .and(t => t.scopeKey >= startDate && t.scopeKey <= endDate)
-    .toArray();
-  return items.sort((a, b) => {
-    if (a.scopeKey !== b.scopeKey) return a.scopeKey < b.scopeKey ? -1 : 1;
-    return a.order - b.order;
-  });
-};
+export const listDayTodosInRange = (startDate: string, endDate: string): Promise<Todo[]> =>
+  http.get<Todo[]>(
+    `/api/todos?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+  );
 
-export const listByParentGoal = async (parentGoalId: string): Promise<Todo[]> =>
-  db.todos.where('parentGoalId').equals(parentGoalId).toArray();
+export const listByParentGoal = (parentGoalId: string): Promise<Todo[]> =>
+  http.get<Todo[]>(`/api/todos?parentGoalId=${encodeURIComponent(parentGoalId)}`);

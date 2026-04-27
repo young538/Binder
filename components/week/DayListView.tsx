@@ -12,8 +12,8 @@ import { useBinder } from '@/store';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { listByScope } from '@/lib/repo/todos';
-import { listRoutinesByDay } from '@/lib/repo/routines';
-import { TimeBlock, Todo, Routine } from '@/lib/types';
+import { listHabits } from '@/lib/repo/habits';
+import { TimeBlock, Todo, Habit, Weekday } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
 import { DayTodoColumn } from './DayTodoColumn';
@@ -43,7 +43,7 @@ export const DayListView = ({ isoweek }: Props) => {
   const [todoOpen, setTodoOpen] = useState(true);
   const [dayTodoCount, setDayTodoCount] = useState(0);
   const [todoRefreshKey, setTodoRefreshKey] = useState(0);
-  const [dayRoutines, setDayRoutines] = useState<Routine[]>([]);
+  const [dayHabits, setDayHabits] = useState<Habit[]>([]);
 
   const dates = weekDates(isoweek);
   const today = toIsoDate(new Date());
@@ -73,8 +73,16 @@ export const DayListView = ({ isoweek }: Props) => {
   }, [dateStr, todoRefreshKey]);
 
   useEffect(() => {
-    const dow = (current.getDay() + 6) % 7;
-    listRoutinesByDay(dow).then(setDayRoutines);
+    const dow = current.getDay() as Weekday;
+    listHabits().then(hs =>
+      setDayHabits(
+        hs.filter(h => {
+          const s = h.schedule;
+          if (!s || s.kind === 'daily' || s.kind === 'perWeek' || s.kind === 'perMonth') return true;
+          return s.days.includes(dow);
+        })
+      )
+    );
   }, [current]);
 
   const dayBlocks = blocks
@@ -141,28 +149,26 @@ export const DayListView = ({ isoweek }: Props) => {
         </button>
       </header>
 
-      {dayRoutines.length > 0 && (
+      {dayHabits.length > 0 && (
         <div className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 p-3">
-          <div className="text-xs font-medium text-zinc-500 mb-2">오늘의 루틴</div>
+          <div className="text-xs font-medium text-zinc-500 mb-2">오늘의 습관</div>
           <div className="flex gap-1.5 flex-wrap">
-            {dayRoutines.map((r) => {
-              const color = categories.find((c) => c.id === r.categoryId)?.color;
+            {dayHabits.map((h) => {
+              const color = categories.find((c) => c.id === h.categoryId)?.color ?? h.color;
               return (
                 <span
-                  key={r.id}
+                  key={h.id}
                   className="text-xs px-2 py-0.5 rounded-full border flex items-center gap-1"
                   style={{
-                    background: color ? tint.soft(color) : 'transparent',
-                    borderColor: color ?? 'var(--color-border)',
+                    background: tint.soft(color),
+                    borderColor: color,
                   }}
                 >
-                  {color && (
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: color }}
-                    />
-                  )}
-                  <span>{r.name}</span>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: color }}
+                  />
+                  <span>{h.name}</span>
                 </span>
               );
             })}

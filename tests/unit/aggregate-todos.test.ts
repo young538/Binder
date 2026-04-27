@@ -8,6 +8,7 @@ const mk = (p: Partial<TimeBlock>): TimeBlock => ({
   startMin: 540,
   endMin: 600,
   text: '',
+  kind: 'plan',
   categoryId: 'c1',
   createdAt: '',
   updatedAt: '',

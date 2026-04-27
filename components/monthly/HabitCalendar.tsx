@@ -46,11 +46,6 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
     reload();
   };
 
-  const stats = (habitId: string) => {
-    const done = logs.filter((l) => l.habitId === habitId).length;
-    return { done, total: days.length };
-  };
-
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
@@ -73,7 +68,7 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
           <div className="overflow-x-auto">
           <table
             className="w-full text-xs border-collapse"
-            style={{ minWidth: `${140 + days.length * 28}px` }}
+            style={{ minWidth: `${120 + days.length * 28}px` }}
           >
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-800/50">
@@ -101,15 +96,10 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
                     </th>
                   );
                 })}
-                <th className="p-2 border-l border-zinc-200 dark:border-zinc-800 w-20 text-center">
-                  합계
-                </th>
               </tr>
             </thead>
             <tbody>
               {habits.map((h) => {
-                const { done, total } = stats(h.id);
-                const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                 return (
                   <tr
                     key={h.id}
@@ -146,12 +136,6 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
                         </td>
                       );
                     })}
-                    <td className="p-2 text-center border-l border-zinc-200 dark:border-zinc-800 tabular-nums">
-                      <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                        {done}/{total}
-                      </div>
-                      <div className="text-[10px] text-zinc-500">{pct}%</div>
-                    </td>
                   </tr>
                 );
               })}

@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { HabitEditor } from '@/components/settings/HabitEditor';
-import { RoutineEditor } from '@/components/settings/RoutineEditor';
 import { AnnualGoalTable } from './AnnualGoalTable';
 import { yearKeyFromString } from '@/lib/utils/period';
 
@@ -36,8 +35,6 @@ export const AnnualPage = ({ year }: Props) => {
       <AnnualGoalTable year={year} />
 
       <HabitEditor />
-
-      <RoutineEditor />
     </div>
   );
 };

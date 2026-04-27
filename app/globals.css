@@ -53,6 +53,16 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
+/* 숫자 input의 스피너(증감 화살표) 숨기기 — 좁은 셀에서 숫자 잘림 방지 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* Tailwind v4 @theme inline — expose vars as Tailwind tokens */
 @theme inline {
   --color-bg: var(--color-bg);

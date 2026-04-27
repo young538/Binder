@@ -1,13 +1,7 @@
-import { db } from '../db';
+// Server-side persistence: no local dirty tracking needed.
+// Retained as no-op stub for any stale imports; safe to delete in future.
+export const getSyncMeta = async (): Promise<null> => null;
 
-export const getSyncMeta = async () => db.syncMeta.get('main');
-
-export const markSynced = async (syncedAt: string) => {
-  const existing = await getSyncMeta();
-  await db.syncMeta.put({
-    key: 'main',
-    dirty: false,
-    lastSyncedAt: syncedAt,
-    deviceId: existing?.deviceId ?? crypto.randomUUID(),
-  });
+export const markSynced = async (_syncedAt: string): Promise<void> => {
+  void _syncedAt;
 };

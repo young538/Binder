@@ -1,32 +1,32 @@
-import { db, markDirty } from '../db';
 import { TimeBlock } from '../types';
-import { newId } from '../utils/id';
+import { http } from './http';
+import { notifyMutation } from './events';
 
 export const createTimeBlock = async (
   data: Omit<TimeBlock, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<TimeBlock> => {
-  const now = new Date().toISOString();
-  const block: TimeBlock = { ...data, id: newId(), createdAt: now, updatedAt: now };
-  await db.timeBlocks.put(block);
-  await markDirty();
-  return block;
+  const row = await http.post<TimeBlock>('/api/time-blocks', data);
+  notifyMutation();
+  return row;
 };
 
 export const updateTimeBlock = async (
   id: string,
   patch: Partial<Omit<TimeBlock, 'id' | 'createdAt'>>
 ): Promise<void> => {
-  await db.timeBlocks.update(id, { ...patch, updatedAt: new Date().toISOString() });
-  await markDirty();
+  await http.patch<TimeBlock>(`/api/time-blocks/${id}`, patch);
+  notifyMutation();
 };
 
 export const deleteTimeBlock = async (id: string): Promise<void> => {
-  await db.timeBlocks.delete(id);
-  await markDirty();
+  await http.del(`/api/time-blocks/${id}`);
+  notifyMutation();
 };
 
-export const getTimeBlocksInRange = async (
+export const getTimeBlocksInRange = (
   startDate: string,
   endDate: string
 ): Promise<TimeBlock[]> =>
-  db.timeBlocks.where('date').between(startDate, endDate, true, true).toArray();
+  http.get<TimeBlock[]>(
+    `/api/time-blocks?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+  );

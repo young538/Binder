@@ -19,7 +19,7 @@ export const TopNav = () => {
   const settingsActive = path.startsWith('/settings');
   return (
     <nav className="hidden lg:flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 px-6 py-3 bg-white dark:bg-zinc-950 sticky top-0 z-20">
-      <span className="font-semibold mr-4 text-zinc-800 dark:text-zinc-50">3P 바인더</span>
+      <span className="font-semibold mr-4 text-zinc-800 dark:text-zinc-50">Super 플래너</span>
       <div className="flex items-center gap-1 mr-auto">
         {primaryLinks.map(({ label, Icon, basePath, href }) => {
           const active = path.startsWith(basePath);

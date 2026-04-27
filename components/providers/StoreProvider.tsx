@@ -1,7 +1,6 @@
 'use client';
 import { useEffect } from 'react';
 import { useBinder } from '@/store';
-import { installAutoSnapshot } from '@/lib/snapshots';
 import { ThemeApplier } from './ThemeApplier';
 
 export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
@@ -9,7 +8,6 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const ready = useBinder(s => s.ready);
   useEffect(() => {
     init();
-    installAutoSnapshot();
   }, [init]);
   if (!ready) return <div className="p-8 text-center text-sm text-gray-500">로딩 중…</div>;
   return (

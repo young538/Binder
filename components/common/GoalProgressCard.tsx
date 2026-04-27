@@ -38,7 +38,7 @@ export const GoalProgressCard = ({ goal, progress, onClick }: Props) => {
         {progress.habits && (
           <span>
             🔁 {progress.habits.thisMonthLogs}/
-            {progress.habits.total * progress.habits.daysInMonth} ({progress.habits.percent}%)
+            {progress.habits.expectedThisMonth} ({progress.habits.percent}%)
           </span>
         )}
         {progress.todos && (
