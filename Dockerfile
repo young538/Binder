@@ -48,6 +48,8 @@ COPY --from=build --chown=nextjs:nodejs /app/node_modules/argon2 ./node_modules/
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/@phc ./node_modules/@phc
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/node-addon-api ./node_modules/node-addon-api
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/node-gyp-build ./node_modules/node-gyp-build
+# scripts/users.mjs uses ulid for new user IDs; standalone bundle doesn't trace it
+COPY --from=build --chown=nextjs:nodejs /app/node_modules/ulid ./node_modules/ulid
 
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 VOLUME ["/app/data"]

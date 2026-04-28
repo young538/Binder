@@ -160,6 +160,42 @@ New-NetFirewallRule -DisplayName "Super Planner HTTP" -Direction Inbound -Protoc
 New-NetFirewallRule -DisplayName "Super Planner HTTPS" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
 ```
 
+## 5.5 사용자 관리 (멀티 유저)
+
+이 인스턴스는 한 컨테이너에서 여러 사용자를 격리해 운영. 사용자 추가/비밀번호 변경/삭제는 CLI 스크립트로만 가능 (UI 없음).
+
+### 사용자 추가
+```powershell
+docker compose exec -T app node scripts/users.mjs add <username> <password>
+```
+신규 사용자는 자동으로 8개 기본 카테고리가 시딩됩니다. 비밀번호는 argon2id 로 해시되어 DB 의 `users` 테이블에만 저장됩니다.
+
+### 사용자 목록
+```powershell
+docker compose exec -T app node scripts/users.mjs list
+```
+출력: `<id>\t<username>\t<created_at>` (비밀번호 해시 노출 없음)
+
+### 비밀번호 변경
+```powershell
+docker compose exec -T app node scripts/users.mjs passwd <username> <new-password>
+```
+
+### 사용자 삭제 (CASCADE)
+```powershell
+docker compose exec -T app node scripts/users.mjs delete <username>
+```
+⚠️ 해당 사용자의 모든 도메인 데이터 (10 테이블) + settings 가 단일 트랜잭션으로 함께 삭제됩니다. 복구 불가. 백업이 있는 상태에서만 실행하세요.
+
+### 데이터 격리 보장
+
+모든 도메인 테이블이 `user_id` 컬럼을 가지고, 모든 server repo / API route 가 `requireSession()` 으로부터 받은 `userId` 로 query 를 필터합니다. 또한 import route 는 import 파일이 어떤 `userId` 를 가지든 무시하고 현재 세션의 `userId` 로 강제 stamp 합니다 — 다른 사용자 계정으로 import 해도 자동으로 본인 계정에 들어옵니다.
+
+### 신규 운영 환경 첫 부트
+- `.env`/`app.env` 의 `APP_USERNAME` / `APP_PASSWORD_HASH` 에 admin 1명만 자동 시딩됨
+- 추가 사용자는 위 CLI 로 등록
+- 기존 single-user 운영 데이터가 있던 DB 는 첫 부트 시 자동 마이그레이션 (모든 행이 admin 의 것으로 backfill) — 데이터 보존됨
+
 ## 6. 자동 시작 체인 (PC 재부팅 후 자동 복구)
 
 1. Windows 부팅
@@ -233,9 +269,12 @@ WAL 파일이 백업에 있으면 함께 복사. 없으면 SQLite가 깨끗한 �
 
 - **self-signed 인증서**: MITM 공격 이론적으로 가능 (브라우저 신뢰 체인 부재). 본인이 인증서 핑거프린트를 한 번 신뢰한 후엔 해당 브라우저에서만 안전.
 - **로그인 brute force**: rate limit 미적용. 외부 노출 중이라면 fail2ban 같은 추가 보호 권장.
-- **단일 사용자**: `APP_USERNAME`, `APP_PASSWORD_HASH` 한 쌍만 지원. 멀티유저 미설계.
+- **사용자 관리 UI 부재**: 사용자 추가/삭제/비번 변경은 모두 CLI 로만 가능 (`scripts/users.mjs`). 운영자만 컨테이너 셸 접근 가능하다는 전제.
+- **사용자 간 ID 충돌 시 import 가 silently skip**: import route 는 ID 충돌 시 onConflictDoNothing 으로 처리. 실 운영에서 ULID 충돌 가능성은 사실상 0.
+- **타이밍 공격 가능성**: unknown username 시 argon2 verify 를 skip 해 응답 시간이 미세하게 다름. 단일 사용자에서 멀티 사용자로 옮긴 직후 외부 노출 시 enumeration 위험. 가정 네트워크 한정 운영이면 무관.
 - **세션 만료**: 30일 (`maxAge: 60*60*24*30` in `lib/server/auth.ts`). 길다고 느끼면 줄이고 컨테이너 재기동.
 
 ## 9. 변경 이력
 
 - 2026-04-28 — 최초 배포 (Docker + Caddy + iptime DDNS + self-signed). LE 발급 차단(CAA) 발견 후 self-signed 로 전환.
+- 2026-04-28 — 멀티 유저 지원 추가 (11-task 리팩토링). users 테이블, 도메인 테이블 user_id, settings per-user PK, server repos/API routes 가 session.userId 로 격리. 기존 single-user 데이터는 sentinel default + runtime backfill 패턴으로 admin 으로 자동 매핑되어 보존. 사용자 관리 CLI (`scripts/users.mjs`) 추가.
