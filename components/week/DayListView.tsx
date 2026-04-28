@@ -83,7 +83,10 @@ export const DayListView = ({ isoweek }: Props) => {
         })
       )
     );
-  }, [current]);
+    // dateStr 으로 의존하면 같은 날짜 = 같은 string 이라 reference 동등
+    // current(Date) 를 deps 에 두면 매 렌더 새 객체라 무한 루프 발생
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateStr]);
 
   const dayBlocks = blocks
     .filter((b) => b.date === dateStr)
