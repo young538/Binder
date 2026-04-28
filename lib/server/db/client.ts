@@ -2,6 +2,7 @@ import 'server-only';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { eq } from 'drizzle-orm';
 import path from 'node:path';
 import fs from 'node:fs';
 import * as schema from './schema';
@@ -33,6 +34,24 @@ const ensureSeed = (db: ReturnType<typeof drizzle<typeof schema>>) => {
   db.insert(schema.categories).values(rows).run();
 };
 
+const ensureAdminUser = (db: ReturnType<typeof drizzle<typeof schema>>) => {
+  const username = process.env.APP_USERNAME ?? 'admin';
+  const hash = process.env.APP_PASSWORD_HASH;
+  if (!hash) return; // no env-based admin; runtime expects an existing user
+
+  const existing = db.select().from(schema.users).where(eq(schema.users.username, username)).get();
+  if (existing) return;
+
+  const now = new Date().toISOString();
+  db.insert(schema.users).values({
+    id: ulid(),
+    username,
+    passwordHash: hash,
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+};
+
 let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 let _sqlite: Database.Database | null = null;
 
@@ -53,6 +72,7 @@ export const getDb = () => {
     }
   }
 
+  ensureAdminUser(_db);
   ensureSeed(_db);
 
   return _db;

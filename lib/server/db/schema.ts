@@ -1,5 +1,14 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
+// Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 // Goals (mandalart: oneThing / mandalartCore / mandalartSub)
 export const goals = sqliteTable(
   'goals',
