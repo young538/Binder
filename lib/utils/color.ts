@@ -12,7 +12,7 @@ export const hexToRgba = (hex: string, alpha: number): string => {
 // TimeBlocks 앱처럼 색이 분명히 보이는 것이 목표.
 export const tint = {
   subtle: (hex: string) => hexToRgba(hex, 0.35),  // 행 배경, hover — 은은하지만 분명히 보임
-  soft:   (hex: string) => hexToRgba(hex, 0.70),  // 타임블록 본체, 칩 배경 — 색 정체성 뚜렷
+  soft:   (hex: string, alpha = 0.70) => hexToRgba(hex, alpha),  // 타임블록 본체, 칩 배경 — 색 정체성 뚜렷
   strong: (hex: string) => hexToRgba(hex, 0.90),  // 선택됨/활성 상태
   bar:    (hex: string) => hex,                   // 솔리드 악센트 (좌측 바)
 };

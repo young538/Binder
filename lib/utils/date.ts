@@ -36,3 +36,5 @@ export const timeStrToMinutes = (s: string): number => {
 
 export const snapToGrid = (minutes: number, gridMinutes: number): number =>
   Math.round(minutes / gridMinutes) * gridMinutes;
+
+export const WEEKDAYS_KO = ['월','화','수','목','금','토','일'] as const;

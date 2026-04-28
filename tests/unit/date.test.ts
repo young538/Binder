@@ -31,3 +31,11 @@ describe('time conversion', () => {
     expect(timeStrToMinutes('23:59')).toBe(1439);
   });
 });
+
+import { WEEKDAYS_KO } from '@/lib/utils/date';
+
+describe('WEEKDAYS_KO', () => {
+  it('starts with monday', () => {
+    expect(WEEKDAYS_KO).toEqual(['월','화','수','목','금','토','일']);
+  });
+});
