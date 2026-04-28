@@ -40,3 +40,35 @@ describe('admin user seeding', () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+import { verifyCredentials } from '@/lib/server/auth';
+
+describe('verifyCredentials', () => {
+  it('returns userId for correct username + password', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const { getDb } = await import('@/lib/server/db/client');
+    getDb();
+    const result = await verifyCredentials('testadmin', 'young7983*');
+    expect(result).toMatchObject({ userId: expect.any(String), username: 'testadmin' });
+  });
+
+  it('returns null for wrong password', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const { getDb } = await import('@/lib/server/db/client');
+    getDb();
+    const result = await verifyCredentials('testadmin', 'wrong-password');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for unknown username', async () => {
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const { getDb } = await import('@/lib/server/db/client');
+    getDb();
+    const result = await verifyCredentials('nobody', 'whatever');
+    expect(result).toBeNull();
+  });
+});

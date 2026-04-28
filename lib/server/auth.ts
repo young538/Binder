@@ -2,9 +2,12 @@ import 'server-only';
 import { getIronSession, type IronSession, type SessionOptions } from 'iron-session';
 import { cookies } from 'next/headers';
 import argon2 from 'argon2';
+import { eq } from 'drizzle-orm';
+import { getDb, schema } from './db/client';
 
 export interface SessionData {
   loggedIn?: boolean;
+  userId?: string;
   username?: string;
 }
 
@@ -33,26 +36,41 @@ export const getSession = async (): Promise<IronSession<SessionData>> => {
   return getIronSession<SessionData>(cookieStore, getSessionOptions());
 };
 
-export const verifyPassword = async (plain: string): Promise<boolean> => {
-  const hash = process.env.APP_PASSWORD_HASH;
-  const username = process.env.APP_USERNAME ?? 'admin';
-  if (!hash) {
-    throw new Error(
-      'APP_PASSWORD_HASH env var missing. Generate via: node scripts/hash-password.mjs <your-password>'
-    );
-  }
-  void username; // reserved for future multi-user
+export interface VerifiedCreds {
+  userId: string;
+  username: string;
+}
+
+export const verifyCredentials = async (
+  username: string,
+  password: string
+): Promise<VerifiedCreds | null> => {
+  if (!username || !password) return null;
+  const db = getDb();
+  const row = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.username, username))
+    .get();
+  if (!row) return null;
   try {
-    return await argon2.verify(hash, plain);
+    const ok = await argon2.verify(row.passwordHash, password);
+    if (!ok) return null;
+    return { userId: row.id, username: row.username };
   } catch {
-    return false;
+    return null;
   }
 };
 
-export const requireSession = async (): Promise<SessionData> => {
+export interface RequiredSession {
+  userId: string;
+  username: string;
+}
+
+export const requireSession = async (): Promise<RequiredSession> => {
   const session = await getSession();
-  if (!session.loggedIn) {
+  if (!session.loggedIn || !session.userId || !session.username) {
     throw new Response('Unauthorized', { status: 401 });
   }
-  return session;
+  return { userId: session.userId, username: session.username };
 };
