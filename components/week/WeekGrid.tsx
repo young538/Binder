@@ -1,9 +1,9 @@
 'use client';
 import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react';
 import { useBinder } from '@/store';
-import { weekDates, toIsoDate, minutesToTimeStr, toIsoWeek } from '@/lib/utils/date';
+import { weekDates, toIsoDate, minutesToTimeStr, toIsoWeek, WEEKDAYS_KO } from '@/lib/utils/date';
 import { weekKeyFromString } from '@/lib/utils/period';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
@@ -149,19 +149,27 @@ export const WeekGrid = ({ isoweek }: Props) => {
           const dateStr = toIsoDate(d);
           const isToday = dateStr === today;
           return (
-            <button
+            <div
               key={`h1-${i}`}
-              onClick={() => setRetroDate(dateStr)}
-              className={`text-center py-2 border-b border-zinc-200 dark:border-zinc-800 text-xs font-medium transition ${
-                isToday
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                  : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900'
-              }`}
+              className={`relative border-b border-zinc-200 dark:border-zinc-800 py-2 px-2 text-center
+                ${isToday
+                  ? 'bg-zinc-50 dark:bg-zinc-900/30'
+                  : 'bg-white dark:bg-zinc-950'}
+              `}
               style={{ gridColumn: `${i * 2 + 2} / span 2`, gridRow: 1 }}
             >
-              <div className="text-[10px] text-zinc-500 mb-0.5">{d.getMonth() + 1}/{d.getDate()}</div>
-              회고 📝
-            </button>
+              <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                <span className="text-zinc-500 dark:text-zinc-400 mr-1">{WEEKDAYS_KO[i]}</span>
+                {d.getMonth() + 1}/{d.getDate()}
+              </div>
+              <button
+                onClick={() => setRetroDate(dateStr)}
+                title="회고"
+                className="absolute top-1 right-1 p-1 rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                <NotebookPen size={12} />
+              </button>
+            </div>
           );
         })}
 
@@ -170,16 +178,16 @@ export const WeekGrid = ({ isoweek }: Props) => {
         {dates.map((_, i) => (
           <Fragment key={`h2-${i}`}>
             <div
-              className="text-center text-[10px] py-1 bg-blue-50/60 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 font-semibold border-b border-r border-zinc-100 dark:border-zinc-900"
+              className="text-center text-[11px] py-1 text-zinc-500 dark:text-zinc-500 font-medium border-b border-zinc-100 dark:border-zinc-900"
               style={{ gridColumn: i * 2 + 2, gridRow: 2 }}
             >
-              🗓️ 계획
+              계획
             </div>
             <div
-              className="text-center text-[10px] py-1 bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 font-semibold border-b border-r border-zinc-100 dark:border-zinc-900"
+              className="text-center text-[11px] py-1 text-zinc-500 dark:text-zinc-500 font-medium border-b border-zinc-100 dark:border-zinc-900"
               style={{ gridColumn: i * 2 + 3, gridRow: 2 }}
             >
-              ✅ 실제
+              실제
             </div>
           </Fragment>
         ))}
@@ -191,8 +199,8 @@ export const WeekGrid = ({ isoweek }: Props) => {
           return (
             <div
               key={`t-${row}`}
-              className={`text-xs pr-2 text-right text-zinc-400 dark:text-zinc-600 border-r border-zinc-100 dark:border-zinc-900 ${
-                isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''
+              className={`text-[11px] tabular-nums pr-2 text-right text-zinc-500 dark:text-zinc-500 border-r border-zinc-100 dark:border-zinc-900 ${
+                isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : 'border-t border-zinc-100/60 dark:border-zinc-900/40'
               }`}
               style={{ gridColumn: 1, gridRow: row + 3, height: ROW_HEIGHT }}
             >
@@ -211,16 +219,15 @@ export const WeekGrid = ({ isoweek }: Props) => {
           ];
           return subCols.map(({ kind, gridColumn }) => {
             const subBlocks = blocks.filter(b => b.date === dateStr && (b.kind ?? 'plan') === kind);
-            const kindBg =
-              kind === 'plan'
-                ? 'bg-blue-50/20 dark:bg-blue-950/10'
-                : 'bg-emerald-50/20 dark:bg-emerald-950/10';
             return (
               <div
                 key={`col-${col}-${kind}`}
-                className={`relative border-r border-zinc-100 dark:border-zinc-900 ${
-                  isToday ? 'bg-blue-50/40 dark:bg-blue-950/20' : kindBg
-                }`}
+                className={`relative
+                  ${isToday ? 'bg-zinc-50 dark:bg-zinc-900/30' : ''}
+                  ${kind === 'plan'
+                    ? 'border-r border-zinc-100/70 dark:border-zinc-900'
+                    : 'border-r border-zinc-200 dark:border-zinc-800'}
+                `}
                 style={{ gridColumn, gridRow: `3 / span ${totalRows}` }}
                 onPointerDown={(e) => {
                   if ((e.target as HTMLElement).closest('[data-block]')) return;
@@ -266,7 +273,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                         ${inDrag
                           ? 'bg-blue-100/50 dark:bg-blue-900/30 outline outline-2 outline-dashed outline-blue-400'
                           : 'hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40'}
-                        ${isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''}
+                        ${isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : ''}
                       `}
                       style={{ height: ROW_HEIGHT }}
                     />

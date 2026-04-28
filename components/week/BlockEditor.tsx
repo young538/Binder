@@ -137,7 +137,7 @@ export const BlockEditor = ({
                     : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                 }`}
               >
-                🗓️ 계획
+                계획
               </button>
               <button
                 type="button"
@@ -148,7 +148,7 @@ export const BlockEditor = ({
                     : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                 }`}
               >
-                ✅ 실제
+                실제
               </button>
             </div>
           </div>
