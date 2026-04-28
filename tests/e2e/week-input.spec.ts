@@ -1,9 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { resetDb } from './_helpers';
+import { ensureUserExists, loginAs, resetDb } from './_helpers';
+
+// Each spec uses its own user so test data on the server-side SQLite DB
+// does not leak between tests in the same suite (each user's todos and
+// time blocks are scoped to that user_id).
+test.beforeAll(async () => {
+  await ensureUserExists('e2e-week-input', 'pwTest123*');
+});
 
 test('create, edit, delete time block', async ({ page }) => {
   await resetDb(page);
-  await page.goto('/');
+  await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.waitForURL(/\/week\//);
 
   // Wait for store to be ready (loading screen to disappear)

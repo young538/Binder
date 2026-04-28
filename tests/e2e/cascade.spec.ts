@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { resetDb } from './_helpers';
+import { ensureUserExists, loginAs, resetDb } from './_helpers';
+
+// Use a per-spec user so other tests' data doesn't accidentally interfere.
+test.beforeAll(async () => {
+  await ensureUserExists('e2e-cascade', 'pwTest123*');
+});
 
 test('cascade pages render without error', async ({ page }) => {
   await resetDb(page);
-  await page.goto('/');
+  await loginAs(page, 'e2e-cascade', 'pwTest123*');
   await page.waitForURL(/\/week\/(.+)/, { timeout: 60000 });
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 

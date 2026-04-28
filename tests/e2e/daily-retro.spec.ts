@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { resetDb } from './_helpers';
+import { ensureUserExists, loginAs, resetDb } from './_helpers';
+
+// Use a per-spec user so saved retro text from earlier tests doesn't leak in.
+test.beforeAll(async () => {
+  await ensureUserExists('e2e-daily-retro', 'pwTest123*');
+});
 
 test('daily retro save and persist', async ({ page }) => {
   await resetDb(page);
-  await page.goto('/');
+  await loginAs(page, 'e2e-daily-retro', 'pwTest123*');
   await page.waitForURL(/\/week\//);
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 
@@ -15,8 +20,8 @@ test('daily retro save and persist', async ({ page }) => {
   const goodTextarea = page.locator('textarea').first();
   await goodTextarea.fill('좋았던 것 E2E');
 
-  // Wait for 1s debounce + some slack
-  await page.waitForTimeout(1500);
+  // Wait for 1s debounce + some slack (extra under load when other specs ran first)
+  await page.waitForTimeout(2500);
 
   // Reload & reopen
   await page.reload();

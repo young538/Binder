@@ -7,13 +7,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import * as schema from './schema';
 import { ulid } from 'ulid';
+import { PENDING_ADMIN_USER_ID } from './constants';
 
-/**
- * Sentinel placeholder written by migration 0003 to satisfy NOT NULL on
- * pre-existing rows. Runtime backfillUserId() swaps this for the real
- * admin ULID once the users table is seeded.
- */
-export const PENDING_ADMIN_USER_ID = 'pending-admin';
+// Re-export for backwards compatibility (tests import from this module).
+export { PENDING_ADMIN_USER_ID };
 
 const getDbPath = () => process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite');
 const MIGRATIONS_DIR = path.join(process.cwd(), 'drizzle');
