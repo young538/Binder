@@ -211,7 +211,7 @@ export const DayListView = ({ isoweek }: Props) => {
         )}
       </div>
 
-      <ul className="p-4 space-y-2 pb-24">
+      <ul className="p-4 space-y-2 pb-36">
         {dayBlocks.length === 0 && (
           <li className="p-8 text-center text-sm text-zinc-400 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
             아직 기록이 없어요
@@ -256,7 +256,10 @@ export const DayListView = ({ isoweek }: Props) => {
         ))}
       </ul>
 
-      <div className="fixed bottom-14 left-4 right-4 z-20">
+      <div
+        className="fixed left-4 right-4 z-20"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)' }}
+      >
         <button
           onClick={openAdd}
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-1.5"
