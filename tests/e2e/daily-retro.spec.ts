@@ -12,8 +12,8 @@ test('daily retro save and persist', async ({ page }) => {
   await page.waitForURL(/\/week\//);
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 
-  // Click the first day header button (buttons with 📝 icon and day text)
-  const dayHeader = page.locator('button').filter({ hasText: '📝' }).first();
+  // Click the first day header's retro button (NotebookPen icon button with title="회고")
+  const dayHeader = page.locator('button[title="회고"]').first();
   await dayHeader.click();
 
   // First textarea = "좋았던 것"
@@ -26,6 +26,6 @@ test('daily retro save and persist', async ({ page }) => {
   // Reload & reopen
   await page.reload();
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
-  await page.locator('button').filter({ hasText: '📝' }).first().click();
+  await page.locator('button[title="회고"]').first().click();
   await expect(page.locator('textarea').first()).toHaveValue('좋았던 것 E2E');
 });
