@@ -2,6 +2,7 @@ export type GoalLevel = 'oneThing' | 'mandalartCore' | 'mandalartSub';
 
 export interface Goal {
   id: string;
+  userId: string;
   title: string;
   parentId?: string;
   level: GoalLevel;
@@ -35,6 +36,7 @@ export const STATUS_ICON: Record<TodoStatus, string> = {
 
 export interface Todo {
   id: string;
+  userId: string;
   title: string;
   scope: TodoScope;
   scopeKey: string;
@@ -52,6 +54,7 @@ export type FocusScope = 'year' | 'month' | 'week';
 
 export interface FocusNote {
   id: string;
+  userId: string;
   scope: FocusScope;
   scopeKey: string;
   text: string;
@@ -62,6 +65,7 @@ export type TimeBlockKind = 'plan' | 'actual';
 
 export interface TimeBlock {
   id: string;
+  userId: string;
   date: string;
   startMin: number;
   endMin: number;
@@ -76,6 +80,7 @@ export interface TimeBlock {
 
 export interface Category {
   id: string;
+  userId: string;
   name: string;
   color: string;
   order: number;
@@ -85,6 +90,7 @@ export type RetroRating = 1 | 2 | 3 | 4 | 5;
 
 export interface Retrospective {
   id: string;
+  userId: string;
   type: 'daily' | 'weekly';
   dateOrWeek: string;
   rating?: RetroRating;
@@ -108,6 +114,7 @@ export interface Settings {
 
 export interface AnnualGoal {
   id: string;
+  userId: string;
   year: string;
   order: number;
   title: string;
@@ -134,6 +141,7 @@ export const defaultSchedule = (): HabitSchedule => ({ kind: 'daily' });
 
 export interface Habit {
   id: string;
+  userId: string;
   name: string;
   color: string;
   order: number;
@@ -148,6 +156,7 @@ export interface Habit {
 
 export interface HabitLog {
   id: string;
+  userId: string;
   habitId: string;
   date: string;
   createdAt: string;
@@ -155,6 +164,7 @@ export interface HabitLog {
 
 export interface Book {
   id: string;
+  userId: string;
   year: string;
   order: number;
   category?: string;

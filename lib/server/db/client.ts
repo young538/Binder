@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import * as schema from './schema';
 import { ulid } from 'ulid';
 
-const DB_PATH = process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite');
+const getDbPath = () => process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite');
 const MIGRATIONS_DIR = path.join(process.cwd(), 'drizzle');
 
 const ensureDir = (filePath: string) => {
@@ -30,7 +30,18 @@ const DEFAULT_CATEGORIES = [
 const ensureSeed = (db: ReturnType<typeof drizzle<typeof schema>>) => {
   const existing = db.select().from(schema.categories).all();
   if (existing.length > 0) return;
-  const rows = DEFAULT_CATEGORIES.map((c, i) => ({ id: ulid(), order: i, ...c }));
+  // Need an admin user to own the seed rows (categories.user_id is NOT NULL).
+  // If no admin exists yet (env vars unset), skip seeding — Task 7 will seed
+  // per-user on user creation.
+  const adminUsername = process.env.APP_USERNAME ?? 'admin';
+  const admin = db.select().from(schema.users).where(eq(schema.users.username, adminUsername)).get();
+  if (!admin) return;
+  const rows = DEFAULT_CATEGORIES.map((c, i) => ({
+    id: ulid(),
+    userId: admin.id,
+    order: i,
+    ...c,
+  }));
   db.insert(schema.categories).values(rows).run();
 };
 
@@ -52,13 +63,33 @@ const ensureAdminUser = (db: ReturnType<typeof drizzle<typeof schema>>) => {
   }).run();
 };
 
+const DOMAIN_TABLES = [
+  'goals', 'categories', 'todos', 'focus_notes',
+  'annual_goals', 'habits', 'habit_logs', 'books',
+  'retrospectives', 'time_blocks',
+] as const;
+
+const backfillUserId = (db: ReturnType<typeof drizzle<typeof schema>>) => {
+  const adminUsername = process.env.APP_USERNAME ?? 'admin';
+  const admin = db.select().from(schema.users).where(eq(schema.users.username, adminUsername)).get();
+  if (!admin) return; // no admin → can't backfill; subsequent NOT NULL migration would fail on a non-empty DB
+
+  // Reach the underlying better-sqlite3 handle to issue parameterized UPDATEs.
+  // (Using drizzle's update() per table works too but this is more concise.)
+  if (!_sqlite) throw new Error('backfillUserId: sqlite handle missing');
+  for (const t of DOMAIN_TABLES) {
+    _sqlite.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id IS NULL`).run(admin.id);
+  }
+};
+
 let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 let _sqlite: Database.Database | null = null;
 
 export const getDb = () => {
   if (_db) return _db;
-  ensureDir(DB_PATH);
-  _sqlite = new Database(DB_PATH);
+  const dbPath = getDbPath();
+  ensureDir(dbPath);
+  _sqlite = new Database(dbPath);
   _sqlite.pragma('journal_mode = WAL');
   _sqlite.pragma('foreign_keys = ON');
   _db = drizzle(_sqlite, { schema });
@@ -73,6 +104,7 @@ export const getDb = () => {
   }
 
   ensureAdminUser(_db);
+  backfillUserId(_db);
   ensureSeed(_db);
 
   return _db;

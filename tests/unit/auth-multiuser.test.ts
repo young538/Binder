@@ -72,3 +72,20 @@ describe('verifyCredentials', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('backfill userId on existing rows', () => {
+  it('every category row has user_id after migration + admin seeding', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const { getDb, schema } = await import('@/lib/server/db/client');
+    const db = getDb();
+    // ensureSeed already inserted 8 default categories during getDb()
+    const cats = await db.select().from(schema.categories).all();
+    expect(cats.length).toBeGreaterThan(0);
+    for (const c of cats) {
+      expect(c.userId).not.toBeNull();
+      expect(c.userId).toEqual(expect.any(String));
+    }
+  });
+});
