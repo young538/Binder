@@ -187,3 +187,96 @@ describe('backfill userId on existing rows', () => {
     }
   });
 });
+
+describe('settings per-user (Task 4)', () => {
+  it('settings is keyed by userId after migration', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const TMP = path.join(process.cwd(), 'tmp-test', `settings-${Date.now()}.sqlite`);
+    process.env.DB_PATH = TMP;
+
+    const { getDb, schema, closeDb } = await import('@/lib/server/db/client');
+    try {
+      const db = getDb();
+      const adminRow = db.select().from(schema.users).where(eq(schema.users.username, 'testadmin')).get();
+      expect(adminRow).toBeTruthy();
+      if (!adminRow) throw new Error('admin row missing');
+
+      // Insert settings for admin
+      db.insert(schema.settings).values({
+        userId: adminRow.id,
+        firstDayOfWeek: 'mon',
+        gridMinutes: 30,
+        dayStartHour: 6,
+        dayEndHour: 23,
+        theme: 'light',
+      }).run();
+
+      // Insert a second user with their own settings
+      const otherId = '01HOTHER111111111111111111';
+      const now = new Date().toISOString();
+      db.insert(schema.users).values({
+        id: otherId,
+        username: 'otheruser',
+        passwordHash: 'hash',
+        createdAt: now,
+        updatedAt: now,
+      }).run();
+      db.insert(schema.settings).values({
+        userId: otherId,
+        firstDayOfWeek: 'sun',
+        gridMinutes: 60,
+        dayStartHour: 8,
+        dayEndHour: 22,
+        theme: 'dark',
+      }).run();
+
+      const adminSettings = db.select().from(schema.settings).where(eq(schema.settings.userId, adminRow.id)).get();
+      const otherSettings = db.select().from(schema.settings).where(eq(schema.settings.userId, otherId)).get();
+      expect(adminSettings?.theme).toBe('light');
+      expect(otherSettings?.theme).toBe('dark');
+
+      const all = db.select().from(schema.settings).all();
+      expect(all).toHaveLength(2);
+    } finally {
+      closeDb();
+      cleanupDb(TMP);
+    }
+  });
+
+  it('legacy main settings row is preserved on populated DB migration', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const TMP = path.join(process.cwd(), 'tmp-test', `settings-legacy-${Date.now()}.sqlite`);
+    process.env.DB_PATH = TMP;
+
+    // Seed pre-multi-user state (migrations 0000–0002 applied), then add a
+    // legacy settings row with key='main' to simulate old single-user data.
+    await seedPopulatedDb(TMP);
+
+    const Database = (await import('better-sqlite3')).default;
+    const handle = new Database(TMP);
+    handle.prepare("INSERT INTO settings (key, first_day_of_week, grid_minutes, day_start_hour, day_end_hour, theme) VALUES ('main', 'mon', 30, 6, 23, 'dark')").run();
+    handle.close();
+
+    const { getDb, schema, closeDb } = await import('@/lib/server/db/client');
+    try {
+      // Now trigger migrations 0003 + 0004 + backfill via getDb()
+      const db = getDb();
+      const adminRow = db.select().from(schema.users).where(eq(schema.users.username, 'testadmin')).get();
+      expect(adminRow).toBeTruthy();
+      if (!adminRow) throw new Error('admin row missing');
+
+      // After migration: legacy 'main' row should be re-keyed to admin user
+      const adminSettings = db.select().from(schema.settings).where(eq(schema.settings.userId, adminRow.id)).get();
+      expect(adminSettings).toBeTruthy();
+      expect(adminSettings?.theme).toBe('dark'); // preserved from legacy row
+      expect(adminSettings?.firstDayOfWeek).toBe('mon');
+    } finally {
+      closeDb();
+      cleanupDb(TMP);
+    }
+  });
+});

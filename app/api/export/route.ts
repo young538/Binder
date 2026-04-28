@@ -44,8 +44,8 @@ export async function GET() {
 
   let settingsOut = null;
   if (settingsRow) {
-    const { key: _k, ...rest } = settingsRow;
-    void _k;
+    const { userId: _u, ...rest } = settingsRow;
+    void _u;
     settingsOut = rest;
   }
 

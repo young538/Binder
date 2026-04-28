@@ -96,9 +96,9 @@ export async function POST(req: Request) {
   if (data.settings) {
     await db
       .insert(settings)
-      .values({ key: 'main', ...data.settings } as never)
+      .values(data.settings as never)
       .onConflictDoUpdate({
-        target: settings.key,
+        target: settings.userId,
         set: data.settings as never,
       })
       .run();

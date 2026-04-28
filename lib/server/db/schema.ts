@@ -233,9 +233,9 @@ export const timeBlocks = sqliteTable(
   })
 );
 
-// Settings (singleton row, key='main')
+// Settings — one row per user (PK = user_id)
 export const settings = sqliteTable('settings', {
-  key: text('key').primaryKey(), // always 'main'
+  userId: text('user_id').primaryKey().notNull().default(PENDING_ADMIN_USER_ID),
   firstDayOfWeek: text('first_day_of_week').notNull(), // 'mon' | 'sun'
   gridMinutes: integer('grid_minutes').notNull(), // 30 | 60
   dayStartHour: integer('day_start_hour').notNull(),

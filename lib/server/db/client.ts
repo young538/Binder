@@ -73,7 +73,7 @@ const ensureAdminUser = (db: ReturnType<typeof drizzle<typeof schema>>) => {
 const DOMAIN_TABLES = [
   'goals', 'categories', 'todos', 'focus_notes',
   'annual_goals', 'habits', 'habit_logs', 'books',
-  'retrospectives', 'time_blocks',
+  'retrospectives', 'time_blocks', 'settings',
 ] as const;
 
 const backfillUserId = (db: ReturnType<typeof drizzle<typeof schema>>) => {
