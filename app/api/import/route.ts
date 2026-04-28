@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { requireSession } from '@/lib/server/auth';
 import { getDb } from '@/lib/server/db/client';
 import {
   goals,
@@ -31,75 +33,96 @@ interface ImportBody {
   };
 }
 
+// Force userId on every row, ignoring whatever the import file claims.
+// This prevents account-takeover via crafted import files.
+const stamp = <T extends object>(rows: unknown[] | undefined, userId: string): T[] =>
+  (rows ?? []).map(r => ({ ...(r as object), userId })) as T[];
+
 export async function POST(req: Request) {
+  let session;
+  try { session = await requireSession(); } catch (r) { return r as Response; }
+
   const body = (await req.json()) as ImportBody;
   const { mode, data } = body;
   if (!mode || !data) {
     return NextResponse.json({ error: 'mode and data required' }, { status: 400 });
   }
   const db = getDb();
+  const uid = session.userId;
 
   if (mode === 'replace') {
-    await db.delete(habitLogs).run();
-    await db.delete(habits).run();
-    await db.delete(annualGoals).run();
-    await db.delete(todos).run();
-    await db.delete(focusNotes).run();
-    await db.delete(retrospectives).run();
-    await db.delete(timeBlocks).run();
-    await db.delete(books).run();
-    await db.delete(categories).run();
-    await db.delete(goals).run();
+    // Only wipe THIS user's rows — never touch other users' data.
+    await db.delete(habitLogs).where(eq(habitLogs.userId, uid)).run();
+    await db.delete(habits).where(eq(habits.userId, uid)).run();
+    await db.delete(annualGoals).where(eq(annualGoals.userId, uid)).run();
+    await db.delete(todos).where(eq(todos.userId, uid)).run();
+    await db.delete(focusNotes).where(eq(focusNotes.userId, uid)).run();
+    await db.delete(retrospectives).where(eq(retrospectives.userId, uid)).run();
+    await db.delete(timeBlocks).where(eq(timeBlocks.userId, uid)).run();
+    await db.delete(books).where(eq(books.userId, uid)).run();
+    await db.delete(categories).where(eq(categories.userId, uid)).run();
+    await db.delete(goals).where(eq(goals.userId, uid)).run();
   }
 
   const counts: Record<string, number> = {};
   if (data.goals?.length) {
-    await db.insert(goals).values(data.goals as never[]).onConflictDoNothing().run();
-    counts.goals = data.goals.length;
+    const rows = stamp(data.goals, uid);
+    await db.insert(goals).values(rows as never[]).onConflictDoNothing().run();
+    counts.goals = rows.length;
   }
   if (data.categories?.length) {
-    await db.insert(categories).values(data.categories as never[]).onConflictDoNothing().run();
-    counts.categories = data.categories.length;
+    const rows = stamp(data.categories, uid);
+    await db.insert(categories).values(rows as never[]).onConflictDoNothing().run();
+    counts.categories = rows.length;
   }
   if (data.timeBlocks?.length) {
-    await db.insert(timeBlocks).values(data.timeBlocks as never[]).onConflictDoNothing().run();
-    counts.timeBlocks = data.timeBlocks.length;
+    const rows = stamp(data.timeBlocks, uid);
+    await db.insert(timeBlocks).values(rows as never[]).onConflictDoNothing().run();
+    counts.timeBlocks = rows.length;
   }
   if (data.retrospectives?.length) {
-    await db.insert(retrospectives).values(data.retrospectives as never[]).onConflictDoNothing().run();
-    counts.retrospectives = data.retrospectives.length;
+    const rows = stamp(data.retrospectives, uid);
+    await db.insert(retrospectives).values(rows as never[]).onConflictDoNothing().run();
+    counts.retrospectives = rows.length;
   }
   if (data.todos?.length) {
-    await db.insert(todos).values(data.todos as never[]).onConflictDoNothing().run();
-    counts.todos = data.todos.length;
+    const rows = stamp(data.todos, uid);
+    await db.insert(todos).values(rows as never[]).onConflictDoNothing().run();
+    counts.todos = rows.length;
   }
   if (data.focusNotes?.length) {
-    await db.insert(focusNotes).values(data.focusNotes as never[]).onConflictDoNothing().run();
-    counts.focusNotes = data.focusNotes.length;
+    const rows = stamp(data.focusNotes, uid);
+    await db.insert(focusNotes).values(rows as never[]).onConflictDoNothing().run();
+    counts.focusNotes = rows.length;
   }
   if (data.annualGoals?.length) {
-    await db.insert(annualGoals).values(data.annualGoals as never[]).onConflictDoNothing().run();
-    counts.annualGoals = data.annualGoals.length;
+    const rows = stamp(data.annualGoals, uid);
+    await db.insert(annualGoals).values(rows as never[]).onConflictDoNothing().run();
+    counts.annualGoals = rows.length;
   }
   if (data.habits?.length) {
-    await db.insert(habits).values(data.habits as never[]).onConflictDoNothing().run();
-    counts.habits = data.habits.length;
+    const rows = stamp(data.habits, uid);
+    await db.insert(habits).values(rows as never[]).onConflictDoNothing().run();
+    counts.habits = rows.length;
   }
   if (data.habitLogs?.length) {
-    await db.insert(habitLogs).values(data.habitLogs as never[]).onConflictDoNothing().run();
-    counts.habitLogs = data.habitLogs.length;
+    const rows = stamp(data.habitLogs, uid);
+    await db.insert(habitLogs).values(rows as never[]).onConflictDoNothing().run();
+    counts.habitLogs = rows.length;
   }
   if (data.books?.length) {
-    await db.insert(books).values(data.books as never[]).onConflictDoNothing().run();
-    counts.books = data.books.length;
+    const rows = stamp(data.books, uid);
+    await db.insert(books).values(rows as never[]).onConflictDoNothing().run();
+    counts.books = rows.length;
   }
   if (data.settings) {
+    const row = { ...data.settings, userId: uid };
     await db
       .insert(settings)
-      .values(data.settings as never)
+      .values(row as never)
       .onConflictDoUpdate({
         target: settings.userId,
-        set: data.settings as never,
+        set: row as never,
       })
       .run();
     counts.settings = 1;

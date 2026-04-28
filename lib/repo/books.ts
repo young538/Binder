@@ -6,7 +6,7 @@ export const listByYear = (year: string): Promise<Book[]> =>
   http.get<Book[]>(`/api/books?year=${encodeURIComponent(year)}`);
 
 export const createBook = async (
-  data: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<Book, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Book> => {
   const row = await http.post<Book>('/api/books', data);
   notifyMutation();
@@ -15,7 +15,7 @@ export const createBook = async (
 
 export const updateBook = async (
   id: string,
-  patch: Partial<Omit<Book, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Book, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Book>(`/api/books/${id}`, patch);
   notifyMutation();

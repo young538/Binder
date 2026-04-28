@@ -3,7 +3,7 @@ import { http } from './http';
 import { notifyMutation } from './events';
 
 export const createTimeBlock = async (
-  data: Omit<TimeBlock, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<TimeBlock> => {
   const row = await http.post<TimeBlock>('/api/time-blocks', data);
   notifyMutation();
@@ -12,7 +12,7 @@ export const createTimeBlock = async (
 
 export const updateTimeBlock = async (
   id: string,
-  patch: Partial<Omit<TimeBlock, 'id' | 'createdAt'>>
+  patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<TimeBlock>(`/api/time-blocks/${id}`, patch);
   notifyMutation();

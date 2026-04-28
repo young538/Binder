@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/server/auth';
 import { updateHabit, deleteHabit } from '@/lib/server/repos/habits';
 
 export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
+  let session;
+  try { session = await requireSession(); } catch (r) { return r as Response; }
+
   const { id } = await ctx.params;
   const patch = await req.json();
-  const row = await updateHabit(id, patch);
+  const row = await updateHabit(session.userId, id, patch);
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(row);
 }
@@ -16,7 +20,10 @@ export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
+  let session;
+  try { session = await requireSession(); } catch (r) { return r as Response; }
+
   const { id } = await ctx.params;
-  await deleteHabit(id);
+  await deleteHabit(session.userId, id);
   return NextResponse.json({ ok: true });
 }

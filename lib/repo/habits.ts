@@ -13,7 +13,7 @@ export const syncAnnualGoalFromHabits = async (_annualGoalId: string): Promise<v
 export const listHabits = (): Promise<Habit[]> => http.get<Habit[]>('/api/habits');
 
 export const createHabit = async (
-  data: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Habit> => {
   const row = await http.post<Habit>('/api/habits', data);
   notifyMutation();
@@ -22,7 +22,7 @@ export const createHabit = async (
 
 export const updateHabit = async (
   id: string,
-  patch: Partial<Omit<Habit, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Habit, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Habit>(`/api/habits/${id}`, patch);
   notifyMutation();

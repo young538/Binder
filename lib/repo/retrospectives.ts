@@ -15,7 +15,7 @@ export const getRetrospective = async (
 export const upsertRetrospective = async (
   type: 'daily' | 'weekly',
   dateOrWeek: string,
-  data: Partial<Omit<Retrospective, 'id' | 'type' | 'dateOrWeek' | 'createdAt' | 'updatedAt'>>
+  data: Partial<Omit<Retrospective, 'id' | 'userId' | 'type' | 'dateOrWeek' | 'createdAt' | 'updatedAt'>>
 ): Promise<Retrospective> => {
   const row = await http.put<Retrospective>('/api/retrospectives', {
     type,

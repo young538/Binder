@@ -6,7 +6,7 @@ export const listCategories = (): Promise<Category[]> =>
   http.get<Category[]>('/api/categories');
 
 export const createCategory = async (
-  data: Omit<Category, 'id'>
+  data: Omit<Category, 'id' | 'userId'>
 ): Promise<Category> => {
   const row = await http.post<Category>('/api/categories', data);
   notifyMutation();
@@ -15,7 +15,7 @@ export const createCategory = async (
 
 export const updateCategory = async (
   id: string,
-  patch: Partial<Omit<Category, 'id'>>
+  patch: Partial<Omit<Category, 'id' | 'userId'>>
 ): Promise<void> => {
   await http.patch<Category>(`/api/categories/${id}`, patch);
   notifyMutation();

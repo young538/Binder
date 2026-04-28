@@ -3,7 +3,7 @@ import { http } from './http';
 import { notifyMutation } from './events';
 
 export const createTodo = async (
-  data: Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Todo> => {
   const row = await http.post<Todo>('/api/todos', data);
   notifyMutation();
@@ -12,7 +12,7 @@ export const createTodo = async (
 
 export const updateTodo = async (
   id: string,
-  patch: Partial<Omit<Todo, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Todo>(`/api/todos/${id}`, patch);
   notifyMutation();

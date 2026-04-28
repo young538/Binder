@@ -16,7 +16,7 @@ export const createAnnualGoal = async (
 
 export const updateAnnualGoal = async (
   id: string,
-  patch: Partial<Omit<AnnualGoal, 'id' | 'createdAt'>>
+  patch: Partial<Omit<AnnualGoal, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<AnnualGoal>(`/api/annual-goals/${id}`, patch);
   notifyMutation();

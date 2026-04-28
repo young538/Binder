@@ -16,7 +16,7 @@ export const listChildren = async (parentId: string): Promise<Goal[]> => {
 };
 
 export const createGoal = async (
-  data: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Goal> => {
   const row = await http.post<Goal>('/api/goals', data);
   notifyMutation();
@@ -25,7 +25,7 @@ export const createGoal = async (
 
 export const updateGoal = async (
   id: string,
-  patch: Partial<Omit<Goal, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Goal>(`/api/goals/${id}`, patch);
   notifyMutation();

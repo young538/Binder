@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { requireSession } from '@/lib/server/auth';
 import { getDb } from '@/lib/server/db/client';
 import {
   goals,
@@ -15,7 +17,11 @@ import {
 } from '@/lib/server/db/schema';
 
 export async function GET() {
+  let session;
+  try { session = await requireSession(); } catch (r) { return r as Response; }
+
   const db = getDb();
+  const uid = session.userId;
   const [
     goalsRows,
     categoriesRows,
@@ -29,17 +35,17 @@ export async function GET() {
     booksRows,
     settingsRow,
   ] = await Promise.all([
-    db.select().from(goals).all(),
-    db.select().from(categories).all(),
-    db.select().from(timeBlocks).all(),
-    db.select().from(retrospectives).all(),
-    db.select().from(todos).all(),
-    db.select().from(focusNotes).all(),
-    db.select().from(annualGoals).all(),
-    db.select().from(habits).all(),
-    db.select().from(habitLogs).all(),
-    db.select().from(books).all(),
-    db.select().from(settings).get(),
+    db.select().from(goals).where(eq(goals.userId, uid)).all(),
+    db.select().from(categories).where(eq(categories.userId, uid)).all(),
+    db.select().from(timeBlocks).where(eq(timeBlocks.userId, uid)).all(),
+    db.select().from(retrospectives).where(eq(retrospectives.userId, uid)).all(),
+    db.select().from(todos).where(eq(todos.userId, uid)).all(),
+    db.select().from(focusNotes).where(eq(focusNotes.userId, uid)).all(),
+    db.select().from(annualGoals).where(eq(annualGoals.userId, uid)).all(),
+    db.select().from(habits).where(eq(habits.userId, uid)).all(),
+    db.select().from(habitLogs).where(eq(habitLogs.userId, uid)).all(),
+    db.select().from(books).where(eq(books.userId, uid)).all(),
+    db.select().from(settings).where(eq(settings.userId, uid)).get(),
   ]);
 
   let settingsOut = null;
