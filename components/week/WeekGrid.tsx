@@ -277,6 +277,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   const topRow = (b.startMin - dayStartHour * 60) / gridMinutes;
                   const spanRows = (b.endMin - b.startMin) / gridMinutes;
                   const color = catColor(b.categoryId);
+                  const isPlan = (b.kind ?? 'plan') === 'plan';
                   return (
                     <button
                       key={b.id}
@@ -291,21 +292,28 @@ export const WeekGrid = ({ isoweek }: Props) => {
                           existing: b,
                         });
                       }}
-                      className="absolute left-0.5 right-0.5 rounded-md shadow-sm hover:shadow-md transition text-left overflow-hidden"
+                      className={`absolute left-0.5 right-0.5 rounded-md text-left overflow-hidden transition
+                        ${isPlan
+                          ? 'border-2 border-dashed hover:shadow-sm'
+                          : 'border-2 border-solid shadow-sm hover:shadow-md'}
+                      `}
                       style={{
                         top: topRow * ROW_HEIGHT + 1,
                         height: spanRows * ROW_HEIGHT - 2,
-                        background: tint.soft(color),
-                        borderLeft: `3px solid ${tint.bar(color)}`,
+                        background: tint.soft(color, isPlan ? 0.10 : 0.24),
+                        borderColor: tint.bar(color),
+                        borderLeftWidth: 3,
+                        borderLeftStyle: 'solid',
+                        borderLeftColor: tint.bar(color),
                       }}
                       title={b.text}
                     >
-                      <div className="px-1 py-0.5">
-                        <div className="text-[10px] font-medium leading-tight text-zinc-800 dark:text-zinc-100 truncate">
+                      <div className="px-1.5 py-1">
+                        <div className="text-[12px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100 truncate">
                           {b.text || '(내용 없음)'}
                         </div>
                         {spanRows >= 2 && (
-                          <div className="text-[9px] text-zinc-600 dark:text-zinc-400 mt-0.5 truncate">
+                          <div className="text-[10px] text-zinc-600 dark:text-zinc-400 mt-0.5 truncate">
                             {minutesToTimeStr(b.startMin)}–{minutesToTimeStr(b.endMin)}
                           </div>
                         )}
