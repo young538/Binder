@@ -35,21 +35,20 @@ export const upsertRetrospective = async (
   const existing = await getRetrospective(userId, type, dateOrWeek);
   const now = new Date().toISOString();
   if (existing) {
-    const updated: Retrospective = { ...existing, ...data, updatedAt: now };
     await db
       .update(retrospectives)
-      .set(updated)
+      .set({ ...data, updatedAt: now })
       .where(and(eq(retrospectives.userId, userId), eq(retrospectives.id, existing.id)))
       .run();
-    return updated;
+    return { ...existing, ...data, updatedAt: now };
   }
   const created: Retrospective = {
+    ...data,
     id: newId(),
     userId,
     type,
     dateOrWeek,
-    template: {},
-    ...data,
+    template: data.template ?? {},
     createdAt: now,
     updatedAt: now,
   };
