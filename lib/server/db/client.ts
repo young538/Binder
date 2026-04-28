@@ -34,22 +34,32 @@ const DEFAULT_CATEGORIES = [
   { name: '낭비',   color: '#d9d9d9' },
 ];
 
-const ensureSeed = (db: ReturnType<typeof drizzle<typeof schema>>) => {
-  const existing = db.select().from(schema.categories).all();
-  if (existing.length > 0) return;
-  // Need an admin user to own the seed rows (categories.user_id is NOT NULL).
-  // If no admin exists yet (env vars unset), skip seeding — Task 7 will seed
-  // per-user on user creation.
-  const adminUsername = process.env.APP_USERNAME ?? 'admin';
-  const admin = db.select().from(schema.users).where(eq(schema.users.username, adminUsername)).get();
-  if (!admin) return;
+/**
+ * Idempotently seed the 8 default categories for a given user.
+ * Early-returns if any category row already exists for that userId.
+ * Exported so future code paths (CLI user creation in Task 8, etc.) can call
+ * it directly when adding users at runtime.
+ */
+export const ensureCategoriesForUser = (userId: string) => {
+  if (!_db) throw new Error('ensureCategoriesForUser: db not initialized');
+  const existing = _db.select().from(schema.categories).where(eq(schema.categories.userId, userId)).get();
+  if (existing) return;
   const rows = DEFAULT_CATEGORIES.map((c, i) => ({
     id: ulid(),
-    userId: admin.id,
+    userId,
     order: i,
     ...c,
   }));
-  db.insert(schema.categories).values(rows).run();
+  _db.insert(schema.categories).values(rows).run();
+};
+
+const ensureSeed = (db: ReturnType<typeof drizzle<typeof schema>>) => {
+  // Find the admin user; if none, skip seeding (CLI path will seed users
+  // explicitly and call ensureCategoriesForUser per user).
+  const adminUsername = process.env.APP_USERNAME ?? 'admin';
+  const admin = db.select().from(schema.users).where(eq(schema.users.username, adminUsername)).get();
+  if (!admin) return;
+  ensureCategoriesForUser(admin.id);
 };
 
 const ensureAdminUser = (db: ReturnType<typeof drizzle<typeof schema>>) => {

@@ -280,3 +280,68 @@ describe('settings per-user (Task 4)', () => {
     }
   });
 });
+
+describe('ensureCategoriesForUser', () => {
+  it('seeds 8 default categories for a user', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const TMP = path.join(process.cwd(), 'tmp-test', `seed-${Date.now()}.sqlite`);
+    process.env.DB_PATH = TMP;
+
+    const { getDb, schema, ensureCategoriesForUser } = await import('@/lib/server/db/client');
+    const db = getDb();
+
+    // Insert a second user without categories
+    const newUserId = '01HNEWUSERFIRST1234567890Z';
+    db.insert(schema.users).values({
+      id: newUserId,
+      username: 'fresh',
+      passwordHash: 'hash',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }).run();
+
+    ensureCategoriesForUser(newUserId);
+    const cats = db.select().from(schema.categories).where(eq(schema.categories.userId, newUserId)).all();
+    expect(cats).toHaveLength(8);
+    for (const c of cats) {
+      expect(c.userId).toBe(newUserId);
+    }
+
+    const { closeDb } = await import('@/lib/server/db/client');
+    closeDb();
+    if (fs.existsSync(TMP)) fs.rmSync(TMP);
+    const wal = `${TMP}-wal`; if (fs.existsSync(wal)) fs.rmSync(wal);
+    const shm = `${TMP}-shm`; if (fs.existsSync(shm)) fs.rmSync(shm);
+  });
+
+  it('is idempotent — does not duplicate when called again', async () => {
+    process.env.APP_USERNAME = 'testadmin';
+    process.env.APP_PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$ELJM/O1oWAJSXPLxq1u5Iw$tY7ll9XvXaPDF4NFzgfRdGN8SCXMlDd2Z2Uc/g2h/5A';
+    process.env.SESSION_SECRET = 'a'.repeat(64);
+    const TMP = path.join(process.cwd(), 'tmp-test', `seed-idem-${Date.now()}.sqlite`);
+    process.env.DB_PATH = TMP;
+
+    const { getDb, schema, ensureCategoriesForUser } = await import('@/lib/server/db/client');
+    const db = getDb();
+    const adminRow = db.select().from(schema.users).where(eq(schema.users.username, 'testadmin')).get();
+    expect(adminRow).toBeTruthy();
+    if (!adminRow) throw new Error('admin row missing');
+
+    // ensureSeed should have already seeded 8 for admin during getDb()
+    let count = db.select().from(schema.categories).where(eq(schema.categories.userId, adminRow.id)).all().length;
+    expect(count).toBe(8);
+
+    // Calling again shouldn't change the count
+    ensureCategoriesForUser(adminRow.id);
+    count = db.select().from(schema.categories).where(eq(schema.categories.userId, adminRow.id)).all().length;
+    expect(count).toBe(8);
+
+    const { closeDb } = await import('@/lib/server/db/client');
+    closeDb();
+    if (fs.existsSync(TMP)) fs.rmSync(TMP);
+    const wal = `${TMP}-wal`; if (fs.existsSync(wal)) fs.rmSync(wal);
+    const shm = `${TMP}-shm`; if (fs.existsSync(shm)) fs.rmSync(shm);
+  });
+});
