@@ -278,3 +278,4 @@ WAL 파일이 백업에 있으면 함께 복사. 없으면 SQLite가 깨끗한 �
 
 - 2026-04-28 — 최초 배포 (Docker + Caddy + iptime DDNS + self-signed). LE 발급 차단(CAA) 발견 후 self-signed 로 전환.
 - 2026-04-28 — 멀티 유저 지원 추가 (11-task 리팩토링). users 테이블, 도메인 테이블 user_id, settings per-user PK, server repos/API routes 가 session.userId 로 격리. 기존 single-user 데이터는 sentinel default + runtime backfill 패턴으로 admin 으로 자동 매핑되어 보존. 사용자 관리 CLI (`scripts/users.mjs`) 추가.
+- 2026-04-28 — 주간 그리드 UX/디자인 개선: 빈 슬롯 드래그로 시간 범위 선택, 계획·실제 블록을 점선·실선 테두리로 구분, 컬럼 색 노이즈 제거 + 헤더·시간라벨·호버 디자인 정돈. `tint.soft(hex, alpha?)` 시그니처 확장 + `WEEKDAYS_KO` 상수 추가.
