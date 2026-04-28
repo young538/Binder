@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { buildMandalartMap } from '@/lib/mandalart';
 import { Goal } from '@/lib/types';
 
+const USER_ID = 'test-user';
+
 const mk = (id: string, level: Goal['level'], parentId?: string, order = 0, title = id): Goal => ({
-  id, title, level, parentId, order, createdAt: '', updatedAt: '',
+  id, userId: USER_ID, title, level, parentId, order, createdAt: '', updatedAt: '',
 });
 
 describe('buildMandalartMap', () => {

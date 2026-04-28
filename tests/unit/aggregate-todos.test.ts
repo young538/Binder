@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { aggregateByTodo } from '@/lib/aggregate';
 import { TimeBlock } from '@/lib/types';
 
+const USER_ID = 'test-user';
+
 const mk = (p: Partial<TimeBlock>): TimeBlock => ({
   id: Math.random().toString(),
+  userId: USER_ID,
   date: '2026-04-18',
   startMin: 540,
   endMin: 600,
