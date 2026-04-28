@@ -79,21 +79,18 @@ docker compose up -d --build
 
 ### 4.2 비밀번호 변경
 
+**일반 사용자 비번 변경** — 멀티유저 CLI 가 가장 깔끔 (5.5 참고):
+```powershell
+docker compose exec -T app node scripts/users.mjs passwd <username> <new-password>
+```
+DB 의 `users.password_hash` 만 갱신 — 컨테이너 재기동 불필요.
+
+**`app.env` 의 admin 시딩 비번 변경** — 신규 부트(빈 DB)에서만 효과 있음. 이미 시딩된 admin 의 비번을 바꾸려면 위 CLI 의 `passwd` 사용. 그래도 시딩 비번 자체를 바꾸고 싶다면:
+
 ```powershell
 node scripts/hash-password.mjs <새-비밀번호>
 ```
-
-출력에서 `APP_PASSWORD_HASH=` 줄을 복사 → `app.env` 의 해당 줄 교체 (단, `$` 를 `$$` 로 모두 이스케이프).
-
-또는 한 번에:
-```powershell
-$pw = "새비밀번호"
-node scripts/hash-password.mjs $pw | ForEach-Object {
-    $_ -replace '^APP_PASSWORD_HASH=(.+)$', { 'APP_PASSWORD_HASH=' + ($_.Groups[1].Value -replace '\\\$', '$$$$') }
-}
-```
-
-수정 후 재기동:
+출력의 `APP_PASSWORD_HASH=...` 줄을 복사 → `app.env` 줄 교체 (단, `$` 를 `$$` 로 모두 이스케이프). 그리고:
 ```powershell
 docker compose up -d --force-recreate app
 ```
@@ -189,12 +186,27 @@ docker compose exec -T app node scripts/users.mjs delete <username>
 
 ### 데이터 격리 보장
 
-모든 도메인 테이블이 `user_id` 컬럼을 가지고, 모든 server repo / API route 가 `requireSession()` 으로부터 받은 `userId` 로 query 를 필터합니다. 또한 import route 는 import 파일이 어떤 `userId` 를 가지든 무시하고 현재 세션의 `userId` 로 강제 stamp 합니다 — 다른 사용자 계정으로 import 해도 자동으로 본인 계정에 들어옵니다.
+- 모든 도메인 테이블이 `user_id text NOT NULL` 컬럼을 가짐 (10개: goals, categories, todos, focus_notes, annual_goals, habits, habit_logs, books, retrospectives, time_blocks). `settings` 는 PK 자체가 `user_id`.
+- 모든 server repo 메서드의 첫 인자가 `userId`, 모든 query 에 `eq(table.userId, userId)` 필터.
+- 모든 API route 가 `requireSession()` 으로 `{ userId, username }` 를 받아 repo 에 전달. body 의 userId 는 무시.
+- Import route 는 import 파일의 userId 를 무시하고 현재 세션 userId 로 강제 stamp — 다른 계정의 export 파일도 안전하게 본인 계정에 들어옴 (account-takeover 방지).
+- `tests/unit/repo-isolation.test.ts` + `tests/e2e/multiuser.spec.ts` 가 cross-user leak 방지를 자동 검증.
+
+### UI 측 (사용자 정보 + 로그아웃)
+
+- 데스크톱 (lg breakpoint 이상) — TopNav 우측에 작은 회색 사용자명 + ⚙ 설정 + ⎋ 로그아웃 아이콘.
+- 모바일/공통 — `/settings` 페이지 최상단 "계정" 카드에 "로그인됨: <username>" + 로그아웃 버튼.
+- 둘 다 `POST /api/auth/logout` 호출 후 `/login` 으로 이동.
+- 현재 사용자 정보는 `GET /api/auth/me` → store 에 캐시 (init 시).
 
 ### 신규 운영 환경 첫 부트
-- `.env`/`app.env` 의 `APP_USERNAME` / `APP_PASSWORD_HASH` 에 admin 1명만 자동 시딩됨
-- 추가 사용자는 위 CLI 로 등록
-- 기존 single-user 운영 데이터가 있던 DB 는 첫 부트 시 자동 마이그레이션 (모든 행이 admin 의 것으로 backfill) — 데이터 보존됨
+- `app.env` 의 `APP_USERNAME` / `APP_PASSWORD_HASH` 에 admin 1명만 자동 시딩됨 (`ensureAdminUser`).
+- 추가 사용자는 위 CLI 로 등록 — `ensureCategoriesForUser` 가 신규 사용자 별 8개 기본 카테고리 시딩.
+- 기존 single-user 운영 데이터가 있던 DB 는 첫 부트 시 자동 마이그레이션:
+  - 0003 마이그레이션이 모든 도메인 테이블에 `user_id text NOT NULL DEFAULT 'pending-admin'` 추가 → 모든 기존 행이 sentinel 값으로 채워짐.
+  - 0004 마이그레이션이 `settings` 도 동일 패턴으로 PK 변경.
+  - 런타임 `backfillUserId` 가 `'pending-admin'` 인 모든 행을 admin 사용자의 ULID 로 swap.
+  - 결과: 기존 single-user 데이터 100% 보존, admin 계정에 매핑됨.
 
 ## 6. 자동 시작 체인 (PC 재부팅 후 자동 복구)
 
@@ -276,6 +288,28 @@ WAL 파일이 백업에 있으면 함께 복사. 없으면 SQLite가 깨끗한 �
 
 ## 9. 변경 이력
 
-- 2026-04-28 — 최초 배포 (Docker + Caddy + iptime DDNS + self-signed). LE 발급 차단(CAA) 발견 후 self-signed 로 전환.
-- 2026-04-28 — 멀티 유저 지원 추가 (11-task 리팩토링). users 테이블, 도메인 테이블 user_id, settings per-user PK, server repos/API routes 가 session.userId 로 격리. 기존 single-user 데이터는 sentinel default + runtime backfill 패턴으로 admin 으로 자동 매핑되어 보존. 사용자 관리 CLI (`scripts/users.mjs`) 추가.
-- 2026-04-28 — 주간 그리드 UX/디자인 개선: 빈 슬롯 드래그로 시간 범위 선택, 계획·실제 블록을 점선·실선 테두리로 구분, 컬럼 색 노이즈 제거 + 헤더·시간라벨·호버 디자인 정돈. `tint.soft(hex, alpha?)` 시그니처 확장 + `WEEKDAYS_KO` 상수 추가.
+- 2026-04-28 — **최초 배포** (Docker + Caddy + iptime DDNS + self-signed). LE 발급 차단(CAA `0 issue ";"`) 발견 후 self-signed 로 전환. `.env` → `app.env` 분리 (compose 변수 보간 충돌 해결). `docs/RUNBOOK.md` 작성.
+- 2026-04-28 — **멀티 유저 지원** (11-task 리팩토링, plan: `docs/superpowers/plans/2026-04-28-multi-user-support.md`).
+  - DB: `users` 테이블, 10개 도메인 테이블에 `user_id`, `settings` PK = `user_id`.
+  - 인증: `verifyCredentials(username, password)` 가 DB users 에서 lookup, session 에 `userId` + `username` 저장.
+  - server repos / API routes 모두 session.userId 로 격리.
+  - 기존 single-user 데이터: sentinel `'pending-admin'` default + runtime backfill 로 admin 에 자동 매핑 (보존).
+  - CLI: `scripts/users.mjs add | list | passwd | delete`. delete 는 모든 도메인 + settings CASCADE.
+  - 신규 사용자 추가 시 `ensureCategoriesForUser` 가 기본 카테고리 8개 자동 시딩.
+  - Dockerfile 에 `node_modules/ulid` 명시 복사 (CLI 가 ulid 사용).
+  - Turbopack 회로 import 회피용 `lib/server/db/constants.ts` 분리.
+  - 격리 검증: `tests/unit/repo-isolation.test.ts`, `tests/e2e/multiuser.spec.ts`.
+  - leemia79 사용자 추가, young538 데이터 보존 검증 완료.
+- 2026-04-28 — **로그아웃 UI** + 현재 사용자 표시 (TopNav 우측 + Settings AccountPanel). 새 endpoint `GET /api/auth/me`, 새 client repo `lib/repo/auth.ts` (`getMe`, `logout`), store 에 `me: Me | null` 추가.
+- 2026-04-28 — **주간 그리드 UX/디자인 개선** (6-task, plan: `docs/superpowers/plans/2026-04-28-week-grid-drag-and-design.md`).
+  - 빈 슬롯에 Pointer Events 드래그로 시간 범위 선택 → BlockEditor 자동 오픈 (단일 클릭 fallback 유지).
+  - 계획 = 점선 테두리 + 10% 채움, 실제 = 실선 테두리 + 24% 채움 (좌측 카테고리 컬러 바 유지).
+  - 컬럼 plan/actual 배경색 제거, 일자 묶음 사이 강한 구분선, 오늘 컬럼 zinc-50.
+  - 헤더: 요일+일자 semibold + 우측 상단 작은 NotebookPen 회고 아이콘. row 2 의 이모지 제거 ("계획"/"실제" 텍스트만).
+  - 시간 라벨 11px tabular-nums, 정시 마크 zinc-200.
+  - 빈 슬롯 hover: cursor-cell + 옅은 배경.
+  - 유틸: `tint.soft(hex, alpha?)` 시그니처 확장, `WEEKDAYS_KO` 상수 추가.
+  - BlockEditor 의 종류 토글 이모지 제거.
+- 2026-04-28 — 드래그 선택 표시 단일 사각형 overlay (이전: 행마다 개별 outline → 시각이 "여러 사각형" 으로 보였음).
+- 2026-04-28 — 모바일 "+ 블록 추가" FAB 가 BottomNav 와 겹쳐 가려지던 문제 fix (`bottom: calc(safe-area-inset-bottom + 76px)`, `pb-36`).
+- 2026-04-28 — **시간 통계는 actual 기준만** (카테고리별 / 목표별 / 요일별 / TODO별 / 총 기록시간). 계획 블록은 통계에서 제외. UI 에 "통계는 ✅ 실제 기록 기준" 라벨 추가. 영향 컴포넌트: `components/week/GoalCoverageBar.tsx`, `components/retro/WeeklySummary.tsx`.
