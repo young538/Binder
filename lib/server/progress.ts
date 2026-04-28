@@ -57,6 +57,7 @@ export interface GoalProgress {
 }
 
 export const computeGoalProgress = async (
+  userId: string,
   goalId: string,
   now: Date = new Date()
 ): Promise<GoalProgress> => {
@@ -66,7 +67,7 @@ export const computeGoalProgress = async (
   const annualRows = (await db
     .select()
     .from(annualGoals)
-    .where(eq(annualGoals.parentGoalId, goalId))
+    .where(and(eq(annualGoals.userId, userId), eq(annualGoals.parentGoalId, goalId)))
     .all()) as AnnualGoal[];
   const ag = annualRows.find(g => g.year === year);
   let numeric: GoalProgress['numeric'];
@@ -79,7 +80,7 @@ export const computeGoalProgress = async (
   const habitRows = (await db
     .select()
     .from(habits)
-    .where(eq(habits.parentGoalId, goalId))
+    .where(and(eq(habits.userId, userId), eq(habits.parentGoalId, goalId)))
     .all()) as Habit[];
   let habitStats: GoalProgress['habits'];
   if (habitRows.length > 0) {
@@ -91,7 +92,7 @@ export const computeGoalProgress = async (
     const logs = await db
       .select()
       .from(habitLogs)
-      .where(between(habitLogs.date, startStr, endStr))
+      .where(and(eq(habitLogs.userId, userId), between(habitLogs.date, startStr, endStr)))
       .all();
     const relevantLogs = logs.filter(l => habitIds.has(l.habitId));
     const expected = habitRows.reduce(
@@ -111,7 +112,7 @@ export const computeGoalProgress = async (
   const allTodos = await db
     .select()
     .from(todos)
-    .where(eq(todos.parentGoalId, goalId))
+    .where(and(eq(todos.userId, userId), eq(todos.parentGoalId, goalId)))
     .all();
   let todoStats: GoalProgress['todos'];
   if (allTodos.length > 0) {
@@ -137,7 +138,13 @@ export const computeGoalProgress = async (
   const tbs = (await db
     .select()
     .from(timeBlocks)
-    .where(and(eq(timeBlocks.goalId, goalId), between(timeBlocks.date, yearStartStr, yearEndStr)))
+    .where(
+      and(
+        eq(timeBlocks.userId, userId),
+        eq(timeBlocks.goalId, goalId),
+        between(timeBlocks.date, yearStartStr, yearEndStr)
+      )
+    )
     .all()) as TimeBlock[];
   const inRange = (tb: TimeBlock, s: string, e: string) => tb.date >= s && tb.date <= e;
   const dur = (tb: TimeBlock) => tb.endMin - tb.startMin;

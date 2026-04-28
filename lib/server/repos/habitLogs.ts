@@ -6,14 +6,23 @@ import { HabitLog } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 
 const bumpLinkedAnnualGoal = async (
+  userId: string,
   habitId: string,
   date: string,
   delta: 1 | -1
 ): Promise<void> => {
   const db = getDb();
-  const habit = await db.select().from(habits).where(eq(habits.id, habitId)).get();
+  const habit = await db
+    .select()
+    .from(habits)
+    .where(and(eq(habits.userId, userId), eq(habits.id, habitId)))
+    .get();
   if (!habit?.annualGoalId) return;
-  const ag = await db.select().from(annualGoals).where(eq(annualGoals.id, habit.annualGoalId)).get();
+  const ag = await db
+    .select()
+    .from(annualGoals)
+    .where(and(eq(annualGoals.userId, userId), eq(annualGoals.id, habit.annualGoalId)))
+    .get();
   if (!ag) return;
   if (date.slice(0, 4) !== ag.year) return;
   const monthIdx = Number(date.slice(5, 7)) - 1;
@@ -24,34 +33,49 @@ const bumpLinkedAnnualGoal = async (
   await db
     .update(annualGoals)
     .set({ monthlyActuals: actuals, updatedAt: new Date().toISOString() })
-    .where(eq(annualGoals.id, habit.annualGoalId))
+    .where(and(eq(annualGoals.userId, userId), eq(annualGoals.id, habit.annualGoalId)))
     .run();
 };
 
-export const toggleHabit = async (habitId: string, date: string): Promise<boolean> => {
+export const toggleHabit = async (
+  userId: string,
+  habitId: string,
+  date: string
+): Promise<boolean> => {
   const db = getDb();
   const existing = await db
     .select()
     .from(habitLogs)
-    .where(and(eq(habitLogs.habitId, habitId), eq(habitLogs.date, date)))
+    .where(
+      and(
+        eq(habitLogs.userId, userId),
+        eq(habitLogs.habitId, habitId),
+        eq(habitLogs.date, date)
+      )
+    )
     .get();
   if (existing) {
-    await db.delete(habitLogs).where(eq(habitLogs.id, existing.id)).run();
-    await bumpLinkedAnnualGoal(habitId, date, -1);
+    await db
+      .delete(habitLogs)
+      .where(and(eq(habitLogs.userId, userId), eq(habitLogs.id, existing.id)))
+      .run();
+    await bumpLinkedAnnualGoal(userId, habitId, date, -1);
     return false;
   }
   const row: HabitLog = {
     id: newId(),
+    userId,
     habitId,
     date,
     createdAt: new Date().toISOString(),
   };
   await db.insert(habitLogs).values(row).run();
-  await bumpLinkedAnnualGoal(habitId, date, 1);
+  await bumpLinkedAnnualGoal(userId, habitId, date, 1);
   return true;
 };
 
 export const listLogsForRange = async (
+  userId: string,
   startDate: string,
   endDate: string
 ): Promise<HabitLog[]> => {
@@ -59,7 +83,7 @@ export const listLogsForRange = async (
   const rows = await db
     .select()
     .from(habitLogs)
-    .where(between(habitLogs.date, startDate, endDate))
+    .where(and(eq(habitLogs.userId, userId), between(habitLogs.date, startDate, endDate)))
     .all();
   return rows as HabitLog[];
 };

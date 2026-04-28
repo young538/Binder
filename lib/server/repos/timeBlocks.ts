@@ -1,11 +1,12 @@
 import 'server-only';
-import { asc, between, eq } from 'drizzle-orm';
+import { and, asc, between, eq } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { timeBlocks } from '../db/schema';
 import { TimeBlock } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 
 export const getTimeBlocksInRange = async (
+  userId: string,
   startDate: string,
   endDate: string
 ): Promise<TimeBlock[]> => {
@@ -13,37 +14,46 @@ export const getTimeBlocksInRange = async (
   const rows = await db
     .select()
     .from(timeBlocks)
-    .where(between(timeBlocks.date, startDate, endDate))
+    .where(and(eq(timeBlocks.userId, userId), between(timeBlocks.date, startDate, endDate)))
     .orderBy(asc(timeBlocks.date), asc(timeBlocks.startMin))
     .all();
   return rows as TimeBlock[];
 };
 
 export const createTimeBlock = async (
-  data: Omit<TimeBlock, 'id' | 'createdAt' | 'updatedAt'>
+  userId: string,
+  data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<TimeBlock> => {
   const db = getDb();
   const now = new Date().toISOString();
-  const row: TimeBlock = { ...data, id: newId(), createdAt: now, updatedAt: now };
+  const row: TimeBlock = { ...data, id: newId(), userId, createdAt: now, updatedAt: now };
   await db.insert(timeBlocks).values(row).run();
   return row;
 };
 
 export const updateTimeBlock = async (
+  userId: string,
   id: string,
-  patch: Partial<Omit<TimeBlock, 'id' | 'createdAt'>>
+  patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>
 ): Promise<TimeBlock | null> => {
   const db = getDb();
   await db
     .update(timeBlocks)
     .set({ ...patch, updatedAt: new Date().toISOString() })
-    .where(eq(timeBlocks.id, id))
+    .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
     .run();
-  const row = await db.select().from(timeBlocks).where(eq(timeBlocks.id, id)).get();
+  const row = await db
+    .select()
+    .from(timeBlocks)
+    .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
+    .get();
   return (row as TimeBlock | undefined) ?? null;
 };
 
-export const deleteTimeBlock = async (id: string): Promise<void> => {
+export const deleteTimeBlock = async (userId: string, id: string): Promise<void> => {
   const db = getDb();
-  await db.delete(timeBlocks).where(eq(timeBlocks.id, id)).run();
+  await db
+    .delete(timeBlocks)
+    .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
+    .run();
 };

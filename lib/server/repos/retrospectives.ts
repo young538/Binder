@@ -6,6 +6,7 @@ import { Retrospective } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 
 export const getRetrospective = async (
+  userId: string,
   type: 'daily' | 'weekly',
   dateOrWeek: string
 ): Promise<Retrospective | null> => {
@@ -13,30 +14,38 @@ export const getRetrospective = async (
   const row = await db
     .select()
     .from(retrospectives)
-    .where(and(eq(retrospectives.type, type), eq(retrospectives.dateOrWeek, dateOrWeek)))
+    .where(
+      and(
+        eq(retrospectives.userId, userId),
+        eq(retrospectives.type, type),
+        eq(retrospectives.dateOrWeek, dateOrWeek)
+      )
+    )
     .get();
   return (row as Retrospective | undefined) ?? null;
 };
 
 export const upsertRetrospective = async (
+  userId: string,
   type: 'daily' | 'weekly',
   dateOrWeek: string,
-  data: Partial<Omit<Retrospective, 'id' | 'type' | 'dateOrWeek' | 'createdAt' | 'updatedAt'>>
+  data: Partial<Omit<Retrospective, 'id' | 'userId' | 'type' | 'dateOrWeek' | 'createdAt' | 'updatedAt'>>
 ): Promise<Retrospective> => {
   const db = getDb();
-  const existing = await getRetrospective(type, dateOrWeek);
+  const existing = await getRetrospective(userId, type, dateOrWeek);
   const now = new Date().toISOString();
   if (existing) {
     const updated: Retrospective = { ...existing, ...data, updatedAt: now };
     await db
       .update(retrospectives)
       .set(updated)
-      .where(eq(retrospectives.id, existing.id))
+      .where(and(eq(retrospectives.userId, userId), eq(retrospectives.id, existing.id)))
       .run();
     return updated;
   }
   const created: Retrospective = {
     id: newId(),
+    userId,
     type,
     dateOrWeek,
     template: {},
