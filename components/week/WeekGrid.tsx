@@ -258,27 +258,34 @@ export const WeekGrid = ({ isoweek }: Props) => {
                 {Array.from({ length: totalRows }).map((_, row) => {
                   const startMin = dayStartHour * 60 + row * gridMinutes;
                   const isHourMark = startMin % 60 === 0;
-                  const inDrag =
-                    drag &&
-                    drag.date === dateStr &&
-                    drag.kind === kind &&
-                    row >= Math.min(drag.startRow, drag.currentRow) &&
-                    row <= Math.max(drag.startRow, drag.currentRow);
                   return (
                     <div
                       key={row}
                       data-testid="time-slot"
                       data-row={row}
                       className={`block w-full transition cursor-cell
-                        ${inDrag
-                          ? 'bg-blue-100/50 dark:bg-blue-900/30 outline outline-2 outline-dashed outline-blue-400'
-                          : 'hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40'}
+                        ${drag ? '' : 'hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40'}
                         ${isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : ''}
                       `}
                       style={{ height: ROW_HEIGHT }}
                     />
                   );
                 })}
+
+                {drag && drag.date === dateStr && drag.kind === kind && (() => {
+                  const minRow = Math.min(drag.startRow, drag.currentRow);
+                  const maxRow = Math.max(drag.startRow, drag.currentRow);
+                  return (
+                    <div
+                      aria-hidden
+                      className="absolute left-0 right-0 pointer-events-none rounded-md outline outline-2 outline-dashed outline-blue-400 bg-blue-100/50 dark:bg-blue-900/30"
+                      style={{
+                        top: minRow * ROW_HEIGHT,
+                        height: (maxRow - minRow + 1) * ROW_HEIGHT,
+                      }}
+                    />
+                  );
+                })()}
 
                 {subBlocks.map((b) => {
                   const topRow = (b.startMin - dayStartHour * 60) / gridMinutes;
