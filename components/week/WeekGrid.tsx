@@ -34,12 +34,20 @@ interface EditorState {
   prefilledText?: string;
 }
 
+interface DragState {
+  date: string;
+  kind: TimeBlockKind;
+  startRow: number;
+  currentRow: number;
+}
+
 export const WeekGrid = ({ isoweek }: Props) => {
   const { categories, settings, goals } = useBinder();
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroDate, setRetroDate] = useState<string | null>(null);
   const [stripRefresh, setStripRefresh] = useState(0);
+  const [drag, setDrag] = useState<DragState | null>(null);
 
   const dates = weekDates(isoweek);
   const rangeStart = toIsoDate(dates[0]);
@@ -214,25 +222,52 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   isToday ? 'bg-blue-50/40 dark:bg-blue-950/20' : kindBg
                 }`}
                 style={{ gridColumn, gridRow: `3 / span ${totalRows}` }}
+                onPointerDown={(e) => {
+                  if ((e.target as HTMLElement).closest('[data-block]')) return;
+                  const row = Number((e.target as HTMLElement).getAttribute('data-row'));
+                  if (Number.isNaN(row)) return;
+                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                  setDrag({ date: dateStr, kind, startRow: row, currentRow: row });
+                }}
+                onPointerMove={(e) => {
+                  if (!drag || drag.date !== dateStr || drag.kind !== kind) return;
+                  const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+                  const row = Number(target?.getAttribute('data-row'));
+                  if (Number.isNaN(row)) return;
+                  if (row !== drag.currentRow) setDrag({ ...drag, currentRow: row });
+                }}
+                onPointerUp={(e) => {
+                  if (!drag || drag.date !== dateStr || drag.kind !== kind) return;
+                  (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                  const minRow = Math.min(drag.startRow, drag.currentRow);
+                  const maxRow = Math.max(drag.startRow, drag.currentRow);
+                  const startMin = dayStartHour * 60 + minRow * gridMinutes;
+                  const endMin = dayStartHour * 60 + (maxRow + 1) * gridMinutes;
+                  setEditor({ date: drag.date, startMin, endMin, kind: drag.kind });
+                  setDrag(null);
+                }}
+                onPointerCancel={() => setDrag(null)}
               >
                 {Array.from({ length: totalRows }).map((_, row) => {
                   const startMin = dayStartHour * 60 + row * gridMinutes;
                   const isHourMark = startMin % 60 === 0;
+                  const inDrag =
+                    drag &&
+                    drag.date === dateStr &&
+                    drag.kind === kind &&
+                    row >= Math.min(drag.startRow, drag.currentRow) &&
+                    row <= Math.max(drag.startRow, drag.currentRow);
                   return (
-                    <button
+                    <div
                       key={row}
                       data-testid="time-slot"
-                      onClick={() =>
-                        setEditor({
-                          date: dateStr,
-                          startMin,
-                          endMin: startMin + gridMinutes,
-                          kind,
-                        })
-                      }
-                      className={`block w-full transition hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 ${
-                        isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''
-                      }`}
+                      data-row={row}
+                      className={`block w-full transition cursor-cell
+                        ${inDrag
+                          ? 'bg-blue-100/50 dark:bg-blue-900/30 outline outline-2 outline-dashed outline-blue-400'
+                          : 'hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40'}
+                        ${isHourMark ? 'border-t border-zinc-100 dark:border-zinc-800' : ''}
+                      `}
                       style={{ height: ROW_HEIGHT }}
                     />
                   );
@@ -245,6 +280,7 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   return (
                     <button
                       key={b.id}
+                      data-block="true"
                       onClick={(e) => {
                         e.stopPropagation();
                         setEditor({
