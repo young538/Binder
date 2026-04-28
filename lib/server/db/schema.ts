@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { PENDING_ADMIN_USER_ID } from './client';
 
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
@@ -14,7 +15,7 @@ export const goals = sqliteTable(
   'goals',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     title: text('title').notNull(),
     parentId: text('parent_id'),
     level: text('level').notNull(), // 'oneThing' | 'mandalartCore' | 'mandalartSub'
@@ -35,7 +36,7 @@ export const categories = sqliteTable(
   'categories',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     name: text('name').notNull(),
     color: text('color').notNull(),
     order: integer('order').notNull(),
@@ -50,7 +51,7 @@ export const todos = sqliteTable(
   'todos',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     title: text('title').notNull(),
     scope: text('scope').notNull(), // 'day' | 'week' | 'month' | 'year'
     scopeKey: text('scope_key').notNull(),
@@ -75,7 +76,7 @@ export const focusNotes = sqliteTable(
   'focus_notes',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     scope: text('scope').notNull(), // 'year' | 'month' | 'week'
     scopeKey: text('scope_key').notNull(),
     text: text('text').notNull(),
@@ -92,7 +93,7 @@ export const annualGoals = sqliteTable(
   'annual_goals',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     year: text('year').notNull(),
     order: integer('order').notNull(),
     title: text('title').notNull(),
@@ -123,7 +124,7 @@ export const habits = sqliteTable(
   'habits',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     name: text('name').notNull(),
     color: text('color').notNull(),
     order: integer('order').notNull(),
@@ -148,7 +149,7 @@ export const habitLogs = sqliteTable(
   'habit_logs',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     habitId: text('habit_id').notNull(),
     date: text('date').notNull(), // YYYY-MM-DD
     createdAt: text('created_at').notNull(),
@@ -166,7 +167,7 @@ export const books = sqliteTable(
   'books',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     year: text('year').notNull(),
     order: integer('order').notNull(),
     category: text('category'),
@@ -190,7 +191,7 @@ export const retrospectives = sqliteTable(
   'retrospectives',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     type: text('type').notNull(), // 'daily' | 'weekly'
     dateOrWeek: text('date_or_week').notNull(),
     rating: integer('rating'),
@@ -212,7 +213,7 @@ export const timeBlocks = sqliteTable(
   'time_blocks',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     date: text('date').notNull(),
     startMin: integer('start_min').notNull(),
     endMin: integer('end_min').notNull(),

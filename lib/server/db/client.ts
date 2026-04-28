@@ -8,6 +8,13 @@ import fs from 'node:fs';
 import * as schema from './schema';
 import { ulid } from 'ulid';
 
+/**
+ * Sentinel placeholder written by migration 0003 to satisfy NOT NULL on
+ * pre-existing rows. Runtime backfillUserId() swaps this for the real
+ * admin ULID once the users table is seeded.
+ */
+export const PENDING_ADMIN_USER_ID = 'pending-admin';
+
 const getDbPath = () => process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite');
 const MIGRATIONS_DIR = path.join(process.cwd(), 'drizzle');
 
@@ -79,7 +86,7 @@ const backfillUserId = (db: ReturnType<typeof drizzle<typeof schema>>) => {
   // the real admin ULID here.
   if (!_sqlite) throw new Error('backfillUserId: sqlite handle missing');
   for (const t of DOMAIN_TABLES) {
-    _sqlite.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = 'pending-admin'`).run(admin.id);
+    _sqlite.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(admin.id, PENDING_ADMIN_USER_ID);
   }
 };
 
