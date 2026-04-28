@@ -30,11 +30,12 @@ const Card = ({ title, children }: { title: string; children: React.ReactNode })
 );
 
 export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals, habitStats }: Props) => {
-  const totalMin = blocks.reduce((s, b) => s + (b.endMin - b.startMin), 0);
-  const byCat = aggregateByCategory(blocks);
-  const byGoal = aggregateByGoal(blocks);
-  const byDay = aggregateByDay(blocks);
-  const byTodo = aggregateByTodo(blocks);
+  const actualBlocks = blocks.filter((b) => (b.kind ?? 'plan') === 'actual');
+  const totalMin = actualBlocks.reduce((s, b) => s + (b.endMin - b.startMin), 0);
+  const byCat = aggregateByCategory(actualBlocks);
+  const byGoal = aggregateByGoal(actualBlocks);
+  const byDay = aggregateByDay(actualBlocks);
+  const byTodo = aggregateByTodo(actualBlocks);
   const dates = weekDates(isoweek).map(toIsoDate);
   const dayMax = Math.max(1, ...dates.map((d) => byDay.get(d) ?? 0));
 
@@ -46,7 +47,11 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals, habit
   const completionPct = totalTodos > 0 ? Math.round((doneTodos / totalTodos) * 100) : 0;
 
   return (
-    <section className="grid md:grid-cols-3 gap-3 mb-6">
+    <section className="mb-6 space-y-3">
+      <div className="text-[11px] text-zinc-500 dark:text-zinc-500">
+        시간 통계는 ✅ 실제 기록 기준
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
       <Card title="TODO 완료율">
         {totalTodos === 0 ? (
           <div className="text-sm text-zinc-400">TODO 없음</div>
@@ -172,6 +177,7 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals, habit
             );
           })}
         </div>
+      </div>
       </div>
     </section>
   );

@@ -47,8 +47,9 @@ const Bar = ({
 };
 
 export const GoalCoverageBar = ({ blocks, goals, categories }: Props) => {
-  const byGoal = aggregateByGoal(blocks);
-  const byCat = aggregateByCategory(blocks);
+  const actualBlocks = blocks.filter((b) => (b.kind ?? 'plan') === 'actual');
+  const byGoal = aggregateByGoal(actualBlocks);
+  const byCat = aggregateByCategory(actualBlocks);
 
   const goalRows = Array.from(byGoal.entries()).map(([gid, mins]) => ({
     label: gid ? (goals.find((g) => g.id === gid)?.title ?? '(삭제된 목표)') : '(목표 미지정)',
@@ -62,9 +63,14 @@ export const GoalCoverageBar = ({ blocks, goals, categories }: Props) => {
   }));
 
   return (
-    <section className="grid md:grid-cols-2 gap-3 p-4 bg-zinc-50 dark:bg-zinc-950">
-      <Bar rows={goalRows} title="🎯 목표별" />
-      <Bar rows={catRows} title="🎨 카테고리별" />
+    <section className="p-4 bg-zinc-50 dark:bg-zinc-950 space-y-2">
+      <div className="text-[11px] text-zinc-500 dark:text-zinc-500">
+        통계는 ✅ 실제 기록 기준
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        <Bar rows={goalRows} title="🎯 목표별" />
+        <Bar rows={catRows} title="🎨 카테고리별" />
+      </div>
     </section>
   );
 };
