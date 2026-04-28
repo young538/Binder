@@ -5,7 +5,7 @@ services:
     container_name: super-planner
     restart: unless-stopped
     env_file:
-      - .env
+      - app.env
     # 호스트 3000 → 컨테이너 3000. Caddy/Nginx 같은 리버스 프록시 뒤에서 쓰도록 설계됨.
     ports:
       - "127.0.0.1:3000:3000"
@@ -19,21 +19,20 @@ services:
       retries: 3
       start_period: 20s
 
-  # 옵션: Caddy 리버스 프록시를 같이 돌리고 싶으면 아래 주석 해제 + Caddyfile 준비
-  # caddy:
-  #   image: caddy:2-alpine
-  #   container_name: super-planner-caddy
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
-  #     - caddy-data:/data
-  #     - caddy-config:/config
-  #   depends_on:
-  #     - app
+  caddy:
+    image: caddy:2-alpine
+    container_name: super-planner-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
 
-# volumes:
-#   caddy-data:
-#   caddy-config:
+volumes:
+  caddy-data:
+  caddy-config:

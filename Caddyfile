@@ -1,0 +1,22 @@
+young538.iptime.org {
+    # iptime.org 의 CAA 레코드가 모든 공인 CA 발급을 차단(0 issue ";").
+    # 따라서 Let's Encrypt 로 인증서 발급 불가 → Caddy 자체 CA 로 self-signed 발급.
+    # 첫 접속 시 브라우저가 "안전하지 않음" 경고를 표시하므로 예외 추가 필요.
+    tls internal
+
+    reverse_proxy app:3000
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /data/access.log {
+            roll_size 10MB
+            roll_keep 5
+        }
+    }
+}
