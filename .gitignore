@@ -45,6 +45,7 @@ next-env.d.ts
 
 # local tools
 .superpowers/
+.worktrees/
 
 # e2e
 test-results/
