@@ -29,13 +29,6 @@
       "when": 1777354442105,
       "tag": "0003_add_user_id",
       "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1777354585795,
-      "tag": "0004_user_id_not_null",
-      "breakpoints": true
     }
   ]
 }

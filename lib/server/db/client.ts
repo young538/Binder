@@ -72,13 +72,14 @@ const DOMAIN_TABLES = [
 const backfillUserId = (db: ReturnType<typeof drizzle<typeof schema>>) => {
   const adminUsername = process.env.APP_USERNAME ?? 'admin';
   const admin = db.select().from(schema.users).where(eq(schema.users.username, adminUsername)).get();
-  if (!admin) return; // no admin → can't backfill; subsequent NOT NULL migration would fail on a non-empty DB
+  if (!admin) return; // no admin → leave sentinel rows in place; they'll be claimed when an admin is created
 
-  // Reach the underlying better-sqlite3 handle to issue parameterized UPDATEs.
-  // (Using drizzle's update() per table works too but this is more concise.)
+  // Migration 0003 added user_id NOT NULL DEFAULT 'pending-admin' so existing
+  // rows on a populated DB get a placeholder value. Swap the placeholder to
+  // the real admin ULID here.
   if (!_sqlite) throw new Error('backfillUserId: sqlite handle missing');
   for (const t of DOMAIN_TABLES) {
-    _sqlite.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id IS NULL`).run(admin.id);
+    _sqlite.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = 'pending-admin'`).run(admin.id);
   }
 };
 
