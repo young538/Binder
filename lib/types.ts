@@ -50,7 +50,7 @@ export interface Todo {
   updatedAt: string;
 }
 
-export type FocusScope = 'year' | 'month' | 'week';
+export type FocusScope = 'year' | 'month' | 'week' | 'board';
 
 export interface FocusNote {
   id: string;
