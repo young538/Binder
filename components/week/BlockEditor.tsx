@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Trash2, Link2 } from 'lucide-react';
 import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
 import {
@@ -57,6 +57,33 @@ export const BlockEditor = ({
     listByScope('day', initial.date).then(setDayTodos);
   }, [initial.date]);
 
+  // 키보드 단축키: ESC = 취소, Enter = 저장.
+  // save/onClose 는 매 렌더 새로 만들어지므로 ref 로 latest 유지 →
+  // useEffect 는 [] 한 번만 등록/해제.
+  const saveRef = useRef<() => void>(() => {});
+  const closeRef = useRef<() => void>(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (e.key === 'Enter') {
+        // textarea 의 Enter 는 줄바꿈으로 보존 (현재 textarea 없으나 미래 대비)
+        if (e.target instanceof HTMLTextAreaElement) return;
+        // IME 한글 조합 중 Enter 는 글자 확정용 — 저장 트리거 금지
+        if (e.isComposing) return;
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const save = async () => {
     const grid = settings?.gridMinutes ?? 30;
     const startMin = snapToGrid(timeStrToMinutes(startStr), grid);
@@ -90,6 +117,7 @@ export const BlockEditor = ({
     onSaved();
     onClose();
   };
+  saveRef.current = save;
 
   const remove = async () => {
     if (!existing) return;
