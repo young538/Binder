@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useBinder } from '@/store';
 import { buildMandalartMap, CORE_RING_POSITIONS, OUTER_CENTERS, SUB_OFFSETS } from '@/lib/mandalart';
@@ -110,6 +110,30 @@ export const MandalartBoard = () => {
     await reload();
     setEdit(null);
   };
+
+  // 키보드 단축키: ESC = 취소, Enter = 저장.
+  // save 는 매 렌더 새로 만들어지므로 ref 로 latest 유지.
+  const saveRef = useRef<() => void>(() => {});
+  saveRef.current = save;
+
+  useEffect(() => {
+    if (!edit) return; // 모달이 떠 있을 때만 핸들러 등록
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setEdit(null);
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (e.target instanceof HTMLTextAreaElement) return;
+        if (e.isComposing) return;
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [edit]);
 
   const isCenter = (r: number, c: number) => r === 4 && c === 4;
   const isCore = (r: number, c: number) =>
