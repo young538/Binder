@@ -16,12 +16,27 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
   const latest = useRef<Partial<Retrospective>>({ template: {} });
 
   useEffect(() => {
+    let cancelled = false;
+    // date 변경 시 이전 pending 저장 취소 — 새 date 로딩 중 이전 timer 가 stale value 를 새 date 에 덮어쓰는 race 방지
+    if (timer.current !== undefined) {
+      window.clearTimeout(timer.current);
+      timer.current = undefined;
+    }
     getRetrospective('daily', date).then((r) => {
+      if (cancelled) return;
       const v = r ?? { template: {} };
       setValue(v);
       latest.current = v;
     });
+    return () => { cancelled = true; };
   }, [date]);
+
+  // unmount 시 pending 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (timer.current !== undefined) window.clearTimeout(timer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

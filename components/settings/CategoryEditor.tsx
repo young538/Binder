@@ -31,14 +31,19 @@ export const CategoryEditor = () => {
           <li key={c.id} className="flex items-center gap-2">
             <input
               type="color"
-              value={c.color}
-              onChange={(e) => update(c.id, { color: e.target.value })}
+              defaultValue={c.color}
+              onBlur={(e) => {
+                if (e.target.value !== c.color) update(c.id, { color: e.target.value });
+              }}
               className="w-9 h-9 rounded-md border border-zinc-200 dark:border-zinc-700 cursor-pointer"
             />
             <input
               type="text"
-              value={c.name}
-              onChange={(e) => update(c.id, { name: e.target.value })}
+              defaultValue={c.name}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && v !== c.name) update(c.id, { name: v });
+              }}
               className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button

@@ -16,11 +16,22 @@ export const FocusNoteEditor = ({ scope, scopeKey, label, placeholder }: Props) 
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
     getFocus(scope, scopeKey).then(f => {
+      if (cancelled) return; // 사용자가 다른 scope 으로 이동하면 stale 응답으로 입력 덮어쓰지 않음
       setText(f?.text ?? '');
       setLoaded(true);
     });
+    return () => { cancelled = true; };
   }, [scope, scopeKey]);
+
+  // unmount / scope 변경 시 pending 타이머 정리 — 같은 컴포넌트가 다른 scope 으로 재사용될 때 이전 저장이 새 입력을 덮지 않도록
+  useEffect(() => {
+    return () => {
+      if (timer.current !== undefined) window.clearTimeout(timer.current);
+    };
+  }, []);
 
   const onChange = (v: string) => {
     setText(v);
