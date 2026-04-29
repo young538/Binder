@@ -57,7 +57,9 @@ export const verifyCredentials = async (
     const ok = await argon2.verify(row.passwordHash, password);
     if (!ok) return null;
     return { userId: row.id, username: row.username };
-  } catch {
+  } catch (err) {
+    // 손상된 hash 또는 argon2 native 바인딩 문제 시 wrong-password 와 구별되게 로그
+    console.error(`[auth] argon2.verify failed for username='${username}'`, err);
     return null;
   }
 };
