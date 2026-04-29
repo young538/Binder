@@ -9,7 +9,7 @@ import { useBinder } from '@/store';
 import { logout } from '@/lib/repo/auth';
 
 const primaryLinks = [
-  { label: '만다라트', Icon: Target,         basePath: '/mandalart',     href: () => '/mandalart' },
+  { label: 'One-Thing', Icon: Target,        basePath: '/mandalart',     href: () => '/mandalart' },
   { label: '연간',    Icon: CalendarRange,  basePath: '/annual',        href: () => `/annual/${format(new Date(), 'yyyy')}` },
   { label: '월간',    Icon: CalendarDays,   basePath: '/monthly',       href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
   { label: '주간',    Icon: Calendar,       basePath: '/week',          href: () => `/week/${toIsoWeek(new Date())}` },

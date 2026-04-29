@@ -118,7 +118,7 @@ export const MandalartBoard = () => {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-50">🎯 만다라트</h1>
+      <h1 className="text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-50">🎯 One-Thing 보드</h1>
       <p className="text-sm text-zinc-500 mb-6">인생 한 문장 → 8개 핵심 목표 → 각 목표의 세부 8개</p>
 
       <div className="grid grid-cols-9 gap-1 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
