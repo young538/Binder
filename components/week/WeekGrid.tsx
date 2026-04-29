@@ -35,6 +35,7 @@ interface EditorState {
 }
 
 interface DragState {
+  pointerId: number;
   date: string;
   kind: TimeBlockKind;
   startRow: number;
@@ -230,22 +231,32 @@ export const WeekGrid = ({ isoweek }: Props) => {
                 `}
                 style={{ gridColumn, gridRow: `3 / span ${totalRows}` }}
                 onPointerDown={(e) => {
+                  if (drag) return; // 멀티터치 방지: 이미 드래그 중이면 새 포인터 무시
                   if ((e.target as HTMLElement).closest('[data-block]')) return;
-                  const row = Number((e.target as HTMLElement).getAttribute('data-row'));
+                  const rowAttr = (e.target as HTMLElement).getAttribute('data-row');
+                  if (rowAttr == null) return;
+                  const row = Number(rowAttr);
                   if (Number.isNaN(row)) return;
                   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-                  setDrag({ date: dateStr, kind, startRow: row, currentRow: row });
+                  setDrag({ pointerId: e.pointerId, date: dateStr, kind, startRow: row, currentRow: row });
                 }}
                 onPointerMove={(e) => {
-                  if (!drag || drag.date !== dateStr || drag.kind !== kind) return;
+                  if (!drag || drag.pointerId !== e.pointerId) return;
+                  if (drag.date !== dateStr || drag.kind !== kind) return;
                   const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-                  const row = Number(target?.getAttribute('data-row'));
+                  // Number(null) === 0 함정: data-row 없는 요소(블록 등) 위로 이동 시 0 으로 점프하던 문제
+                  const rowAttr = target?.getAttribute('data-row');
+                  if (rowAttr == null) return;
+                  const row = Number(rowAttr);
                   if (Number.isNaN(row)) return;
                   if (row !== drag.currentRow) setDrag({ ...drag, currentRow: row });
                 }}
                 onPointerUp={(e) => {
-                  if (!drag || drag.date !== dateStr || drag.kind !== kind) return;
-                  (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                  if (!drag || drag.pointerId !== e.pointerId) return;
+                  if (drag.date !== dateStr || drag.kind !== kind) return;
+                  try {
+                    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                  } catch { /* already released */ }
                   const minRow = Math.min(drag.startRow, drag.currentRow);
                   const maxRow = Math.max(drag.startRow, drag.currentRow);
                   const startMin = dayStartHour * 60 + minRow * gridMinutes;
@@ -253,7 +264,13 @@ export const WeekGrid = ({ isoweek }: Props) => {
                   setEditor({ date: drag.date, startMin, endMin, kind: drag.kind });
                   setDrag(null);
                 }}
-                onPointerCancel={() => setDrag(null)}
+                onPointerCancel={(e) => {
+                  if (drag && drag.pointerId !== e.pointerId) return;
+                  try {
+                    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                  } catch { /* already released */ }
+                  setDrag(null);
+                }}
               >
                 {Array.from({ length: totalRows }).map((_, row) => {
                   const startMin = dayStartHour * 60 + row * gridMinutes;
