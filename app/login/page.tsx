@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get('next') ?? '/';
+  // next 파라미터는 같은 origin 의 절대 경로만 허용 — javascript: / 외부 URL / 프로토콜 상대 URL 차단
+  const rawNext = search.get('next') ?? '/';
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
