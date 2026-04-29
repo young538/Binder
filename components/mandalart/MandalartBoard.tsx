@@ -9,6 +9,7 @@ import { createGoal, updateGoal, deleteGoal } from '@/lib/repo/goals';
 import { Goal, GoalLevel } from '@/lib/types';
 import { listHabits } from '@/lib/repo/habits';
 import { listByYear as listAnnualGoalsByYear } from '@/lib/repo/annualGoals';
+import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 
 interface PendingEdit {
   row: number;
@@ -141,17 +142,29 @@ export const MandalartBoard = () => {
     OUTER_CENTERS.some(([cr, cc]) => cr === r && cc === c);
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-50">🎯 One-Thing 보드</h1>
       <p className="text-sm text-zinc-500 mb-6">인생 한 문장 → 8개 핵심 목표 → 각 목표의 세부 8개</p>
 
-      <div className="grid grid-cols-9 gap-1 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        {map.flatMap((row, r) => row.map((cell, c) => (
-          <GoalCell key={`${r}-${c}`} goal={cell}
-            isCenter={isCenter(r, c)} isCore={isCore(r, c)}
-            connectionCount={cell ? (allCounts.get(cell.id) ?? 0) : 0}
-            onClick={() => open(r, c)} />
-        )))}
+      {/* 데스크톱(lg+)에서는 격자 좌측 / 자유노트 우측, 그 외에는 격자 위 / 노트 아래 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4">
+        <div className="grid grid-cols-9 gap-1 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          {map.flatMap((row, r) => row.map((cell, c) => (
+            <GoalCell key={`${r}-${c}`} goal={cell}
+              isCenter={isCenter(r, c)} isCore={isCore(r, c)}
+              connectionCount={cell ? (allCounts.get(cell.id) ?? 0) : 0}
+              onClick={() => open(r, c)} />
+          )))}
+        </div>
+
+        <FocusNoteEditor
+          scope="board"
+          scopeKey="main"
+          label="🗒️ 자유노트"
+          placeholder="떠오르는 생각, 아이디어, 메모를 자유롭게 적어보세요"
+          multiline
+          rows={14}
+        />
       </div>
 
       {edit && (
