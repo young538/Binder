@@ -15,7 +15,7 @@ export const CoreSection = ({ core, subs, currentMonth }: Props) => {
         {core.title || <span className="text-zinc-400">(코어 제목 미입력)</span>}
       </h2>
       {subs.length === 0 ? (
-        <div className="text-xs text-zinc-400">만다라트에서 이 코어의 서브 8개를 입력해주세요.</div>
+        <div className="text-xs text-zinc-400">One-Thing 보드에서 이 코어의 서브 8개를 입력해주세요.</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {subs.sort((a, b) => a.order - b.order).map(s => (
