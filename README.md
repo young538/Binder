@@ -43,7 +43,7 @@ DB 파일은 자동으로 `./data/binder.sqlite` 에 생성되고, 마이그레�
 
 ## 프로덕션 배포 (Docker)
 
-> ⚠️ 본인 운영 환경 (Windows 11 + iptime DDNS + self-signed HTTPS) 의 자세한 가이드는 **`docs/RUNBOOK.md`** 를 보세요. 아래는 일반적 가이드입니다.
+> ⚠️ 본인 운영 환경 (Windows 11 + Synology DDNS/Let's Encrypt + iptime self-signed fallback) 의 자세한 가이드는 **`docs/RUNBOOK.md`** 를 보세요. 아래는 일반적 가이드입니다.
 
 ### 1) 환경변수 준비
 

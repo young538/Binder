@@ -8,20 +8,20 @@
 |---|---|
 | OS | Windows 11 Pro (10.0.26200) |
 | 컨테이너 런타임 | Docker Desktop (WSL2 백엔드) |
-| 도메인 | `young538.iptime.org` (iptime 공유기 자체 DDNS) |
+| 도메인 | `young538.synology.me` (primary), `young538.iptime.org` (fallback) |
 | 공인 IP | 119.196.34.251 (가정용 회선, 변동 가능) |
 | 서버 LAN IP | 192.168.0.222 (DHCP 예약 고정) |
 | 서버 MAC | `B4:2E:99:88:B3:03` |
 | 외부 노출 포트 | 80, 443 (TCP) |
 | 리버스 프록시 | Caddy 2 (컨테이너) |
-| TLS | **self-signed** (Caddy 내부 CA 발급) |
+| TLS | Let's Encrypt (`young538.synology.me`), self-signed fallback (`young538.iptime.org`) |
 | 환경변수 파일 | `app.env` (루트, gitignored) |
 | DB 파일 | `./data/binder.sqlite` (호스트 bind mount) |
 
-접속 URL: `https://young538.iptime.org`
-첫 접속 시 브라우저가 "안전하지 않은 연결" 경고 → "고급" → "계속 진행" 한 번만 누르면 이후 영구 매끄러움.
+접속 URL: `https://young538.synology.me`
+모바일은 공인 인증서가 발급된 이 주소를 사용합니다. `https://young538.iptime.org` 는 Caddy 내부 CA 인증서를 쓰는 fallback 주소라 브라우저 경고가 뜰 수 있습니다.
 
-## 2. 왜 self-signed 인증서인가
+## 2. 왜 iptime 주소는 self-signed 인가
 
 처음에는 Caddy + Let's Encrypt 자동 발급으로 시도했으나 다음 차단으로 **공인 인증서 발급 불가** 판정.
 
@@ -33,18 +33,19 @@ iptime.org. CAA 0 issuewild ";"
 
 `";"` 는 RFC 8659에서 "**모든 공인 CA에서 발급 차단**"을 의미. iptime이 정책적으로 모든 `*.iptime.org` 하위 도메인의 공인 인증서 발급을 차단해 놓아 사용자가 변경할 수 없습니다.
 
+현재는 같은 공인 IP를 가리키는 `young538.synology.me` 를 primary 주소로 추가했고, 이 도메인은 CAA 제한이 없어 Let's Encrypt 인증서 발급에 성공했습니다.
+
 **우회 옵션 비교**:
 
 | 방법 | 결과 | 사용자 부담 |
 |---|---|---|
 | Let's Encrypt (`*.iptime.org`) | ❌ CAA 차단 | — |
+| Let's Encrypt (`young538.synology.me`) | ✅ 현재 primary | Synology DDNS 유지 |
 | DuckDNS / 다른 무료 DDNS | ✅ 가능 | 가입 1분, IP 갱신 스크립트 1개 |
 | 직접 도메인 구매 | ✅ 가능 | 비용 + Cloudflare/Caddy 설정 |
 | Tailscale Funnel | ✅ 가능 | 본인 기기에 클라이언트 설치 |
-| **Caddy self-signed (현재)** | ⚠️ 브라우저 첫 경고 | 첫 접속 시 1회만 예외 추가 |
+| Caddy self-signed (`young538.iptime.org`) | ⚠️ fallback | 첫 접속 시 1회만 예외 추가 |
 | 평문 HTTP | ❌ 작동 불가 | iron-session `secure` 쿠키 미전송 |
-
-본인만 쓰는 단일 사용자 앱이고, 비밀번호/세션 모두 어쨌든 TLS로 암호화되므로 self-signed가 충분.
 
 ## 3. 환경변수 파일이 `.env`가 아니라 `app.env`인 이유
 
@@ -225,13 +226,13 @@ docker compose exec -T app node scripts/users.mjs delete <username>
 진단 순서:
 ```powershell
 # 1. DDNS 가 현재 공인 IP 가리키는지
-Invoke-RestMethod "https://dns.google/resolve?name=young538.iptime.org&type=A"
+Invoke-RestMethod "https://dns.google/resolve?name=young538.synology.me&type=A"
 $publicIp = Invoke-RestMethod "https://api.ipify.org"
-# 두 값 일치해야 함. 아니면 iptime 공유기 DDNS 갱신 버튼 클릭.
+# 두 값 일치해야 함. 아니면 Synology/iptime DDNS 갱신 상태 확인.
 
 # 2. 외부 포트 도달
 Invoke-WebRequest -Uri "https://ports.yougetsignal.com/check-port.php" `
-    -Method POST -Body @{ remoteAddress = "young538.iptime.org"; portNumber = "443" } -UseBasicParsing
+    -Method POST -Body @{ remoteAddress = "young538.synology.me"; portNumber = "443" } -UseBasicParsing
 
 # 3. 컨테이너 살아 있는지
 docker compose ps
@@ -239,14 +240,14 @@ docker compose logs --tail 50 caddy
 ```
 
 원인별 처방:
-- DDNS 미갱신 → 공유기 관리 페이지에서 수동 갱신
+- DDNS 미갱신 → Synology/iptime DDNS 갱신 상태 확인
 - 외부 포트 closed → 공유기 포트포워딩 다시 확인 (내부 IP 가 192.168.0.222 인지)
 - ISP 80/443 차단 → 비표준 포트 (예: 8443) 로 변경하거나 Tailscale/Cloudflare Tunnel 로 우회
 - 컨테이너 down → `docker compose up -d`
 
 ### 7.2 로그인이 안 됨 / 즉시 로그아웃됨
 
-iron-session 쿠키가 `secure: true` 라 HTTPS 가 아니면 쿠키가 안 박힘. **반드시 `https://...` 로 접속**해야 함. self-signed 경고를 무시하지 말고 "예외 추가"를 눌러야 쿠키 정상 동작.
+iron-session 쿠키가 `secure: true` 라 HTTPS 가 아니면 쿠키가 안 박힘. **반드시 `https://young538.synology.me` 로 접속**해야 함. `young538.iptime.org` fallback 을 쓸 때만 self-signed 경고에서 "예외 추가"를 눌러야 쿠키 정상 동작.
 
 ### 7.3 비밀번호가 틀린 것처럼 거부됨
 
@@ -289,6 +290,7 @@ WAL 파일이 백업에 있으면 함께 복사. 없으면 SQLite가 깨끗한 �
 ## 9. 변경 이력
 
 - 2026-04-28 — **최초 배포** (Docker + Caddy + iptime DDNS + self-signed). LE 발급 차단(CAA `0 issue ";"`) 발견 후 self-signed 로 전환. `.env` → `app.env` 분리 (compose 변수 보간 충돌 해결). `docs/RUNBOOK.md` 작성.
+- 2026-04-30 — 모바일 브라우저의 self-signed 차단을 피하기 위해 `young538.synology.me` 를 primary 도메인으로 추가. Caddy/Let's Encrypt 인증서 발급 성공, `young538.iptime.org` 는 self-signed fallback 으로 유지.
 - 2026-04-28 — **멀티 유저 지원** (11-task 리팩토링, plan: `docs/superpowers/plans/2026-04-28-multi-user-support.md`).
   - DB: `users` 테이블, 10개 도메인 테이블에 `user_id`, `settings` PK = `user_id`.
   - 인증: `verifyCredentials(username, password)` 가 DB users 에서 lookup, session 에 `userId` + `username` 저장.
