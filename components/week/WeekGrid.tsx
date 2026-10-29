@@ -1,379 +1,77 @@
 'use client';
-import { Fragment, useEffect, useState } from 'react';
+
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react';
-import { useBinder } from '@/store';
-import { weekDates, toIsoDate, minutesToTimeStr, toIsoWeek, WEEKDAYS_KO } from '@/lib/utils/date';
-import { weekKeyFromString } from '@/lib/utils/period';
-import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
-import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from 'date-fns';
-import { BlockEditor } from './BlockEditor';
-import { DailyRetroSheet } from './DailyRetroSheet';
-import { GoalCoverageBar } from './GoalCoverageBar';
+import { weekDates, toIsoDate, toIsoWeek } from '@/lib/utils/date';
+import { weekKeyFromString } from '@/lib/utils/period';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
-import { DayTodoStrip } from './DayTodoStrip';
-import { HabitStrip } from './HabitStrip';
+import { TimeGrid } from '@/components/common/TimeGrid';
 import { GoalSummaryStrip } from '@/components/monthly/GoalSummaryStrip';
-import { tint } from '@/lib/utils/color';
+import { WeeklyReview } from './WeeklyReview';
+import { DayTodoStrip } from './DayTodoStrip';
+import { useWeeklyData } from './WeeklyDataProvider';
 
 interface Props {
   isoweek: string;
 }
 
-const ROW_HEIGHT = 32; // px per grid row
-
-interface EditorState {
-  date: string;
-  startMin: number;
-  endMin: number;
-  kind: TimeBlockKind;
-  existing?: TimeBlock;
-  prefilledTodoId?: string;
-  prefilledText?: string;
-}
-
-interface DragState {
-  pointerId: number;
-  date: string;
-  kind: TimeBlockKind;
-  startRow: number;
-  currentRow: number;
-}
-
 export const WeekGrid = ({ isoweek }: Props) => {
-  const { categories, settings, goals } = useBinder();
-  const [blocks, setBlocks] = useState<TimeBlock[]>([]);
-  const [editor, setEditor] = useState<EditorState | null>(null);
-  const [retroDate, setRetroDate] = useState<string | null>(null);
-  const [stripRefresh, setStripRefresh] = useState(0);
-  const [drag, setDrag] = useState<DragState | null>(null);
-
+  const { blocks } = useWeeklyData();
   const dates = weekDates(isoweek);
-  const rangeStart = toIsoDate(dates[0]);
-  const rangeEnd = toIsoDate(dates[6]);
-  const today = toIsoDate(new Date());
-
-  const reloadBlocks = () => {
-    getTimeBlocksInRange(rangeStart, rangeEnd).then(setBlocks);
-  };
-
-  useEffect(() => {
-    reloadBlocks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeStart, rangeEnd]);
-
-  if (!settings) return null;
-  const { dayStartHour, dayEndHour, gridMinutes } = settings;
-  const totalRows = ((dayEndHour - dayStartHour) * 60) / gridMinutes;
-
   const prevWeek = toIsoWeek(addDays(dates[0], -7));
   const nextWeek = toIsoWeek(addDays(dates[0], 7));
 
-  const catColor = (id: string) =>
-    categories.find((c) => c.id === id)?.color ?? '#a1a1aa';
-
-  const openFromTodo = (todo: Todo) => {
-    const startMin = dayStartHour * 60;
-    setEditor({
-      date: todo.scopeKey,
-      startMin,
-      endMin: startMin + gridMinutes,
-      kind: 'plan',
-      prefilledTodoId: todo.id,
-      prefilledText: todo.title,
-    });
-  };
-
-  const handleSaved = () => {
-    reloadBlocks();
-    setStripRefresh((k) => k + 1);
-  };
-
   return (
     <div className="hidden md:block">
-      <header className="flex items-center gap-3 px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-        <Link
-          href={`/week/${prevWeek}`}
-          className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
-          aria-label="이전주"
-        >
-          <ChevronLeft size={18} />
-        </Link>
-        <h1 className="font-semibold flex-1 text-center text-zinc-800 dark:text-zinc-50">
-          {isoweek}
-        </h1>
-        <Link
-          href={`/week/${nextWeek}`}
-          className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
-          aria-label="다음주"
-        >
-          <ChevronRight size={18} />
-        </Link>
-      </header>
-
-      <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-        <FocusNoteEditor
-          scope="week"
-          scopeKey={weekKeyFromString(isoweek)}
-          label="이번 주 한 문장"
-          placeholder="예: 릴스 제작 루틴 실행"
-        />
-      </div>
-
-      <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-        <GoalSummaryStrip />
-      </div>
-
-      <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-        <TodoListSection scope="week" scopeKey={isoweek} title="이번 주 TODO" />
-      </div>
-
-      <HabitStrip dates={dates} />
-
-      <DayTodoStrip
-        dates={dates}
-        refreshKey={stripRefresh}
-        onMakeBlock={openFromTodo}
-        onChanged={() => setStripRefresh((k) => k + 1)}
-      />
-
-      {/* 2-column-per-day grid: each day is split into 계획 (plan) | 실제 (actual). */}
-      <div
-        className="grid overflow-x-auto"
-        style={{ gridTemplateColumns: `60px repeat(14, minmax(60px, 1fr))` }}
-      >
-        {/* Row 1: date header — spans 2 sub-cols */}
-        <div className="bg-white dark:bg-zinc-950" style={{ gridColumn: 1, gridRow: 1 }}></div>
-        {dates.map((d, i) => {
-          const dateStr = toIsoDate(d);
-          const isToday = dateStr === today;
-          return (
-            <div
-              key={`h1-${i}`}
-              className={`relative border-b border-zinc-200 dark:border-zinc-800 py-2 px-2 text-center
-                ${isToday
-                  ? 'bg-zinc-50 dark:bg-zinc-900/30'
-                  : 'bg-white dark:bg-zinc-950'}
-              `}
-              style={{ gridColumn: `${i * 2 + 2} / span 2`, gridRow: 1 }}
+      <TimeGrid dates={dates} blocks={blocks} beforeGrid={(openFromTodo) => (
+        <>
+          <header className="flex items-center gap-3 px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+            <Link
+              href={`/week/${prevWeek}`}
+              className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
+              aria-label="이전주"
             >
-              <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-                <span className="text-zinc-500 dark:text-zinc-400 mr-1">{WEEKDAYS_KO[i]}</span>
-                {d.getMonth() + 1}/{d.getDate()}
-              </div>
-              <button
-                onClick={() => setRetroDate(dateStr)}
-                title="회고"
-                className="absolute top-1 right-1 p-1 rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              >
-                <NotebookPen size={12} />
-              </button>
-            </div>
-          );
-        })}
-
-        {/* Row 2: 계획 / 실제 sub-header */}
-        <div style={{ gridColumn: 1, gridRow: 2 }}></div>
-        {dates.map((_, i) => (
-          <Fragment key={`h2-${i}`}>
-            <div
-              className="text-center text-[11px] py-1 text-zinc-500 dark:text-zinc-500 font-medium border-b border-zinc-100 dark:border-zinc-900"
-              style={{ gridColumn: i * 2 + 2, gridRow: 2 }}
+              <ChevronLeft size={18} />
+            </Link>
+            <h1 className="font-semibold flex-1 text-center text-zinc-800 dark:text-zinc-50">
+              {isoweek}
+            </h1>
+            <Link
+              href={`/week/${nextWeek}`}
+              className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
+              aria-label="다음주"
             >
-              계획
-            </div>
-            <div
-              className="text-center text-[11px] py-1 text-zinc-500 dark:text-zinc-500 font-medium border-b border-zinc-100 dark:border-zinc-900"
-              style={{ gridColumn: i * 2 + 3, gridRow: 2 }}
-            >
-              실제
-            </div>
-          </Fragment>
-        ))}
+              <ChevronRight size={18} />
+            </Link>
+          </header>
 
-        {/* Time labels column (starts at row 3) */}
-        {Array.from({ length: totalRows }).map((_, row) => {
-          const startMin = dayStartHour * 60 + row * gridMinutes;
-          const isHourMark = startMin % 60 === 0;
-          return (
-            <div
-              key={`t-${row}`}
-              className={`text-[11px] tabular-nums pr-2 text-right text-zinc-500 dark:text-zinc-500 border-r border-zinc-100 dark:border-zinc-900 ${
-                isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : 'border-t border-zinc-100/60 dark:border-zinc-900/40'
-              }`}
-              style={{ gridColumn: 1, gridRow: row + 3, height: ROW_HEIGHT }}
-            >
-              {isHourMark ? minutesToTimeStr(startMin) : ''}
-            </div>
-          );
-        })}
+          <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+            <FocusNoteEditor
+              scope="week"
+              scopeKey={weekKeyFromString(isoweek)}
+              label="이번 주 한 문장"
+              placeholder="예: 릴스 제작 루틴 실행"
+            />
+          </div>
 
-        {/* Sub-columns for each day × {plan, actual} */}
-        {dates.map((d, col) => {
-          const dateStr = toIsoDate(d);
-          const isToday = dateStr === today;
-          const subCols: { kind: TimeBlockKind; gridColumn: number }[] = [
-            { kind: 'plan', gridColumn: col * 2 + 2 },
-            { kind: 'actual', gridColumn: col * 2 + 3 },
-          ];
-          return subCols.map(({ kind, gridColumn }) => {
-            const subBlocks = blocks.filter(b => b.date === dateStr && (b.kind ?? 'plan') === kind);
-            return (
-              <div
-                key={`col-${col}-${kind}`}
-                className={`relative
-                  ${isToday ? 'bg-zinc-50 dark:bg-zinc-900/30' : ''}
-                  ${kind === 'plan'
-                    ? 'border-r border-zinc-100/70 dark:border-zinc-900'
-                    : 'border-r border-zinc-200 dark:border-zinc-800'}
-                `}
-                style={{ gridColumn, gridRow: `3 / span ${totalRows}` }}
-                onPointerDown={(e) => {
-                  if (drag) return; // 멀티터치 방지: 이미 드래그 중이면 새 포인터 무시
-                  if ((e.target as HTMLElement).closest('[data-block]')) return;
-                  const rowAttr = (e.target as HTMLElement).getAttribute('data-row');
-                  if (rowAttr == null) return;
-                  const row = Number(rowAttr);
-                  if (Number.isNaN(row)) return;
-                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-                  setDrag({ pointerId: e.pointerId, date: dateStr, kind, startRow: row, currentRow: row });
-                }}
-                onPointerMove={(e) => {
-                  if (!drag || drag.pointerId !== e.pointerId) return;
-                  if (drag.date !== dateStr || drag.kind !== kind) return;
-                  const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-                  // Number(null) === 0 함정: data-row 없는 요소(블록 등) 위로 이동 시 0 으로 점프하던 문제
-                  const rowAttr = target?.getAttribute('data-row');
-                  if (rowAttr == null) return;
-                  const row = Number(rowAttr);
-                  if (Number.isNaN(row)) return;
-                  if (row !== drag.currentRow) setDrag({ ...drag, currentRow: row });
-                }}
-                onPointerUp={(e) => {
-                  if (!drag || drag.pointerId !== e.pointerId) return;
-                  if (drag.date !== dateStr || drag.kind !== kind) return;
-                  try {
-                    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-                  } catch { /* already released */ }
-                  const minRow = Math.min(drag.startRow, drag.currentRow);
-                  const maxRow = Math.max(drag.startRow, drag.currentRow);
-                  const startMin = dayStartHour * 60 + minRow * gridMinutes;
-                  const endMin = dayStartHour * 60 + (maxRow + 1) * gridMinutes;
-                  setEditor({ date: drag.date, startMin, endMin, kind: drag.kind });
-                  setDrag(null);
-                }}
-                onPointerCancel={(e) => {
-                  if (drag && drag.pointerId !== e.pointerId) return;
-                  try {
-                    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-                  } catch { /* already released */ }
-                  setDrag(null);
-                }}
-              >
-                {Array.from({ length: totalRows }).map((_, row) => {
-                  const startMin = dayStartHour * 60 + row * gridMinutes;
-                  const isHourMark = startMin % 60 === 0;
-                  return (
-                    <div
-                      key={row}
-                      data-testid="time-slot"
-                      data-row={row}
-                      className={`block w-full transition cursor-cell
-                        ${drag ? '' : 'hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40'}
-                        ${isHourMark ? 'border-t border-zinc-200 dark:border-zinc-800' : ''}
-                      `}
-                      style={{ height: ROW_HEIGHT }}
-                    />
-                  );
-                })}
+          <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+            <GoalSummaryStrip date={toIsoDate(dates[0])} />
+          </div>
 
-                {drag && drag.date === dateStr && drag.kind === kind && (() => {
-                  const minRow = Math.min(drag.startRow, drag.currentRow);
-                  const maxRow = Math.max(drag.startRow, drag.currentRow);
-                  return (
-                    <div
-                      aria-hidden
-                      className="absolute left-0 right-0 pointer-events-none rounded-md outline outline-2 outline-dashed outline-blue-400 bg-blue-100/50 dark:bg-blue-900/30"
-                      style={{
-                        top: minRow * ROW_HEIGHT,
-                        height: (maxRow - minRow + 1) * ROW_HEIGHT,
-                      }}
-                    />
-                  );
-                })()}
+          <WeeklyReview isoweek={isoweek} />
 
-                {subBlocks.map((b) => {
-                  const topRow = (b.startMin - dayStartHour * 60) / gridMinutes;
-                  const spanRows = (b.endMin - b.startMin) / gridMinutes;
-                  const color = catColor(b.categoryId);
-                  const isPlan = (b.kind ?? 'plan') === 'plan';
-                  return (
-                    <button
-                      key={b.id}
-                      data-block="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditor({
-                          date: b.date,
-                          startMin: b.startMin,
-                          endMin: b.endMin,
-                          kind: b.kind ?? 'plan',
-                          existing: b,
-                        });
-                      }}
-                      className={`absolute left-0.5 right-0.5 rounded-md text-left overflow-hidden transition
-                        ${isPlan
-                          ? 'border-2 border-dashed hover:shadow-sm'
-                          : 'border-2 border-solid shadow-sm hover:shadow-md'}
-                      `}
-                      style={{
-                        top: topRow * ROW_HEIGHT + 1,
-                        height: spanRows * ROW_HEIGHT - 2,
-                        background: tint.soft(color, isPlan ? 0.10 : 0.24),
-                        borderColor: tint.bar(color),
-                        borderLeftWidth: 3,
-                        borderLeftStyle: 'solid',
-                        borderLeftColor: tint.bar(color),
-                      }}
-                      title={b.text}
-                    >
-                      <div className="px-1.5 py-1">
-                        <div className="text-[12px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100 truncate">
-                          {b.text || '(내용 없음)'}
-                        </div>
-                        {spanRows >= 2 && (
-                          <div className="text-[10px] text-zinc-600 dark:text-zinc-400 mt-0.5 truncate">
-                            {minutesToTimeStr(b.startMin)}–{minutesToTimeStr(b.endMin)}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          });
-        })}
-      </div>
+          <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+            <TodoListSection scope="week" scopeKey={isoweek} title="이번 주 TODO" />
+          </div>
 
-      <GoalCoverageBar blocks={blocks} goals={goals} categories={categories} />
-
-      {editor && (
-        <BlockEditor
-          initial={{ date: editor.date, startMin: editor.startMin, endMin: editor.endMin, kind: editor.kind }}
-          existing={editor.existing}
-          prefilledTodoId={editor.prefilledTodoId}
-          prefilledText={editor.prefilledText}
-          onClose={() => setEditor(null)}
-          onSaved={handleSaved}
-        />
-      )}
-
-      {retroDate && (
-        <DailyRetroSheet date={retroDate} onClose={() => setRetroDate(null)} />
-      )}
+          <DayTodoStrip
+            dates={dates}
+            onMakeBlock={openFromTodo}
+          />
+        </>
+      )} />
     </div>
   );
 };

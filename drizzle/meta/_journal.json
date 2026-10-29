@@ -36,6 +36,13 @@
       "when": 1777356800000,
       "tag": "0004_settings_per_user",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788912000000,
+      "tag": "0005_annual_actual_adjustments",
+      "breakpoints": true
     }
   ]
 }

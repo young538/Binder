@@ -8,5 +8,5 @@ export const getSettings = async (): Promise<Settings> => {
 
 export const updateSettings = async (patch: Partial<Settings>): Promise<void> => {
   await http.patch<Settings>('/api/settings', patch);
-  notifyMutation();
+  notifyMutation('settings');
 };

@@ -2,14 +2,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut } from 'lucide-react';
-import { toIsoWeek } from '@/lib/utils/date';
+import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut, Sun } from 'lucide-react';
+import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 import { useBinder } from '@/store';
 import { logout } from '@/lib/repo/auth';
 
 const primaryLinks = [
   { label: 'One-Thing', Icon: Target,        basePath: '/mandalart',     href: () => '/mandalart' },
+  { label: '일일',    Icon: Sun,            basePath: '/daily',         href: () => '/daily' },
   { label: '연간',    Icon: CalendarRange,  basePath: '/annual',        href: () => `/annual/${format(new Date(), 'yyyy')}` },
   { label: '월간',    Icon: CalendarDays,   basePath: '/monthly',       href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
   { label: '주간',    Icon: Calendar,       basePath: '/week',          href: () => `/week/${toIsoWeek(new Date())}` },
@@ -43,6 +44,10 @@ export const TopNav = () => {
           const active = path.startsWith(basePath);
           return (
             <Link key={basePath} href={href()}
+              onNavigate={basePath === '/daily' ? (event) => {
+                event.preventDefault();
+                router.push(`/daily/${toIsoDate(new Date())}`);
+              } : undefined}
               className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors text-sm
                 ${active
                   ? 'text-blue-700 font-semibold bg-blue-50/70 dark:bg-blue-950/40 dark:text-blue-300'

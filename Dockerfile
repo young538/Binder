@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# ---- build: next build + drizzle-kit (generates any missing migrations) ----
+# ---- build: next build (SQL migrations are generated and reviewed beforehand) ----
 FROM node:20-alpine AS build
 RUN apk add --no-cache python3 make g++ libc6-compat
 WORKDIR /app

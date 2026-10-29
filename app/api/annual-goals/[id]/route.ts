@@ -1,29 +1,22 @@
+import { getUserRepositories } from '@/lib/server/repos';
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
-import { updateAnnualGoal, deleteAnnualGoal } from '@/lib/server/repos/annualGoals';
+import { authenticated } from '@/lib/server/http';
 
-export async function PATCH(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
 
+export const PATCH = authenticated(async (session, req: Request, ctx: { params: Promise<{ id: string }> }) => {
+  const repositories = getUserRepositories(session.userId);
   const { id } = await ctx.params;
-  const patch = await req.json();
-  const row = await updateAnnualGoal(session.userId, id, patch);
+  const patch = await readMutation(req, 'annualGoals', session.userId, true, id);
+  if (patch instanceof Response) return patch;
+  const row = await repositories.annualGoals.update(id, patch);
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(row);
-}
+});
 
-export async function DELETE(
-  _req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
+export const DELETE = authenticated(async (session, _req: Request, ctx: { params: Promise<{ id: string }> }) => {
+  const repositories = getUserRepositories(session.userId);
   const { id } = await ctx.params;
-  await deleteAnnualGoal(session.userId, id);
+  await repositories.annualGoals.delete(id);
   return NextResponse.json({ ok: true });
-}
+});

@@ -77,7 +77,7 @@ export const focusNotes = sqliteTable(
   {
     id: text('id').primaryKey(),
     userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
-    scope: text('scope').notNull(), // 'year' | 'month' | 'week'
+    scope: text('scope').notNull(), // 'year' | 'month' | 'week' | 'day' | 'board'
     scopeKey: text('scope_key').notNull(),
     text: text('text').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -108,6 +108,9 @@ export const annualGoals = sqliteTable(
     monthlyActuals: text('monthly_actuals', { mode: 'json' })
       .$type<(number | null)[]>()
       .notNull(),
+    // Signed manual offsets; displayed actuals are computed from current logs.
+    monthlyActualAdjustments: text('monthly_actual_adjustments', { mode: 'json' })
+      .$type<(number | null)[]>(),
     parentGoalId: text('parent_goal_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -196,7 +199,7 @@ export const retrospectives = sqliteTable(
     dateOrWeek: text('date_or_week').notNull(),
     rating: integer('rating'),
     template: text('template', { mode: 'json' })
-      .$type<{ good?: string; bad?: string; nextStep?: string }>()
+      .$type<{ good?: string; bad?: string; nextStep?: string; reading?: string }>()
       .notNull(),
     freeText: text('free_text'),
     createdAt: text('created_at').notNull(),

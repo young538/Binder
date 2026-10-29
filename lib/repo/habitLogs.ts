@@ -7,7 +7,7 @@ export const toggleHabit = async (
   date: string
 ): Promise<boolean> => {
   const res = await http.post<{ added: boolean }>('/api/habit-logs', { habitId, date });
-  notifyMutation();
+  notifyMutation('habitLogs');
   return res.added;
 };
 

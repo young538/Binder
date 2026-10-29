@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { toIsoWeek } from '@/lib/utils/date';
 
 // Use a per-spec user so other tests' data doesn't accidentally interfere.
 test.beforeAll(async () => {
@@ -9,6 +10,7 @@ test.beforeAll(async () => {
 test('weekly summary aggregates time blocks', async ({ page }) => {
   await resetDb(page);
   await loginAs(page, 'e2e-weekly-retro', 'pwTest123*');
+  await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\/(.+)/);
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
   const url = page.url();
@@ -16,9 +18,12 @@ test('weekly summary aggregates time blocks', async ({ page }) => {
   expect(match).not.toBeNull();
   const isoweek = match![1];
 
-  // Create a block (similar to week-input)
+  // Create a block (select → edit flow, same as week-input)
   const firstCell = page.locator('[data-testid="time-slot"]').first();
   await firstCell.click();
+  await expect(firstCell).toHaveAttribute('data-selected', 'true');
+  await page.getByTestId('week-selection-edit').click();
+  await expect(page.getByRole('heading', { name: /블록 추가/ })).toBeVisible();
   await page.getByPlaceholder('내용').fill('주간합산');
   await page.getByRole('button', { name: '저장' }).click();
 

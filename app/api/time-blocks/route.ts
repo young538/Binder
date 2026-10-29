@@ -1,27 +1,26 @@
+import { getUserRepositories } from '@/lib/server/repos';
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
-import { getTimeBlocksInRange, createTimeBlock } from '@/lib/server/repos/timeBlocks';
+import { authenticated } from '@/lib/server/http';
 
-export async function GET(req: NextRequest) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
 
+export const GET = authenticated(async (session, req: NextRequest) => {
+  const repositories = getUserRepositories(session.userId);
   const sp = req.nextUrl.searchParams;
   const startDate = sp.get('startDate');
   const endDate = sp.get('endDate');
   if (!startDate || !endDate) {
     return NextResponse.json({ error: 'startDate & endDate required' }, { status: 400 });
   }
-  const rows = await getTimeBlocksInRange(session.userId, startDate, endDate);
+  const rows = await repositories.timeBlocks.listInRange(startDate, endDate);
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const body = await req.json();
-  const row = await createTimeBlock(session.userId, body);
+export const POST = authenticated(async (session, req: Request) => {
+  const repositories = getUserRepositories(session.userId);
+  const body = await readMutation(req, 'timeBlocks', session.userId);
+  if (body instanceof Response) return body;
+  const row = await repositories.timeBlocks.create(body);
   return NextResponse.json(row, { status: 201 });
-}
+});

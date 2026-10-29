@@ -22,6 +22,6 @@ export const upsertRetrospective = async (
     dateOrWeek,
     ...data,
   });
-  notifyMutation();
+  notifyMutation('retrospectives');
   return row;
 };

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Calendar,
   CalendarDays,
@@ -11,26 +11,29 @@ import {
   MoreHorizontal,
   BookOpen,
   Settings as SettingsIcon,
+  Sun,
   X,
 } from 'lucide-react';
-import { toIsoWeek } from '@/lib/utils/date';
+import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 
 const primary = [
   { label: 'One-Thing', Icon: Target,       basePath: '/mandalart',     href: () => '/mandalart' },
+  { label: '일일',    Icon: Sun,           basePath: '/daily',          href: () => '/daily' },
   { label: '연간',    Icon: CalendarRange, basePath: '/annual',        href: () => `/annual/${format(new Date(), 'yyyy')}` },
   { label: '월간',    Icon: CalendarDays,  basePath: '/monthly',       href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
   { label: '주간',    Icon: Calendar,      basePath: '/week',          href: () => `/week/${toIsoWeek(new Date())}` },
-  { label: '회고',    Icon: NotebookPen,   basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
 ];
 
 const more = [
+  { label: '회고', Icon: NotebookPen,  basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
   { label: '독서', Icon: BookOpen,     basePath: '/reading',  href: () => '/reading' },
   { label: '설정', Icon: SettingsIcon, basePath: '/settings', href: () => '/settings' },
 ];
 
 export const BottomNav = () => {
   const path = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const moreActive = more.some((m) => path.startsWith(m.basePath));
 
@@ -43,6 +46,10 @@ export const BottomNav = () => {
             <Link
               key={basePath}
               href={href()}
+              onNavigate={basePath === '/daily' ? (event) => {
+                event.preventDefault();
+                router.push(`/daily/${toIsoDate(new Date())}`);
+              } : undefined}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors
                 ${active ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
             >

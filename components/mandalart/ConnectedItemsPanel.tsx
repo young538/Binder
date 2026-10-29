@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Trash2, Plus } from 'lucide-react';
-import { Goal, AnnualGoal, HabitSchedule } from '@/lib/types';
+import { Goal, HabitSchedule } from '@/lib/types';
 import { listHabits, createHabit } from '@/lib/repo/habits';
 import {
   listByYear as listAnnualGoalsByYear,
@@ -35,8 +36,9 @@ const formatSchedule = (s: HabitSchedule): string => {
   return `월 ${s.count}회`;
 };
 
-export const ConnectedItemsPanel = ({ goal, onChange }: Props) => {
-  const [annualGoals, setAnnualGoals] = useState<AnnualGoal[]>([]);
+export const ConnectedItemsPanel = (props: Props) => <ConnectedItemsSession key={props.goal.id} {...props} />;
+
+const ConnectedItemsSession = ({ goal, onChange }: Props) => {
   const [adding, setAdding] = useState(false);
 
   const [agTitle, setAgTitle] = useState('');
@@ -45,17 +47,11 @@ export const ConnectedItemsPanel = ({ goal, onChange }: Props) => {
   const [agDeadline, setAgDeadline] = useState('');
   const [agAlsoCreateHabit, setAgAlsoCreateHabit] = useState(true);
 
-  const reload = async () => {
-    const year = String(new Date().getFullYear());
-    const a = await listAnnualGoalsByYear(year).then(as => as.filter(x => x.parentGoalId === goal.id));
-    setAnnualGoals(a);
-  };
-
-  useEffect(() => {
-    reload();
-    setAdding(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal.id]);
+  const { value: annualGoals, refresh: reload } = useAsyncResource(
+    goal.id,
+    () => listAnnualGoalsByYear(String(new Date().getFullYear())).then(rows => rows.filter(row => row.parentGoalId === goal.id)),
+    [], ['annualGoals', 'habits', 'habitLogs'],
+  );
 
   const openAdd = () => {
     setAgTitle(goal.title);
@@ -76,9 +72,9 @@ export const ConnectedItemsPanel = ({ goal, onChange }: Props) => {
     await updateAnnualGoal(created.id, {
       parentGoalId: goal.id,
       title: agTitle.trim(),
-      metric: agMetric.trim() || undefined,
+      metric: agMetric.trim() || null,
       target: targetNum,
-      deadline: agDeadline || undefined,
+      deadline: agDeadline || null,
     });
     if (agAlsoCreateHabit && targetNum && targetNum > 0) {
       const all = await listHabits();

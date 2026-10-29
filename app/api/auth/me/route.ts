@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
+import { authenticated } from '@/lib/server/http';
 
-export async function GET() {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
+export const GET = authenticated(async (session) => {
   return NextResponse.json({ userId: session.userId, username: session.username });
-}
+});

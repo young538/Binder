@@ -1,37 +1,28 @@
+import { getUserRepositories } from '@/lib/server/repos';
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
-import {
-  listAnnualGoalsByYear,
-  createAnnualGoal,
-  ensureSeven,
-} from '@/lib/server/repos/annualGoals';
+import { authenticated } from '@/lib/server/http';
 
-export async function GET(req: NextRequest) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
 
+export const GET = authenticated(async (session, req: NextRequest) => {
+  const repositories = getUserRepositories(session.userId);
   const year = req.nextUrl.searchParams.get('year');
   if (!year) {
     return NextResponse.json({ error: 'year required' }, { status: 400 });
   }
-  const rows = await listAnnualGoalsByYear(session.userId, year);
+  const rows = await repositories.annualGoals.listByYear(year);
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const body = (await req.json()) as {
-    year: string;
-    order: number;
-    ensureSeven?: boolean;
-  };
+export const POST = authenticated(async (session, req: Request) => {
+  const repositories = getUserRepositories(session.userId);
+  const body = await readMutation(req, 'annualGoalCreate', session.userId);
+  if (body instanceof Response) return body;
   if (body.ensureSeven) {
-    const rows = await ensureSeven(session.userId, body.year);
+    const rows = await repositories.annualGoals.ensureSeven(body.year);
     return NextResponse.json(rows);
   }
-  const row = await createAnnualGoal(session.userId, body.year, body.order);
+  const row = await repositories.annualGoals.create(body.year, body.order!);
   return NextResponse.json(row, { status: 201 });
-}
+});

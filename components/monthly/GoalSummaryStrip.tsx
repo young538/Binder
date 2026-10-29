@@ -1,13 +1,15 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { parseISO } from 'date-fns';
+import { toIsoDate } from '@/lib/utils/date';
+import { useMemo } from 'react';
 import { useBinder } from '@/store';
 import { Goal } from '@/lib/types';
 import { computeMultipleProgress, GoalProgress } from '@/lib/progress';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { GoalProgressCard } from '@/components/common/GoalProgressCard';
 
-export const GoalSummaryStrip = () => {
+export const GoalSummaryStrip = ({ date = toIsoDate(new Date()) }: { date?: string }) => {
   const { goals } = useBinder();
-  const [progressMap, setProgressMap] = useState<Map<string, GoalProgress>>(new Map());
 
   const { highlighted, basis } = useMemo(() => {
     const cores = goals.filter(g => g.level === 'mandalartCore' && g.title).slice(0, 8);
@@ -18,14 +20,11 @@ export const GoalSummaryStrip = () => {
 
   const idsKey = highlighted.map(g => g.id).join(',');
 
-  useEffect(() => {
-    if (highlighted.length === 0) {
-      setProgressMap(new Map());
-      return;
-    }
-    computeMultipleProgress(highlighted.map(g => g.id)).then(setProgressMap);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey]);
+  const { value: progressMap } = useAsyncResource<Map<string, GoalProgress>>(
+    `${idsKey}:${date}`,
+    () => idsKey ? computeMultipleProgress(idsKey.split(','), parseISO(date)) : Promise.resolve(new Map()),
+    new Map(), ['todos', 'timeBlocks', 'habits', 'habitLogs', 'annualGoals'],
+  );
 
   if (highlighted.length === 0) return null;
 

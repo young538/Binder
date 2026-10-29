@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { toIsoWeek } from '@/lib/utils/date';
 
 // Use a per-spec user so saved retro text from earlier tests doesn't leak in.
 test.beforeAll(async () => {
@@ -9,6 +10,7 @@ test.beforeAll(async () => {
 test('daily retro save and persist', async ({ page }) => {
   await resetDb(page);
   await loginAs(page, 'e2e-daily-retro', 'pwTest123*');
+  await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 

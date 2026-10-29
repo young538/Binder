@@ -1,77 +1,31 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { useBinder } from '@/store';
 import { weekDates, toIsoDate } from '@/lib/utils/date';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
-import { getRetrospective, upsertRetrospective } from '@/lib/repo/retrospectives';
+import { useRetrospectiveEditor } from '@/lib/autosave/editors';
+import { AutosaveStatus } from '@/components/common/AutosaveStatus';
+import { computeHabitStatsForRange } from '@/lib/utils/habitSchedule';
 import { listDayTodosInRange } from '@/lib/repo/todos';
 import { listHabits } from '@/lib/repo/habits';
 import { listLogsForRange } from '@/lib/repo/habitLogs';
-import { Retrospective, TimeBlock, Todo } from '@/lib/types';
-import { WeeklySummary, HabitStats } from './WeeklySummary';
+import { WeeklySummary } from './WeeklySummary';
 import { RetroTemplate } from './RetroTemplate';
 
 export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
   const { categories, goals } = useBinder();
-  const [blocks, setBlocks] = useState<TimeBlock[]>([]);
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [habitStats, setHabitStats] = useState<HabitStats>({ total: 0, logs: 0, expected: 0, percent: 0 });
-  const [value, setValue] = useState<Partial<Retrospective>>({ template: {} });
-  const latest = useRef<Partial<Retrospective>>({ template: {} });
-  const timer = useRef<number | undefined>(undefined);
+  const editor = useRetrospectiveEditor('weekly', isoweek);
 
-  useEffect(() => {
-    let cancelled = false;
-    // isoweek 변경 시 이전 pending 저장 취소
-    if (timer.current !== undefined) {
-      window.clearTimeout(timer.current);
-      timer.current = undefined;
-    }
+  const { value: { blocks, todos, habitStats } } = useAsyncResource(isoweek, async () => {
     const dates = weekDates(isoweek);
-    const startStr = toIsoDate(dates[0]);
-    const endStr = toIsoDate(dates[6]);
-    getTimeBlocksInRange(startStr, endStr).then(b => { if (!cancelled) setBlocks(b); });
-    listDayTodosInRange(startStr, endStr).then(t => { if (!cancelled) setTodos(t); });
-    Promise.all([listHabits(), listLogsForRange(startStr, endStr)]).then(([habitsAll, logsInWeek]) => {
-      if (cancelled) return;
-      const expected = habitsAll.length * 7;
-      const logs = logsInWeek.length;
-      const percent = expected > 0 ? Math.round((logs / expected) * 100) : 0;
-      setHabitStats({ total: habitsAll.length, logs, expected, percent });
-    });
-    getRetrospective('weekly', isoweek).then((r) => {
-      if (cancelled) return;
-      const v = r ?? { template: {} };
-      setValue(v);
-      latest.current = v;
-    });
-    return () => { cancelled = true; };
-  }, [isoweek]);
-
-  // unmount 시 pending 저장 정리
-  useEffect(() => {
-    return () => {
-      if (timer.current !== undefined) window.clearTimeout(timer.current);
-    };
-  }, []);
-
-  const patch = (p: Partial<Retrospective>) => {
-    const merged: Partial<Retrospective> = {
-      ...latest.current,
-      ...p,
-      template: { ...latest.current.template, ...(p.template ?? {}) },
-    };
-    latest.current = merged;
-    setValue(merged);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      upsertRetrospective('weekly', isoweek, {
-        rating: merged.rating,
-        template: merged.template,
-        freeText: merged.freeText,
-      });
-    }, 1000);
-  };
+    const start = toIsoDate(dates[0]);
+    const end = toIsoDate(dates[6]);
+    const [blocks, todos, habits, logs] = await Promise.all([
+      getTimeBlocksInRange(start, end), listDayTodosInRange(start, end), listHabits(), listLogsForRange(start, end),
+    ]);
+    return { blocks, todos, habitStats: computeHabitStatsForRange(habits, logs, dates[0], dates[6]) };
+  }, { blocks: [], todos: [], habitStats: { total: 0, logs: 0, expected: 0, percent: 0 } },
+  ['timeBlocks', 'todos', 'habits', 'habitLogs']);
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -88,7 +42,8 @@ export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
         habitStats={habitStats}
       />
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-5">
-        <RetroTemplate value={value} onChange={patch} />
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} />}
+        <AutosaveStatus {...editor} />
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     passWithNoTests: true,
-    exclude: ['node_modules', '.next', 'tests/e2e/**'],
+    exclude: ['node_modules', '.next', '.codex-spreadsheet-audit', 'tests/e2e/**'],
   },
   resolve: {
     alias: {

@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 export const resetDb = async (page: Page) => {
   // Runs before the app bundle loads on each navigation.
@@ -72,8 +72,8 @@ export const ensureUserExists = async (username: string, password: string) => {
   await _migrationsReady;
 
   try {
-    execSync(
-      `node scripts/users.mjs add ${username} ${password}`,
+    execFileSync(
+      process.execPath, ['scripts/users.mjs', 'add', username, password],
       {
         env: { ...process.env, DB_PATH: './tmp-test/e2e.sqlite' },
         stdio: 'pipe',

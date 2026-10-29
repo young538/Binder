@@ -1,18 +1,12 @@
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession, verifyCredentials } from '@/lib/server/auth';
 
 export async function POST(req: NextRequest) {
-  let body: { username?: string; password?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
+  const body = await readMutation(req, 'login', '');
+  if (body instanceof Response) return body;
   const { username, password } = body;
-  if (!username || !password) {
-    return NextResponse.json({ error: '아이디와 비밀번호를 입력해주세요' }, { status: 400 });
-  }
 
   const creds = await verifyCredentials(username, password);
   if (!creds) {

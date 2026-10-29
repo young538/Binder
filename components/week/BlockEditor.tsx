@@ -1,156 +1,49 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { X, Trash2, Link2 } from 'lucide-react';
-import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
-import {
-  createTimeBlock,
-  updateTimeBlock,
-  deleteTimeBlock,
-} from '@/lib/repo/timeBlocks';
-import { listByScope } from '@/lib/repo/todos';
-import { useBinder } from '@/store';
-import {
-  minutesToTimeStr,
-  timeStrToMinutes,
-  snapToGrid,
-} from '@/lib/utils/date';
+import { useId } from 'react';
+import { X, Trash2, Link2, Copy } from 'lucide-react';
+import { minutesToTimeStr } from '@/lib/utils/date';
 import { GoalPicker } from '@/components/common/GoalPicker';
+import { useBlockEditor, type BlockEditorProps } from './useBlockEditor';
 
-interface Props {
-  initial: { date: string; startMin: number; endMin: number; kind?: TimeBlockKind };
-  existing?: TimeBlock;
-  prefilledTodoId?: string;
-  prefilledText?: string;
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-export const BlockEditor = ({
-  initial,
-  existing,
-  prefilledTodoId,
-  prefilledText,
-  onClose,
-  onSaved,
-}: Props) => {
-  const { categories, settings } = useBinder();
-  const [text, setText] = useState(existing?.text ?? prefilledText ?? '');
-  const [categoryId, setCategoryId] = useState(
-    existing?.categoryId ?? categories[0]?.id ?? '',
-  );
-  const [goalId, setGoalId] = useState<string | undefined>(existing?.goalId);
-  const [kind, setKind] = useState<TimeBlockKind>(
-    existing?.kind ?? initial.kind ?? 'plan'
-  );
-  const [todoId, setTodoId] = useState<string | undefined>(
-    existing?.todoId ?? prefilledTodoId,
-  );
-  const [startStr, setStartStr] = useState(
-    minutesToTimeStr(existing?.startMin ?? initial.startMin),
-  );
-  const [endStr, setEndStr] = useState(
-    minutesToTimeStr(existing?.endMin ?? initial.endMin),
-  );
-  const [dayTodos, setDayTodos] = useState<Todo[]>([]);
-
-  useEffect(() => {
-    listByScope('day', initial.date).then(setDayTodos);
-  }, [initial.date]);
-
-  // 키보드 단축키: ESC = 취소, Enter = 저장.
-  // save/onClose 는 매 렌더 새로 만들어지므로 ref 로 latest 유지 →
-  // useEffect 는 [] 한 번만 등록/해제.
-  const saveRef = useRef<() => void>(() => {});
-  const closeRef = useRef<() => void>(onClose);
-  closeRef.current = onClose;
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeRef.current();
-        return;
-      }
-      if (e.key === 'Enter') {
-        // textarea 의 Enter 는 줄바꿈으로 보존 (현재 textarea 없으나 미래 대비)
-        if (e.target instanceof HTMLTextAreaElement) return;
-        // IME 한글 조합 중 Enter 는 글자 확정용 — 저장 트리거 금지
-        if (e.isComposing) return;
-        e.preventDefault();
-        saveRef.current();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  const save = async () => {
-    const grid = settings?.gridMinutes ?? 30;
-    const startMin = snapToGrid(timeStrToMinutes(startStr), grid);
-    const endMin = snapToGrid(timeStrToMinutes(endStr), grid);
-    if (endMin <= startMin) {
-      alert('종료가 시작보다 빨라요');
-      return;
-    }
-    if (existing) {
-      await updateTimeBlock(existing.id, {
-        text,
-        kind,
-        categoryId,
-        goalId,
-        todoId,
-        startMin,
-        endMin,
-      });
-    } else {
-      await createTimeBlock({
-        date: initial.date,
-        startMin,
-        endMin,
-        text,
-        kind,
-        categoryId,
-        goalId,
-        todoId,
-      });
-    }
-    onSaved();
-    onClose();
-  };
-  saveRef.current = save;
-
-  const remove = async () => {
-    if (!existing) return;
-    if (!confirm('삭제할까요?')) return;
-    await deleteTimeBlock(existing.id);
-    onSaved();
-    onClose();
-  };
-
+export const BlockEditor = (props: BlockEditorProps) => {
+  const { initial, existing, onCopyToNextDay } = props;
+  const titleId = useId();
+  const slotLabel = existing
+    ? null
+    : `${initial.date} ${initial.kind === 'actual' ? '실제' : '계획'} ${minutesToTimeStr(initial.startMin)}–${minutesToTimeStr(initial.endMin)}`;
+  const { text, setText, categoryId, setCategoryId, goalId, setGoalId, kind, setKind, todoId, setTodoId, startStr, setStartStr, endStr, setEndStr, dayTodos, pending, error, close, save, remove, categories } = useBlockEditor(props);
   return (
     <div
       className="fixed inset-0 bg-zinc-900/25 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={close}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-busy={pending}
         className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-50">
+          <h3 id={titleId} className="text-lg font-semibold text-zinc-800 dark:text-zinc-50">
             {existing ? '블록 편집' : '블록 추가'}
           </h3>
           <button
-            onClick={onClose}
+            onClick={close}
+            aria-label="닫기"
+            disabled={pending}
             className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="text-xs text-zinc-500 mb-4">{initial.date}</div>
+        <div className="text-xs text-zinc-500 mb-4">
+          {slotLabel ?? initial.date}
+        </div>
 
-        <div className="space-y-4">
+        <fieldset disabled={pending} className="space-y-4 min-w-0 disabled:opacity-60">
           <div>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
               종류
@@ -158,6 +51,7 @@ export const BlockEditor = ({
             <div className="flex gap-2">
               <button
                 type="button"
+                aria-pressed={kind === 'plan'}
                 onClick={() => setKind('plan')}
                 className={`flex-1 py-2 rounded-lg border text-sm font-medium transition ${
                   kind === 'plan'
@@ -169,6 +63,7 @@ export const BlockEditor = ({
               </button>
               <button
                 type="button"
+                aria-pressed={kind === 'actual'}
                 onClick={() => setKind('actual')}
                 className={`flex-1 py-2 rounded-lg border text-sm font-medium transition ${
                   kind === 'actual'
@@ -188,18 +83,21 @@ export const BlockEditor = ({
             <div className="flex items-center gap-2">
               <input
                 type="time"
+                aria-label="시작"
                 value={startStr}
                 onChange={(e) => setStartStr(e.target.value)}
-                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 min-w-0 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-zinc-400 text-sm">~</span>
               <input
                 type="time"
+                aria-label="종료 (00:00은 자정)"
                 value={endStr}
                 onChange={(e) => setEndStr(e.target.value)}
-                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 flex-1 min-w-0 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <p className="mt-1.5 text-xs text-zinc-500">종료 00:00은 이 날의 자정이에요.</p>
           </div>
 
           <div>
@@ -251,7 +149,7 @@ export const BlockEditor = ({
             <select
               value={todoId ?? ''}
               onChange={(e) => {
-                const id = e.target.value || undefined;
+                const id = e.target.value || null;
                 setTodoId(id);
                 if (id && !text) {
                   const t = dayTodos.find((x) => x.id === id);
@@ -282,25 +180,42 @@ export const BlockEditor = ({
             </label>
             <GoalPicker value={goalId} onChange={setGoalId} />
           </div>
-        </div>
+        </fieldset>
+
+        {error && <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {pending && <p role="status" className="mt-4 text-sm text-zinc-500">처리 중이에요…</p>}
 
         <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
           {existing && (
-            <button
-              onClick={remove}
-              className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-sm font-medium mr-auto"
-            >
-              <Trash2 size={14} /> 삭제
-            </button>
+            <div className="flex items-center gap-1 mr-auto">
+              <button
+                onClick={remove}
+                disabled={pending}
+                className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-sm font-medium"
+              >
+                <Trash2 size={14} /> 삭제
+              </button>
+              {onCopyToNextDay && (
+                <button
+                  onClick={() => onCopyToNextDay(existing)}
+                  disabled={pending}
+                  className="flex items-center gap-1 px-3 py-2 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium"
+                >
+                  <Copy size={14} /> 다음날로 복사...
+                </button>
+              )}
+            </div>
           )}
           <button
-            onClick={onClose}
+            onClick={close}
+            disabled={pending}
             className="ml-auto px-4 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             취소
           </button>
           <button
             onClick={save}
+            disabled={pending}
             className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
             저장

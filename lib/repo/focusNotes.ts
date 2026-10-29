@@ -18,6 +18,6 @@ export const upsertFocus = async (
   text: string
 ): Promise<FocusNote> => {
   const row = await http.put<FocusNote>('/api/focus-notes', { scope, scopeKey, text });
-  notifyMutation();
+  notifyMutation('focusNotes');
   return row;
 };

@@ -1,92 +1,51 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Clock, Trash2 } from 'lucide-react';
 import { Todo } from '@/lib/types';
 import {
-  listByScope,
   createTodo,
   updateTodo,
   deleteTodo,
   setStatus,
 } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
+import { useWeeklyData } from './WeeklyDataProvider';
 import { tint } from '@/lib/utils/color';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
-import { statusRowClass } from '@/lib/utils/todoStatus';
+import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
   dateStr: string;
-  refreshKey: number;
   onMakeBlock: (todo: Todo) => void;
-  onChanged: () => void;
 }
 
 export const DayTodoColumn = ({
   dateStr,
-  refreshKey,
   onMakeBlock,
-  onChanged,
 }: Props) => {
   const { categories } = useBinder();
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const { todos: weekTodos } = useWeeklyData();
+  const todos = weekTodos.filter((todo) => todo.scopeKey === dateStr);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
-
-  const reload = () => listByScope('day', dateStr).then(setTodos);
-
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr, refreshKey]);
-
-  const add = async () => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setAdding(false);
-      setDraft('');
-      return;
-    }
-    await createTodo({
-      title: trimmed,
-      scope: 'day',
-      scopeKey: dateStr,
-      status: 'pending',
-      order: todos.length,
-    });
-    setDraft('');
-    setAdding(false);
-    reload();
-    onChanged();
-  };
-
   const changeStatus = async (id: string, next: Todo['status']) => {
     await setStatus(id, next);
-    reload();
-    onChanged();
   };
 
   const remove = async (id: string) => {
     if (!confirm('삭제?')) return;
     await deleteTodo(id);
-    reload();
-    onChanged();
   };
 
-  const editTitle = async (t: Todo, v: string) => {
-    const trimmed = v.trim();
-    if (!trimmed || trimmed === t.title) return;
-    await updateTodo(t.id, { title: trimmed });
-    reload();
-    onChanged();
+  const editTitle = async (t: Todo, nextTitle: string) => {
+    await updateTodo(t.id, { title: nextTitle });
   };
 
-  const setCategory = async (id: string, categoryId: string | undefined) => {
+  const setCategory = async (id: string, categoryId: string | null) => {
     await updateTodo(id, { categoryId });
-    reload();
-    onChanged();
   };
 
-  const catColor = (id?: string) =>
+  const catColor = (id?: string | null) =>
     id ? categories.find((c) => c.id === id)?.color : null;
 
   return (
@@ -100,7 +59,7 @@ export const DayTodoColumn = ({
           return (
             <li
               key={t.id}
-              className="group flex items-start gap-1 text-[11px] leading-tight rounded relative"
+              className="group flex min-h-6 items-center gap-1.5 text-[11px] leading-tight rounded relative"
               style={
                 color
                   ? {
@@ -112,7 +71,7 @@ export const DayTodoColumn = ({
                   : { paddingLeft: '0.25rem', paddingRight: '0.25rem' }
               }
             >
-              <div className="mt-0.5">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center">
                 <TodoStatusButton
                   status={t.status}
                   onChange={(next) => changeStatus(t.id, next)}
@@ -120,27 +79,22 @@ export const DayTodoColumn = ({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-1">
+                <div className="flex items-center gap-1">
                   {t.priority && (
-                    <span className="text-amber-500 text-[9px] mt-0.5 shrink-0">
+                    <span className="h-5 shrink-0 text-[9px] leading-5 text-amber-500">
                       {'*'.repeat(t.priority)}
                     </span>
                   )}
-                  <input
-                    type="text"
-                    defaultValue={t.title}
-                    onBlur={(e) => editTitle(t, e.target.value)}
-                    className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] py-0.5 ${statusRowClass(t.status)}`}
-                  />
+                  <TodoTitleEditor todo={t} onCommit={editTitle} />
                 </div>
               </div>
               <select
                 value={t.categoryId ?? ''}
                 onChange={(e) =>
-                  setCategory(t.id, e.target.value || undefined)
+                  setCategory(t.id, e.target.value || null)
                 }
                 title="카테고리"
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[9px] border border-zinc-200 dark:border-zinc-700 rounded bg-white dark:bg-zinc-950 transition shrink-0 mt-0.5"
+                className="h-5 shrink-0 rounded border border-zinc-200 bg-white text-[9px] opacity-0 transition group-hover:opacity-100 focus:opacity-100 dark:border-zinc-700 dark:bg-zinc-950"
               >
                 <option value="">·</option>
                 {categories.map((c) => (
@@ -152,14 +106,14 @@ export const DayTodoColumn = ({
               <button
                 onClick={() => onMakeBlock(t)}
                 title="블록 만들기"
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition shrink-0 mt-0.5"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-blue-600 opacity-0 transition hover:bg-blue-50 group-hover:opacity-100 dark:hover:bg-blue-950/40"
               >
                 <Clock size={11} />
               </button>
               <button
                 onClick={() => remove(t.id)}
                 title="삭제"
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-red-600 transition shrink-0 mt-0.5"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-zinc-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100"
               >
                 <Trash2 size={11} />
               </button>
@@ -168,20 +122,12 @@ export const DayTodoColumn = ({
         })}
         {adding && (
           <li>
-            <input
-              type="text"
-              value={draft}
-              autoFocus
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={add}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') add();
-                if (e.key === 'Escape') {
-                  setAdding(false);
-                  setDraft('');
-                }
-              }}
-              placeholder="할 일"
+            <TodoCreateInput
+              key={dateStr}
+              onCreate={title => createTodo({
+                title, scope: 'day', scopeKey: dateStr, status: 'pending', order: todos.length,
+              })}
+              onDone={() => { setAdding(false); }}
               className="w-full border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-1 text-[11px] bg-white dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </li>

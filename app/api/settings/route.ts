@@ -1,55 +1,20 @@
+import { readMutation, ValidationError } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
 import { getDb } from '@/lib/server/db/client';
-import { settings } from '@/lib/server/db/schema';
-import { requireSession } from '@/lib/server/auth';
+import { authenticated } from '@/lib/server/http';
+import { SettingsRepository } from '@/lib/server/repos/settings';
 
-const DEFAULTS = {
-  firstDayOfWeek: 'mon' as const,
-  gridMinutes: 30 as const,
-  dayStartHour: 6,
-  dayEndHour: 23,
-  theme: 'light' as const,
-};
+export const GET = authenticated(async (session) => {
+  return NextResponse.json(new SettingsRepository(getDb(), session.userId).get());
+});
 
-export async function GET() {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const db = getDb();
-  const row = await db.select().from(settings).where(eq(settings.userId, session.userId)).get();
-  if (!row) {
-    return NextResponse.json(DEFAULTS);
+export const PATCH = authenticated(async (session, req: Request) => {
+  const patch = await readMutation(req, 'settings', session.userId, true);
+  if (patch instanceof Response) return patch;
+  try {
+    return NextResponse.json(new SettingsRepository(getDb(), session.userId).update(patch));
+  } catch (error) {
+    if (error instanceof ValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
   }
-  // Strip userId from response — client only needs the settings values
-  const { userId: _u, ...rest } = row;
-  void _u;
-  return NextResponse.json(rest);
-}
-
-interface SettingsPatch {
-  firstDayOfWeek?: 'mon' | 'sun';
-  gridMinutes?: 30 | 60;
-  dayStartHour?: number;
-  dayEndHour?: number;
-  theme?: 'light' | 'dark';
-}
-
-export async function PATCH(req: Request) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const patch = (await req.json()) as SettingsPatch;
-  const db = getDb();
-  const existing = await db.select().from(settings).where(eq(settings.userId, session.userId)).get();
-  if (existing) {
-    await db.update(settings).set(patch).where(eq(settings.userId, session.userId)).run();
-  } else {
-    await db.insert(settings).values({ ...DEFAULTS, ...patch, userId: session.userId }).run();
-  }
-  const row = await db.select().from(settings).where(eq(settings.userId, session.userId)).get();
-  if (!row) return NextResponse.json({ error: 'Settings not found' }, { status: 500 });
-  const { userId: _u, ...rest } = row;
-  void _u;
-  return NextResponse.json(rest);
-}
+});

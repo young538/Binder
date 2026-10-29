@@ -1,23 +1,22 @@
+import { getUserRepositories } from '@/lib/server/repos';
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
-import { listBooksByYear, createBook } from '@/lib/server/repos/books';
+import { authenticated } from '@/lib/server/http';
 
-export async function GET(req: NextRequest) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
 
+export const GET = authenticated(async (session, req: NextRequest) => {
+  const repositories = getUserRepositories(session.userId);
   const year = req.nextUrl.searchParams.get('year');
   if (!year) return NextResponse.json({ error: 'year required' }, { status: 400 });
-  const rows = await listBooksByYear(session.userId, year);
+  const rows = await repositories.books.listByYear(year);
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const body = await req.json();
-  const row = await createBook(session.userId, body);
+export const POST = authenticated(async (session, req: Request) => {
+  const repositories = getUserRepositories(session.userId);
+  const body = await readMutation(req, 'books', session.userId);
+  if (body instanceof Response) return body;
+  const row = await repositories.books.create(body);
   return NextResponse.json(row, { status: 201 });
-}
+});

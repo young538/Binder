@@ -46,6 +46,9 @@ next-env.d.ts
 # local tools
 .superpowers/
 .worktrees/
+.codex-spreadsheet-audit/
+/backups/
+/tmp-test/
 
 # e2e
 test-results/

@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Todo } from '@/lib/types';
 import { listDayTodosInRange } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
@@ -14,7 +15,6 @@ const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
 export const MonthlyCalendar = ({ yyyymm }: Props) => {
   const { categories } = useBinder();
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
 
   const monthDate = useMemo(() => parseISO(`${yyyymm}-01`), [yyyymm]);
@@ -28,12 +28,9 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
     days.push(d);
   }
 
-  const reload = () => {
-    listDayTodosInRange(toIsoDate(gridStart), toIsoDate(gridEnd)).then(setTodos);
-  };
-
-  useEffect(() => { reload(); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yyyymm]);
+  const { value: todos, refresh: reload } = useAsyncResource(
+    yyyymm, () => listDayTodosInRange(toIsoDate(gridStart), toIsoDate(gridEnd)), [], ['todos'],
+  );
 
   const today = toIsoDate(new Date());
   const currentMonth = monthDate.getMonth();

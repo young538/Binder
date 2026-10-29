@@ -1,109 +1,89 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { habits, annualGoals } from '../db/schema';
+import { habits, habitLogs } from '../db/schema';
 import { Habit } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
-import { computeHabitYearBreakdown } from '@/lib/utils/habitSchedule';
+import { preserveAnnualActualBaseline, syncAnnualTargets } from './annualGoalAggregates';
+import { stripUndefined } from '../db/patch';
+import type { BinderDatabase } from '../db/connection';
 
-export const listHabits = async (userId: string): Promise<Habit[]> => {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(habits)
-    .where(eq(habits.userId, userId))
-    .orderBy(asc(habits.order))
-    .all();
-  return rows as Habit[];
-};
+/** User-scoped habits operations; accepts an isolated database for tests. */
+export class HabitRepository {
+  constructor(private readonly database: BinderDatabase, private readonly userId: string) { }
 
-export const syncAnnualGoalFromHabits = async (
-  userId: string,
-  annualGoalId: string
-): Promise<void> => {
-  const db = getDb();
-  const ag = await db
-    .select()
-    .from(annualGoals)
-    .where(and(eq(annualGoals.userId, userId), eq(annualGoals.id, annualGoalId)))
-    .get();
-  if (!ag) return;
-  const linked = (await db
-    .select()
-    .from(habits)
-    .where(and(eq(habits.userId, userId), eq(habits.annualGoalId, annualGoalId)))
-    .all()) as Habit[];
-  if (linked.length === 0) return;
-  const monthlyTargets: number[] = Array(12).fill(0);
-  for (const h of linked) {
-    const b = computeHabitYearBreakdown(h.schedule, ag.year);
-    b.monthlyTargets.forEach((v, i) => { monthlyTargets[i] += v; });
+  async list(): Promise<Habit[]> {
+    const userId = this.userId;
+    const db = this.database;
+    const rows = await db
+      .select()
+      .from(habits)
+      .where(eq(habits.userId, userId))
+      .orderBy(asc(habits.order))
+      .all();
+    return rows as Habit[];
   }
-  const target = monthlyTargets.reduce((s, v) => s + v, 0);
-  await db
-    .update(annualGoals)
-    .set({
-      target,
-      monthlyTargets: monthlyTargets as (number | null)[],
-      updatedAt: new Date().toISOString(),
-    })
-    .where(and(eq(annualGoals.userId, userId), eq(annualGoals.id, annualGoalId)))
-    .run();
-};
 
-export const createHabit = async (
-  userId: string,
-  data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-): Promise<Habit> => {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const row: Habit = { ...data, id: newId(), userId, createdAt: now, updatedAt: now };
-  await db.insert(habits).values(row).run();
-  if (row.annualGoalId) await syncAnnualGoalFromHabits(userId, row.annualGoalId);
-  return row;
-};
+  async syncAnnualGoal(annualGoalId: string): Promise<void> {
+    const userId = this.userId;
+    this.database.transaction(tx => syncAnnualTargets(tx, userId, annualGoalId), { behavior: 'immediate' });
+  }
 
-export const updateHabit = async (
-  userId: string,
-  id: string,
-  patch: Partial<Omit<Habit, 'id' | 'userId' | 'createdAt'>>
-): Promise<Habit | null> => {
-  const db = getDb();
-  const before = (await db
-    .select()
-    .from(habits)
-    .where(and(eq(habits.userId, userId), eq(habits.id, id)))
-    .get()) as Habit | undefined;
-  await db
-    .update(habits)
-    .set({ ...patch, updatedAt: new Date().toISOString() })
-    .where(and(eq(habits.userId, userId), eq(habits.id, id)))
-    .run();
-  const after = (await db
-    .select()
-    .from(habits)
-    .where(and(eq(habits.userId, userId), eq(habits.id, id)))
-    .get()) as Habit | undefined;
-  const affected = new Set<string>();
-  if (before?.annualGoalId) affected.add(before.annualGoalId);
-  if (after?.annualGoalId) affected.add(after.annualGoalId);
-  for (const agId of affected) await syncAnnualGoalFromHabits(userId, agId);
-  return after ?? null;
-};
+  async create(data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Habit> {
+    const userId = this.userId;
+    const db = this.database;
+    const now = new Date().toISOString();
+    const row: Habit = { ...data, id: newId(), userId, createdAt: now, updatedAt: now };
+    db.transaction(tx => {
+      if (row.annualGoalId) preserveAnnualActualBaseline(tx, userId, row.annualGoalId);
+      tx.insert(habits).values(row).run();
+      if (row.annualGoalId) syncAnnualTargets(tx, userId, row.annualGoalId);
+    }, { behavior: 'immediate' });
+    return row;
+  }
 
-export const deleteHabit = async (userId: string, id: string): Promise<void> => {
-  const db = getDb();
-  const before = (await db
-    .select()
-    .from(habits)
-    .where(and(eq(habits.userId, userId), eq(habits.id, id)))
-    .get()) as Habit | undefined;
-  // habitLogs cascaded via separate delete (no FK cascade)
-  const { habitLogs } = await import('../db/schema');
-  await db
-    .delete(habitLogs)
-    .where(and(eq(habitLogs.userId, userId), eq(habitLogs.habitId, id)))
-    .run();
-  await db.delete(habits).where(and(eq(habits.userId, userId), eq(habits.id, id))).run();
-  if (before?.annualGoalId) await syncAnnualGoalFromHabits(userId, before.annualGoalId);
-};
+  async update(id: string, patch: Partial<Omit<Habit, 'id' | 'userId' | 'createdAt'>>): Promise<Habit | null> {
+    const userId = this.userId;
+    return this.database.transaction(tx => {
+      const before = tx.select().from(habits)
+        .where(and(eq(habits.userId, userId), eq(habits.id, id))).get();
+      if (!before) return null;
+      const affected = new Set([before.annualGoalId, patch.annualGoalId].filter((value): value is string => !!value));
+      for (const goalId of affected) preserveAnnualActualBaseline(tx, userId, goalId);
+      tx.update(habits).set({ ...stripUndefined(patch), updatedAt: new Date().toISOString() })
+        .where(and(eq(habits.userId, userId), eq(habits.id, id))).run();
+      for (const goalId of affected) syncAnnualTargets(tx, userId, goalId);
+      return tx.select().from(habits)
+        .where(and(eq(habits.userId, userId), eq(habits.id, id))).get() as Habit;
+    }, { behavior: 'immediate' });
+  }
+
+  async delete(id: string): Promise<void> {
+    const userId = this.userId;
+    this.database.transaction(tx => {
+      const before = tx.select().from(habits)
+        .where(and(eq(habits.userId, userId), eq(habits.id, id))).get();
+      if (!before) return;
+      if (before.annualGoalId) preserveAnnualActualBaseline(tx, userId, before.annualGoalId);
+      tx.delete(habitLogs).where(and(eq(habitLogs.userId, userId), eq(habitLogs.habitId, id))).run();
+      tx.delete(habits).where(and(eq(habits.userId, userId), eq(habits.id, id))).run();
+      if (before.annualGoalId) syncAnnualTargets(tx, userId, before.annualGoalId);
+    }, { behavior: 'immediate' });
+  }
+}
+
+// Compatibility functions for existing callers. New services can inject the repository.
+export const listHabits = async (userId: string): Promise<Habit[]> =>
+  new HabitRepository(getDb(), userId).list();
+
+export const syncAnnualGoalFromHabits = async (userId: string, annualGoalId: string): Promise<void> =>
+  new HabitRepository(getDb(), userId).syncAnnualGoal(annualGoalId);
+
+export const createHabit = async (userId: string, data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Habit> =>
+  new HabitRepository(getDb(), userId).create(data);
+
+export const updateHabit = async (userId: string, id: string, patch: Partial<Omit<Habit, 'id' | 'userId' | 'createdAt'>>): Promise<Habit | null> =>
+  new HabitRepository(getDb(), userId).update(id, patch);
+
+export const deleteHabit = async (userId: string, id: string): Promise<void> =>
+  new HabitRepository(getDb(), userId).delete(id);

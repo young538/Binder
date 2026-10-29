@@ -1,36 +1,35 @@
+import { getUserRepositories } from '@/lib/server/repos';
+import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { requireSession } from '@/lib/server/auth';
-import { listTodos, listDayTodosInRange, createTodo } from '@/lib/server/repos/todos';
+import { authenticated } from '@/lib/server/http';
+
 import type { TodoScope } from '@/lib/types';
 
-export async function GET(req: NextRequest) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
+export const GET = authenticated(async (session, req: NextRequest) => {
+  const repositories = getUserRepositories(session.userId);
   const sp = req.nextUrl.searchParams;
   const startDate = sp.get('startDate');
   const endDate = sp.get('endDate');
   if (startDate && endDate) {
-    const rows = await listDayTodosInRange(session.userId, startDate, endDate);
+    const rows = await repositories.todos.listDaysInRange(startDate, endDate);
     return NextResponse.json(rows);
   }
   const scope = sp.get('scope') as TodoScope | null;
   const scopeKey = sp.get('scopeKey');
   const parentGoalId = sp.get('parentGoalId');
-  const rows = await listTodos(session.userId, {
+  const rows = await repositories.todos.list({
     scope: scope ?? undefined,
     scopeKey: scopeKey ?? undefined,
     parentGoalId: parentGoalId ?? undefined,
   });
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
-  let session;
-  try { session = await requireSession(); } catch (r) { return r as Response; }
-
-  const body = await req.json();
-  const row = await createTodo(session.userId, body);
+export const POST = authenticated(async (session, req: Request) => {
+  const repositories = getUserRepositories(session.userId);
+  const body = await readMutation(req, 'todos', session.userId);
+  if (body instanceof Response) return body;
+  const row = await repositories.todos.create(body);
   return NextResponse.json(row, { status: 201 });
-}
+});

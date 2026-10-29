@@ -19,7 +19,7 @@ export const createGoal = async (
   data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Goal> => {
   const row = await http.post<Goal>('/api/goals', data);
-  notifyMutation();
+  notifyMutation('goals');
   return row;
 };
 
@@ -28,10 +28,10 @@ export const updateGoal = async (
   patch: Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Goal>(`/api/goals/${id}`, patch);
-  notifyMutation();
+  notifyMutation('goals');
 };
 
 export const deleteGoal = async (id: string): Promise<void> => {
   await http.del(`/api/goals/${id}`);
-  notifyMutation();
+  notifyMutation('goals');
 };

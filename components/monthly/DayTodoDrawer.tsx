@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { X, Plus, Trash2, Link2 } from 'lucide-react';
 import { Todo } from '@/lib/types';
 import { listByScope, createTodo, updateTodo, deleteTodo, setStatus } from '@/lib/repo/todos';
@@ -7,7 +8,8 @@ import { useBinder } from '@/store';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
-import { statusRowClass } from '@/lib/utils/todoStatus';
+import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
   dateStr: string;
@@ -18,29 +20,13 @@ const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
   const { categories, goals } = useBinder();
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
 
   const dayDate = parseISO(dateStr);
   const title = format(dayDate, 'M월 d일', { locale: ko }) + ' (' + DOW_KO[dayDate.getDay()] + ')';
 
-  const reload = () => listByScope('day', dateStr).then(setTodos);
-  useEffect(() => { reload(); }, [dateStr]);
-
-  const addTodo = async () => {
-    if (!draft.trim()) { setAdding(false); setDraft(''); return; }
-    await createTodo({
-      title: draft.trim(),
-      scope: 'day',
-      scopeKey: dateStr,
-      status: 'pending',
-      order: todos.length,
-    });
-    setDraft('');
-    setAdding(false);
-    reload();
-  };
+  const { value: todos, refresh } = useAsyncResource(dateStr, () => listByScope('day', dateStr), [], ['todos']);
+  const reload = () => refresh();
 
   const updateField = async (t: Todo, patch: Partial<Todo>) => {
     await updateTodo(t.id, patch);
@@ -54,7 +40,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
   };
 
   const cyclePriority = (t: Todo) => {
-    const next = t.priority === undefined ? 1 : t.priority === 3 ? undefined : (t.priority + 1) as 1 | 2 | 3;
+    const next = t.priority == null ? 1 : t.priority === 3 ? null : (t.priority + 1) as 1 | 2 | 3;
     updateField(t, { priority: next });
   };
 
@@ -87,12 +73,11 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
                       size="sm"
                     />
                   </div>
-                  <input type="text" defaultValue={t.title}
-                    onBlur={e => {
-                      const v = e.target.value.trim();
-                      if (v && v !== t.title) updateField(t, { title: v });
-                    }}
-                    className={`flex-1 bg-transparent border-none outline-none text-sm text-zinc-800 dark:text-zinc-50 ${statusRowClass(t.status)}`} />
+                  <TodoTitleEditor
+                    todo={t}
+                    onCommit={(todo, nextTitle) => updateField(todo, { title: nextTitle })}
+                    textClassName="text-sm text-zinc-800 dark:text-zinc-50"
+                  />
                   <button onClick={() => remove(t.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition">
                     <Trash2 size={14} />
@@ -105,7 +90,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
                     {t.priority ? '*'.repeat(t.priority) : '우선순위'}
                   </button>
                   <select value={t.categoryId ?? ''}
-                    onChange={e => updateField(t, { categoryId: e.target.value || undefined })}
+                    onChange={e => updateField(t, { categoryId: e.target.value || null })}
                     className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5 bg-white dark:bg-zinc-950">
                     <option value="">카테고리</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -114,7 +99,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
                     <span className="w-2 h-2 rounded-full" style={{ background: category.color }} />
                   )}
                   <select value={t.parentGoalId ?? ''}
-                    onChange={e => updateField(t, { parentGoalId: e.target.value || undefined })}
+                    onChange={e => updateField(t, { parentGoalId: e.target.value || null })}
                     className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5 bg-white dark:bg-zinc-950">
                     <option value="">목표 연결</option>
                     {goals.filter(g => g.level === 'mandalartSub' || g.level === 'mandalartCore').map(g => (
@@ -132,15 +117,14 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
           })}
 
           {adding && (
-            <input type="text" value={draft} autoFocus
-              onChange={e => setDraft(e.target.value)}
-              onBlur={addTodo}
-              onKeyDown={e => {
-                if (e.key === 'Enter') addTodo();
-                if (e.key === 'Escape') { setAdding(false); setDraft(''); }
-              }}
-              placeholder="할 일"
-              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <TodoCreateInput
+              key={dateStr}
+              onCreate={title => createTodo({
+                title, scope: 'day', scopeKey: dateStr, status: 'pending', order: todos.length,
+              })}
+              onDone={() => { setAdding(false); void reload(); }}
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           )}
         </div>
 

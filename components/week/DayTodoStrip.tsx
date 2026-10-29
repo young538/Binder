@@ -7,16 +7,12 @@ const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
 interface Props {
   dates: Date[];
-  refreshKey: number;
   onMakeBlock: (todo: Todo) => void;
-  onChanged: () => void;
 }
 
 export const DayTodoStrip = ({
   dates,
-  refreshKey,
   onMakeBlock,
-  onChanged,
 }: Props) => {
   const today = toIsoDate(new Date());
   return (
@@ -53,9 +49,7 @@ export const DayTodoStrip = ({
             </div>
             <DayTodoColumn
               dateStr={dateStr}
-              refreshKey={refreshKey}
               onMakeBlock={onMakeBlock}
-              onChanged={onChanged}
             />
           </div>
         );

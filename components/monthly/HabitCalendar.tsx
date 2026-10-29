@@ -1,9 +1,9 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { Habit, HabitLog } from '@/lib/types';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { listHabits } from '@/lib/repo/habits';
 import { listLogsForRange, toggleHabit } from '@/lib/repo/habitLogs';
 import { toIsoDate } from '@/lib/utils/date';
+import { canCheckHabitOnDate } from '@/lib/utils/habitSchedule';
 import { addDays, endOfMonth, parseISO, startOfMonth } from 'date-fns';
 import Link from 'next/link';
 
@@ -14,8 +14,6 @@ interface Props {
 const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 export const HabitCalendar = ({ yyyymm }: Props) => {
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [logs, setLogs] = useState<HabitLog[]>([]);
 
   const monthDate = parseISO(`${yyyymm}-01`);
   const first = startOfMonth(monthDate);
@@ -24,19 +22,11 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
   for (let d = first; d <= last; d = addDays(d, 1)) days.push(d);
   const today = toIsoDate(new Date());
 
-  const reload = useCallback(async () => {
-    const [h, l] = await Promise.all([
-      listHabits(),
-      listLogsForRange(toIsoDate(first), toIsoDate(last)),
-    ]);
-    setHabits(h);
-    setLogs(l);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yyyymm]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
+  const { value: [habits, logs], refresh: reload } = useAsyncResource(
+    yyyymm,
+    () => Promise.all([listHabits(), listLogsForRange(toIsoDate(first), toIsoDate(last))]),
+    [[], []], ['habits', 'habitLogs'],
+  );
 
   const isDone = (habitId: string, dateStr: string) =>
     logs.some((l) => l.habitId === habitId && l.date === dateStr);
@@ -51,14 +41,14 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">습관 달력</h2>
         {habits.length === 0 && (
-          <Link href="/settings" className="text-xs text-blue-600 hover:underline">
-            설정에서 추가 →
+          <Link href="/daily" className="text-xs text-blue-600 hover:underline">
+            일일에서 관리 →
           </Link>
         )}
       </div>
       {habits.length === 0 ? (
         <div className="p-8 text-center text-sm text-zinc-400">
-          설정 → 습관 섹션에서 추적할 습관을 추가하세요.
+          일일 페이지의 루틴 관리에서 추적할 습관을 추가하세요.
         </div>
       ) : (
         <>
@@ -117,15 +107,20 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
                     {days.map((d) => {
                       const ds = toIsoDate(d);
                       const cellDone = isDone(h.id, ds);
+                      const applies = canCheckHabitOnDate(h.schedule, d);
                       return (
                         <td
                           key={ds}
-                          className="p-0.5 text-center border-r border-zinc-100 dark:border-zinc-900"
+                          className={`p-0.5 text-center border-r border-zinc-100 dark:border-zinc-900 ${
+                            !applies ? 'bg-zinc-50/50 dark:bg-zinc-800/20' : ''
+                          }`}
                         >
                           <button
                             onClick={() => onToggle(h.id, ds)}
-                            className="w-6 h-6 rounded-md border flex items-center justify-center transition
-                              hover:scale-110 hover:shadow-sm"
+                            disabled={!applies}
+                            className={`w-6 h-6 rounded-md border flex items-center justify-center transition ${
+                              applies ? 'hover:scale-110 hover:shadow-sm' : 'opacity-30 cursor-not-allowed'
+                            }`}
                             style={{
                               background: cellDone ? h.color : 'transparent',
                               borderColor: cellDone ? h.color : 'var(--color-border)',

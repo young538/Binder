@@ -6,6 +6,7 @@ interface Props {
   blocks: TimeBlock[];
   goals: Goal[];
   categories: Category[];
+  embedded?: boolean;
 }
 
 const formatHours = (mins: number) => {
@@ -23,20 +24,20 @@ const Bar = ({
 }) => {
   const max = Math.max(1, ...rows.map((r) => r.mins));
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-      <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50 mb-3">{title}</h3>
+    <div className="min-w-0">
+      <h3 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-50">{title}</h3>
       {rows.length === 0 && <p className="text-xs text-zinc-400">기록 없음</p>}
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={i} className="flex items-center gap-3 text-xs">
-            <div className="w-24 truncate text-zinc-700 dark:text-zinc-300">{r.label}</div>
+            <div className="min-w-0 w-24 shrink-0 truncate text-zinc-700 dark:text-zinc-300">{r.label}</div>
             <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
               <div
                 style={{ width: `${(r.mins / max) * 100}%`, background: r.color }}
                 className="h-full rounded-full"
               />
             </div>
-            <div className="w-16 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+            <div className="w-16 shrink-0 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
               {formatHours(r.mins)}
             </div>
           </div>
@@ -46,7 +47,7 @@ const Bar = ({
   );
 };
 
-export const GoalCoverageBar = ({ blocks, goals, categories }: Props) => {
+export const GoalCoverageBar = ({ blocks, goals, categories, embedded = false }: Props) => {
   const actualBlocks = blocks.filter((b) => (b.kind ?? 'plan') === 'actual');
   const byGoal = aggregateByGoal(actualBlocks);
   const byCat = aggregateByCategory(actualBlocks);
@@ -63,13 +64,16 @@ export const GoalCoverageBar = ({ blocks, goals, categories }: Props) => {
   }));
 
   return (
-    <section className="p-4 bg-zinc-50 dark:bg-zinc-950 space-y-2">
-      <div className="text-[11px] text-zinc-500 dark:text-zinc-500">
-        통계는 ✅ 실제 기록 기준
+    <section data-testid="weekly-statistics" className={embedded
+      ? 'bg-white px-4 py-4 dark:bg-zinc-950'
+      : 'rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950'}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">주간 실제 기록 통계</h2>
+        <div className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-500">통계는 ✅ 실제 기록 기준</div>
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        <Bar rows={goalRows} title="🎯 목표별" />
-        <Bar rows={catRows} title="🎨 카테고리별" />
+      <div className="grid gap-4 md:grid-cols-2 md:divide-x md:divide-zinc-200 dark:md:divide-zinc-800">
+        <div className="min-w-0 md:pr-4"><Bar rows={goalRows} title="🎯 목표별" /></div>
+        <div className="min-w-0 md:pl-4"><Bar rows={catRows} title="🎨 카테고리별" /></div>
       </div>
     </section>
   );

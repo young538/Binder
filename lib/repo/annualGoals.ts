@@ -10,7 +10,7 @@ export const createAnnualGoal = async (
   order: number
 ): Promise<AnnualGoal> => {
   const row = await http.post<AnnualGoal>('/api/annual-goals', { year, order });
-  notifyMutation();
+  notifyMutation('annualGoals');
   return row;
 };
 
@@ -19,12 +19,12 @@ export const updateAnnualGoal = async (
   patch: Partial<Omit<AnnualGoal, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<AnnualGoal>(`/api/annual-goals/${id}`, patch);
-  notifyMutation();
+  notifyMutation('annualGoals');
 };
 
 export const deleteAnnualGoal = async (id: string): Promise<void> => {
   await http.del(`/api/annual-goals/${id}`);
-  notifyMutation();
+  notifyMutation('annualGoals');
 };
 
 export const ensureSeven = async (year: string): Promise<AnnualGoal[]> => {
@@ -33,6 +33,6 @@ export const ensureSeven = async (year: string): Promise<AnnualGoal[]> => {
     order: 0,
     ensureSeven: true,
   });
-  notifyMutation();
+  notifyMutation('annualGoals');
   return rows;
 };

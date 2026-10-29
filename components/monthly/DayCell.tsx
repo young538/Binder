@@ -15,13 +15,14 @@ interface Props {
 
 const MAX_VISIBLE = 5;
 
-export const DayCell = ({ date, isCurrentMonth, isToday, todos, categoryColor, onClick }: Props) => {
+export const DayCell = ({ date, dateStr, isCurrentMonth, isToday, todos, categoryColor, onClick }: Props) => {
   const visible = todos.slice(0, MAX_VISIBLE);
   const hidden = todos.length - visible.length;
   const dayNum = date.getDate();
 
   return (
     <button
+      aria-label={`${dateStr} 할 일`}
       onClick={onClick}
       className={`
         group relative flex flex-col items-stretch text-left min-h-[110px] p-1.5 border border-stone-100 dark:border-zinc-800 rounded-md

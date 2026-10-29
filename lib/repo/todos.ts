@@ -6,7 +6,7 @@ export const createTodo = async (
   data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Todo> => {
   const row = await http.post<Todo>('/api/todos', data);
-  notifyMutation();
+  notifyMutation('todos');
   return row;
 };
 
@@ -15,12 +15,12 @@ export const updateTodo = async (
   patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Todo>(`/api/todos/${id}`, patch);
-  notifyMutation();
+  notifyMutation('todos');
 };
 
 export const deleteTodo = async (id: string): Promise<void> => {
   await http.del(`/api/todos/${id}`);
-  notifyMutation();
+  notifyMutation('todos');
 };
 
 export const setStatus = async (id: string, status: TodoStatus): Promise<void> => {
@@ -29,7 +29,7 @@ export const setStatus = async (id: string, status: TodoStatus): Promise<void> =
 
 export const toggleDone = async (id: string): Promise<void> => {
   await http.post(`/api/todos/${id}/toggle-done`);
-  notifyMutation();
+  notifyMutation('todos');
 };
 
 export const listByScope = (scope: TodoScope, scopeKey: string): Promise<Todo[]> =>

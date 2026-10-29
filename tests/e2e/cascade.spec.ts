@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { toIsoWeek } from '@/lib/utils/date';
 
 // Use a per-spec user so other tests' data doesn't accidentally interfere.
 test.beforeAll(async () => {
@@ -9,6 +10,7 @@ test.beforeAll(async () => {
 test('cascade pages render without error', async ({ page }) => {
   await resetDb(page);
   await loginAs(page, 'e2e-cascade', 'pwTest123*');
+  await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\/(.+)/, { timeout: 60000 });
   await expect(page.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 

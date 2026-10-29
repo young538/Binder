@@ -1,23 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { WeeklyReview } from './WeeklyReview';
+import { useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Pencil,
   NotebookPen,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { useBinder } from '@/store';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
-import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
-import { listByScope } from '@/lib/repo/todos';
-import { listHabits } from '@/lib/repo/habits';
-import { TimeBlock, Todo, Habit, Weekday } from '@/lib/types';
+import { useWeeklyData } from './WeeklyDataProvider';
+import { TimeBlock, Todo } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
 import { DayTodoColumn } from './DayTodoColumn';
-import { tint } from '@/lib/utils/color';
 
 interface Props {
   isoweek: string;
@@ -34,59 +33,29 @@ interface EditorState {
   prefilledText?: string;
 }
 
-export const DayListView = ({ isoweek }: Props) => {
+export const DayListView = (props: Props) => <DayListSession key={props.isoweek} {...props} />;
+
+const DayListSession = ({ isoweek }: Props) => {
   const { categories, settings } = useBinder();
-  const [blocks, setBlocks] = useState<TimeBlock[]>([]);
-  const [dayIdx, setDayIdx] = useState(0);
+  const { blocks, todos } = useWeeklyData();
+
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroOpen, setRetroOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(true);
-  const [dayTodoCount, setDayTodoCount] = useState(0);
-  const [todoRefreshKey, setTodoRefreshKey] = useState(0);
-  const [dayHabits, setDayHabits] = useState<Habit[]>([]);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  // role=button div는 모바일에서 dblclick이 오지 않으므로 수동 더블탭 처리.
+  const lastTap = useRef<{ id: string; time: number } | null>(null);
 
   const dates = weekDates(isoweek);
   const today = toIsoDate(new Date());
   const todayIdx = dates.findIndex((d) => toIsoDate(d) === today);
 
-  useEffect(() => {
-    setDayIdx(todayIdx >= 0 ? todayIdx : 0);
-  }, [todayIdx]);
-
-  const rangeStart = toIsoDate(dates[0]);
-  const rangeEnd = toIsoDate(dates[6]);
-
-  const reload = () => {
-    getTimeBlocksInRange(rangeStart, rangeEnd).then(setBlocks);
-  };
-
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeStart, rangeEnd]);
+  const [dayIdx, setDayIdx] = useState(() => todayIdx >= 0 ? todayIdx : 0);
 
   const current = dates[dayIdx];
   const dateStr = toIsoDate(current);
 
-  useEffect(() => {
-    listByScope('day', dateStr).then((ts) => setDayTodoCount(ts.length));
-  }, [dateStr, todoRefreshKey]);
-
-  useEffect(() => {
-    const dow = current.getDay() as Weekday;
-    listHabits().then(hs =>
-      setDayHabits(
-        hs.filter(h => {
-          const s = h.schedule;
-          if (!s || s.kind === 'daily' || s.kind === 'perWeek' || s.kind === 'perMonth') return true;
-          return s.days.includes(dow);
-        })
-      )
-    );
-    // dateStr 으로 의존하면 같은 날짜 = 같은 string 이라 reference 동등
-    // current(Date) 를 deps 에 두면 매 렌더 새 객체라 무한 루프 발생
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr]);
+  const dayTodoCount = todos.filter((todo) => todo.scopeKey === dateStr).length;
 
   const dayBlocks = blocks
     .filter((b) => b.date === dateStr)
@@ -96,15 +65,31 @@ export const DayListView = ({ isoweek }: Props) => {
   const catName = (id: string) =>
     categories.find((c) => c.id === id)?.name ?? '';
 
+  const closeEditor = () => {
+    setEditor(null);
+  };
+
   const openAdd = () => {
     const start = (settings?.dayStartHour ?? 9) * 60;
     const grid = settings?.gridMinutes ?? 30;
+    setSelectedBlockId(null);
     setEditor({ date: dateStr, startMin: start, endMin: start + grid });
+  };
+
+  const openEditorForBlock = (b: TimeBlock) => {
+    setSelectedBlockId(b.id);
+    setEditor({
+      existing: b,
+      date: b.date,
+      startMin: b.startMin,
+      endMin: b.endMin,
+    });
   };
 
   const openFromTodo = (todo: Todo) => {
     const start = (settings?.dayStartHour ?? 9) * 60;
     const grid = settings?.gridMinutes ?? 30;
+    setSelectedBlockId(null);
     setEditor({
       date: todo.scopeKey,
       startMin: start,
@@ -114,13 +99,10 @@ export const DayListView = ({ isoweek }: Props) => {
     });
   };
 
-  const handleSaved = () => {
-    reload();
-    setTodoRefreshKey((k) => k + 1);
-  };
+  const handleSaved = () => {};
 
   return (
-    <div className="md:hidden bg-zinc-50 dark:bg-zinc-950 min-h-screen">
+    <div className="md:hidden bg-zinc-50 pb-[calc(76px+env(safe-area-inset-bottom))] dark:bg-zinc-950">
       <header className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <button
           onClick={() => setDayIdx((i) => Math.max(0, i - 1))}
@@ -152,32 +134,7 @@ export const DayListView = ({ isoweek }: Props) => {
         </button>
       </header>
 
-      {dayHabits.length > 0 && (
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 p-3">
-          <div className="text-xs font-medium text-zinc-500 mb-2">오늘의 습관</div>
-          <div className="flex gap-1.5 flex-wrap">
-            {dayHabits.map((h) => {
-              const color = categories.find((c) => c.id === h.categoryId)?.color ?? h.color;
-              return (
-                <span
-                  key={h.id}
-                  className="text-xs px-2 py-0.5 rounded-full border flex items-center gap-1"
-                  style={{
-                    background: tint.soft(color),
-                    borderColor: color,
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: color }}
-                  />
-                  <span>{h.name}</span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <WeeklyReview isoweek={isoweek} />
 
       <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <button
@@ -206,57 +163,97 @@ export const DayListView = ({ isoweek }: Props) => {
           <div className="border-t border-zinc-200 dark:border-zinc-800 max-h-64 overflow-y-auto">
             <DayTodoColumn
               dateStr={dateStr}
-              refreshKey={todoRefreshKey}
               onMakeBlock={openFromTodo}
-              onChanged={() => setTodoRefreshKey((k) => k + 1)}
             />
           </div>
         )}
       </div>
 
-      <ul className="p-4 space-y-2 pb-36">
+      <ul className="p-4 space-y-2">
         {dayBlocks.length === 0 && (
           <li className="p-8 text-center text-sm text-zinc-400 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
             아직 기록이 없어요
           </li>
         )}
-        {dayBlocks.map((b) => (
-          <li
-            key={b.id}
-            onClick={() =>
-              setEditor({
-                existing: b,
-                date: b.date,
-                startMin: b.startMin,
-                endMin: b.endMin,
-              })
-            }
-            className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition"
-          >
-            <div className="flex">
+        {dayBlocks.map((b) => {
+          const isSelected = selectedBlockId === b.id;
+          return (
+            <li key={b.id}>
               <div
-                className="w-1.5 self-stretch"
-                style={{ background: catColor(b.categoryId) }}
-              />
-              <div className="flex-1 p-3">
-                <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-                  {b.text || '(내용 없음)'}
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  <span className="tabular-nums">
-                    {minutesToTimeStr(b.startMin)} – {minutesToTimeStr(b.endMin)}
-                  </span>
-                  {catName(b.categoryId) && (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                      <span>{catName(b.categoryId)}</span>
-                    </>
+                role="button"
+                tabIndex={0}
+                data-testid="day-block"
+                data-block-id={b.id}
+                data-selected={isSelected ? 'true' : 'false'}
+                aria-label={`${b.text || '(내용 없음)'} 블록${isSelected ? ' 선택됨' : ''}`}
+                aria-pressed={isSelected}
+                onClick={() => {
+                  const now = Date.now();
+                  const prev = lastTap.current;
+                  lastTap.current = { id: b.id, time: now };
+                  setSelectedBlockId(b.id);
+                  if (prev && prev.id === b.id && now - prev.time < 400) {
+                    lastTap.current = null;
+                    openEditorForBlock(b);
+                  }
+                }}
+                onDoubleClick={() => openEditorForBlock(b)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'F2') {
+                    e.preventDefault();
+                    openEditorForBlock(b);
+                  }
+                }}
+                className={`flex w-full items-stretch overflow-hidden rounded-xl border bg-white text-left shadow-sm transition hover:shadow-md focus-visible:outline-2 focus-visible:outline-blue-500 dark:bg-zinc-900 ${
+                  isSelected
+                    ? 'border-blue-500 ring-2 ring-blue-500/60 dark:border-blue-400 dark:ring-blue-400/50'
+                    : 'border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                <div
+                  className="w-1.5 self-stretch"
+                  style={{ background: catColor(b.categoryId) }}
+                />
+                <div className="min-w-0 flex-1 p-3">
+                  <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                    {b.text || '(내용 없음)'}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="tabular-nums">
+                      {minutesToTimeStr(b.startMin)} – {minutesToTimeStr(b.endMin)}
+                    </span>
+                    {catName(b.categoryId) && (
+                      <>
+                        <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                        <span>{catName(b.categoryId)}</span>
+                      </>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        data-testid="day-block-edit"
+                        data-block-id={b.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditorForBlock(b);
+                        }}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        <Pencil size={12} /> 편집
+                      </button>
+                      <span className="text-[11px] text-zinc-400">
+                        Enter·더블클릭으로도 편집
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       <div
@@ -281,7 +278,7 @@ export const DayListView = ({ isoweek }: Props) => {
           existing={editor.existing}
           prefilledTodoId={editor.prefilledTodoId}
           prefilledText={editor.prefilledText}
-          onClose={() => setEditor(null)}
+          onClose={closeEditor}
           onSaved={handleSaved}
         />
       )}

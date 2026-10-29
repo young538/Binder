@@ -1,12 +1,10 @@
 'use client';
 import { useRef, useState } from 'react';
+import { useBinder } from '@/store';
+import { importBackup } from '@/lib/repo/backup';
 import { Upload, Check, AlertTriangle } from 'lucide-react';
 
-interface ImportResult {
-  ok: boolean;
-  mode: 'merge' | 'replace';
-  counts: Record<string, number>;
-}
+import { BACKUP_COLLECTIONS, type ImportResult } from '@/lib/backup';
 
 export const DataImportPanel = () => {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -21,23 +19,16 @@ export const DataImportPanel = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     setErr(null);
+    setData(null);
+    setPreview(null);
+    setResult(null);
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Expected a backup object');
       setData(parsed);
       const counts: Record<string, number> = {};
-      for (const key of [
-        'goals',
-        'categories',
-        'timeBlocks',
-        'retrospectives',
-        'todos',
-        'focusNotes',
-        'annualGoals',
-        'habits',
-        'habitLogs',
-        'books',
-      ]) {
+      for (const key of BACKUP_COLLECTIONS) {
         const v = (parsed as Record<string, unknown>)[key];
         if (Array.isArray(v)) counts[key] = v.length;
       }
@@ -56,18 +47,13 @@ export const DataImportPanel = () => {
         setLoading(false);
         return;
       }
-      const res = await fetch('/api/import', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, data }),
-      });
-      if (!res.ok) throw new Error(`가져오기 실패: ${res.status}`);
-      const json = (await res.json()) as ImportResult;
+      const json = await importBackup(mode, data);
       setResult(json);
       setPreview(null);
       setData(null);
       if (fileRef.current) fileRef.current.value = '';
+      try { await useBinder.getState().reload(); }
+      catch { setErr('가져오기는 완료됐지만 화면을 갱신하지 못했어요. 페이지를 새로고침해 주세요.'); }
     } catch (e) {
       setErr(e instanceof Error ? e.message : '실패');
     } finally {
@@ -154,6 +140,7 @@ export const DataImportPanel = () => {
                 setPreview(null);
                 setData(null);
                 if (fileRef.current) fileRef.current.value = '';
+
               }}
               className="px-4 py-2 text-sm rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >

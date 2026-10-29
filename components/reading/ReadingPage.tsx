@@ -1,19 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Book } from '@/lib/types';
 import { listByYear, createBook, updateBook, deleteBook } from '@/lib/repo/books';
 
 export const ReadingPage = () => {
   const [year, setYear] = useState(() => String(new Date().getFullYear()));
-  const [books, setBooks] = useState<Book[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const reload = () => listByYear(year).then(setBooks);
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
+  const { value: books, refresh: reload } = useAsyncResource(year, () => listByYear(year), [], ['books']);
 
   const add = async () => {
     const next = await createBook({
@@ -123,7 +119,7 @@ export const ReadingPage = () => {
                         type="text"
                         defaultValue={b.category ?? ''}
                         onBlur={e =>
-                          update(b.id, { category: e.target.value.trim() || undefined })
+                          update(b.id, { category: e.target.value.trim() || null })
                         }
                         placeholder="-"
                         className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded text-center text-xs text-zinc-600 dark:text-zinc-400"
@@ -144,7 +140,7 @@ export const ReadingPage = () => {
                         type="text"
                         defaultValue={b.oneThing ?? ''}
                         onBlur={e =>
-                          update(b.id, { oneThing: e.target.value.trim() || undefined })
+                          update(b.id, { oneThing: e.target.value.trim() || null })
                         }
                         placeholder="한 문장"
                         className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded text-zinc-700 dark:text-zinc-300"
@@ -155,7 +151,7 @@ export const ReadingPage = () => {
                         type="text"
                         defaultValue={b.keywords ?? ''}
                         onBlur={e =>
-                          update(b.id, { keywords: e.target.value.trim() || undefined })
+                          update(b.id, { keywords: e.target.value.trim() || null })
                         }
                         placeholder="키워드1, 키워드2, 키워드3"
                         className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded text-xs text-zinc-600 dark:text-zinc-400"
@@ -165,7 +161,7 @@ export const ReadingPage = () => {
                       <input
                         type="date"
                         defaultValue={b.finishedAt ?? ''}
-                        onBlur={e => update(b.id, { finishedAt: e.target.value || undefined })}
+                        onBlur={e => update(b.id, { finishedAt: e.target.value || null })}
                         className="w-full bg-transparent outline-none text-xs text-center"
                       />
                     </td>
@@ -175,7 +171,7 @@ export const ReadingPage = () => {
                           type="url"
                           defaultValue={b.reviewUrl ?? ''}
                           onBlur={e =>
-                            update(b.id, { reviewUrl: e.target.value.trim() || undefined })
+                            update(b.id, { reviewUrl: e.target.value.trim() || null })
                           }
                           placeholder="URL"
                           className="flex-1 bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded text-[10px]"

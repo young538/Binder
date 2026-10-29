@@ -1,23 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Habit, Weekday } from '@/lib/types';
+import { Habit } from '@/lib/types';
 import { listHabits } from '@/lib/repo/habits';
 import { useBinder } from '@/store';
 import { tint } from '@/lib/utils/color';
+import { canCheckHabitOnDate } from '@/lib/utils/habitSchedule';
 
 interface Props {
   dates: Date[];
 }
-
-const getDow = (d: Date): Weekday => d.getDay() as Weekday;
-
-// perWeek / perMonth habits have no fixed day, so show on every day — user
-// checks whenever the habit is performed.
-const matchesHabit = (habit: Habit, dow: Weekday): boolean => {
-  const s = habit.schedule;
-  if (!s || s.kind === 'daily' || s.kind === 'perWeek' || s.kind === 'perMonth') return true;
-  return s.days.includes(dow);
-};
 
 export const HabitStrip = ({ dates }: Props) => {
   const { categories } = useBinder();
@@ -29,7 +20,7 @@ export const HabitStrip = ({ dates }: Props) => {
 
   if (habits.length === 0) return null;
 
-  const catColor = (id?: string) =>
+  const catColor = (id?: string | null) =>
     id ? categories.find((c) => c.id === id)?.color : null;
 
   return (
@@ -41,8 +32,7 @@ export const HabitStrip = ({ dates }: Props) => {
         습관
       </div>
       {dates.map((d, i) => {
-        const dow = getDow(d);
-        const dayHabits = habits.filter((h) => matchesHabit(h, dow));
+        const dayHabits = habits.filter((h) => canCheckHabitOnDate(h.schedule, d));
         return (
           <div
             key={i}

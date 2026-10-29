@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs, ensureUserExists } from './_helpers';
+import { toIsoWeek } from '@/lib/utils/date';
 
 test.describe('multi-user isolation', () => {
   test.beforeAll(async () => {
@@ -8,8 +9,9 @@ test.describe('multi-user isolation', () => {
   });
 
   test('userA cannot see userB todos', async ({ browser }) => {
-    const TODO_A = 'A의 할일 격리테스트';
-    const TODO_B = 'B의 할일 격리테스트';
+    const runId = Date.now();
+    const TODO_A = `A의 할일 격리테스트 ${runId}`;
+    const TODO_B = `B의 할일 격리테스트 ${runId}`;
     // After save, an existing todo title is rendered as a non-placeholder
     // <input> with the title as its value (see TodoListSection.tsx). The
     // "add" input has placeholder="할 일", so we filter that out to avoid
@@ -36,7 +38,7 @@ test.describe('multi-user isolation', () => {
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();
     await loginAs(pageA, 'userA', 'passwordA1*');
-    // Login redirects to '/' → /week/<isoweek>; wait for the loading state to clear.
+    await pageA.goto(`/week/${toIsoWeek(new Date())}`);
     await pageA.waitForURL(/\/week\//);
     await expect(pageA.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
     await addWeeklyTodo(pageA, TODO_A);
@@ -46,6 +48,7 @@ test.describe('multi-user isolation', () => {
     const ctxB = await browser.newContext();
     const pageB = await ctxB.newPage();
     await loginAs(pageB, 'userB', 'passwordB1*');
+    await pageB.goto(`/week/${toIsoWeek(new Date())}`);
     await pageB.waitForURL(/\/week\//);
     await expect(pageB.getByText('로딩 중…')).toHaveCount(0, { timeout: 60000 });
 

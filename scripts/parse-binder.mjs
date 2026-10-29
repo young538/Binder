@@ -108,7 +108,7 @@ function parseMandalart() {
   // 중앙 블록(블록 좌표 1,1)의 중앙(1,1) = oneThing
   // 중앙 블록의 다른 8개 = 8 cores (블록 위치 0,0 0,1 0,2 1,0 1,2 2,0 2,1 2,2)
   // 외곽 블록 8개 각각: 중앙(1,1)은 해당 코어의 복사본, 나머지 8개가 sub
-  const blockOf = (r, c) => [Math.floor(r / 3), Math.floor(c / 3)];
+
   const goals = [];
   const coreIds = []; // 블록 인덱스 0..7 → core id (블록 순서: TL,TM,TR,ML,MR,BL,BM,BR)
 

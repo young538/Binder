@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Retrospective } from '@/lib/types';
-import { getRetrospective, upsertRetrospective } from '@/lib/repo/retrospectives';
+import { useRetrospectiveEditor } from '@/lib/autosave/editors';
+import { AutosaveStatus } from '@/components/common/AutosaveStatus';
 import { RetroTemplate } from '@/components/retro/RetroTemplate';
 
 interface Props {
@@ -11,32 +11,7 @@ interface Props {
 }
 
 export const DailyRetroSheet = ({ date, onClose }: Props) => {
-  const [value, setValue] = useState<Partial<Retrospective>>({ template: {} });
-  const timer = useRef<number | undefined>(undefined);
-  const latest = useRef<Partial<Retrospective>>({ template: {} });
-
-  useEffect(() => {
-    let cancelled = false;
-    // date 변경 시 이전 pending 저장 취소 — 새 date 로딩 중 이전 timer 가 stale value 를 새 date 에 덮어쓰는 race 방지
-    if (timer.current !== undefined) {
-      window.clearTimeout(timer.current);
-      timer.current = undefined;
-    }
-    getRetrospective('daily', date).then((r) => {
-      if (cancelled) return;
-      const v = r ?? { template: {} };
-      setValue(v);
-      latest.current = v;
-    });
-    return () => { cancelled = true; };
-  }, [date]);
-
-  // unmount 시 pending 타이머 정리
-  useEffect(() => {
-    return () => {
-      if (timer.current !== undefined) window.clearTimeout(timer.current);
-    };
-  }, []);
+  const editor = useRetrospectiveEditor('daily', date);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,24 +20,6 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  const patch = (p: Partial<Retrospective>) => {
-    const merged: Partial<Retrospective> = {
-      ...latest.current,
-      ...p,
-      template: { ...latest.current.template, ...(p.template ?? {}) },
-    };
-    latest.current = merged;
-    setValue(merged);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      upsertRetrospective('daily', date, {
-        rating: merged.rating,
-        template: merged.template,
-        freeText: merged.freeText,
-      });
-    }, 1000);
-  };
 
   return (
     <div
@@ -87,7 +44,8 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
             <X size={18} />
           </button>
         </div>
-        <RetroTemplate value={value} onChange={patch} />
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} />}
+        <AutosaveStatus {...editor} />
       </div>
     </div>
   );

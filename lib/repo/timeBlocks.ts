@@ -6,7 +6,7 @@ export const createTimeBlock = async (
   data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<TimeBlock> => {
   const row = await http.post<TimeBlock>('/api/time-blocks', data);
-  notifyMutation();
+  notifyMutation('timeBlocks');
   return row;
 };
 
@@ -15,12 +15,12 @@ export const updateTimeBlock = async (
   patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<TimeBlock>(`/api/time-blocks/${id}`, patch);
-  notifyMutation();
+  notifyMutation('timeBlocks');
 };
 
 export const deleteTimeBlock = async (id: string): Promise<void> => {
   await http.del(`/api/time-blocks/${id}`);
-  notifyMutation();
+  notifyMutation('timeBlocks');
 };
 
 export const getTimeBlocksInRange = (

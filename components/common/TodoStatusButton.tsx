@@ -55,9 +55,11 @@ export const TodoStatusButton = ({ status, onChange, size = 'md' }: Props) => {
           setOpen((o) => !o);
         }}
         title={STATUS_LABEL[status]}
-        className={`${btnSize} inline-flex items-center justify-center rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:border-blue-400 transition leading-none shrink-0`}
+        className={`${btnSize} inline-flex items-center justify-center rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:border-blue-400 transition leading-none shrink-0 align-middle`}
       >
-        <span className="leading-none">{STATUS_ICON[status]}</span>
+        <span className="flex h-full w-full items-center justify-center leading-none">
+          {STATUS_ICON[status]}
+        </span>
       </button>
       {open && pos && (
         <>

@@ -50,7 +50,7 @@ export const MonthlyPage = ({ yyyymm }: Props) => {
         label="이번 달 한 문장"
         placeholder="예: 릴스 업로드 주 2회 시작" />
 
-      <GoalSummaryStrip />
+      <GoalSummaryStrip date={`${yyyymm}-01`} />
 
       <HabitCalendar yyyymm={yyyymm} />
 

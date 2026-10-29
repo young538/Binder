@@ -21,3 +21,8 @@ tests
 .vscode
 .idea
 .superpowers
+app.env
+backups
+tmp-test
+.worktrees
+.codex-spreadsheet-audit

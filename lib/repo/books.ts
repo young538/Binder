@@ -9,7 +9,7 @@ export const createBook = async (
   data: Omit<Book, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Book> => {
   const row = await http.post<Book>('/api/books', data);
-  notifyMutation();
+  notifyMutation('books');
   return row;
 };
 
@@ -18,10 +18,10 @@ export const updateBook = async (
   patch: Partial<Omit<Book, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   await http.patch<Book>(`/api/books/${id}`, patch);
-  notifyMutation();
+  notifyMutation('books');
 };
 
 export const deleteBook = async (id: string): Promise<void> => {
   await http.del(`/api/books/${id}`);
-  notifyMutation();
+  notifyMutation('books');
 };

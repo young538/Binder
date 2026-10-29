@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLatest } from '@/lib/hooks/useLatest';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { X, Trash2 } from 'lucide-react';
 import { useBinder } from '@/store';
 import { buildMandalartMap, CORE_RING_POSITIONS, OUTER_CENTERS, SUB_OFFSETS } from '@/lib/mandalart';
@@ -24,30 +26,26 @@ export const MandalartBoard = () => {
   const { goals, reload } = useBinder();
   const [edit, setEdit] = useState<PendingEdit | null>(null);
   const [title, setTitle] = useState('');
-  const [allCounts, setAllCounts] = useState<Map<string, number>>(new Map());
 
   const map = buildMandalartMap(goals);
   const oneThing = goals.find(g => g.level === 'oneThing');
 
-  const recomputeAllCounts = async () => {
+  const { value: allCounts, refresh: recomputeAllCounts } = useAsyncResource(
+    goals.map(goal => `${goal.id}:${goal.updatedAt}`).join(','), async () => {
     const year = String(new Date().getFullYear());
     const [habits, ags] = await Promise.all([
       listHabits(),
       listAnnualGoalsByYear(year),
     ]);
     const m = new Map<string, number>();
-    const bump = (id?: string) => {
+    const bump = (id?: string | null) => {
       if (!id) return;
       m.set(id, (m.get(id) ?? 0) + 1);
     };
     for (const h of habits) bump(h.parentGoalId);
     for (const a of ags) bump(a.parentGoalId);
-    setAllCounts(m);
-  };
-
-  useEffect(() => {
-    recomputeAllCounts();
-  }, [goals]);
+    return m;
+  }, new Map<string, number>(), ['habits', 'annualGoals']);
 
   const classify = (r: number, c: number): Pick<PendingEdit, 'level' | 'parentId' | 'order'> | null => {
     if (r === 4 && c === 4) return { level: 'oneThing', order: 0 };
@@ -114,8 +112,7 @@ export const MandalartBoard = () => {
 
   // 키보드 단축키: ESC = 취소, Enter = 저장.
   // save 는 매 렌더 새로 만들어지므로 ref 로 latest 유지.
-  const saveRef = useRef<() => void>(() => {});
-  saveRef.current = save;
+  const saveRef = useLatest(save);
 
   useEffect(() => {
     if (!edit) return; // 모달이 떠 있을 때만 핸들러 등록
@@ -134,7 +131,7 @@ export const MandalartBoard = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [edit]);
+  }, [edit, saveRef]);
 
   const isCenter = (r: number, c: number) => r === 4 && c === 4;
   const isCore = (r: number, c: number) =>

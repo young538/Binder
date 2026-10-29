@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
-import { HabitEditor } from '@/components/settings/HabitEditor';
 import { AnnualGoalTable } from './AnnualGoalTable';
 import { yearKeyFromString } from '@/lib/utils/period';
 
@@ -34,7 +33,13 @@ export const AnnualPage = ({ year }: Props) => {
 
       <AnnualGoalTable year={year} />
 
-      <HabitEditor />
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        습관(루틴)은{' '}
+        <Link href="/daily" className="text-blue-600 hover:underline dark:text-blue-400">
+          일일 페이지의 루틴 관리
+        </Link>
+        에서 편집할 수 있어요.
+      </p>
     </div>
   );
 };

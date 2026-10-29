@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Check } from 'lucide-react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Goal, Todo } from '@/lib/types';
 import { createTodo, listByParentGoal } from '@/lib/repo/todos';
 import { toIsoDate } from '@/lib/utils/date';
@@ -21,21 +22,21 @@ const defaultPickedDate = (currentMonth: Date): string => {
   return `${format(currentMonth, 'yyyy-MM')}-01`;
 };
 
-export const SubCard = ({ sub, currentMonth }: Props) => {
-  const [linkedTodos, setLinkedTodos] = useState<Todo[]>([]);
+export const SubCard = (props: Props) => <SubCardSession key={`${props.sub.id}:${format(props.currentMonth, 'yyyy-MM')}`} {...props} />;
+
+const SubCardSession = ({ sub, currentMonth }: Props) => {
   const [busy, setBusy] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [pickedDate, setPickedDate] = useState(() => defaultPickedDate(currentMonth));
-  const [progress, setProgress] = useState<GoalProgress | null>(null);
 
-  useEffect(() => {
-    listByParentGoal(sub.id).then(setLinkedTodos);
-    computeGoalProgress(sub.id).then(setProgress);
-  }, [sub.id]);
-
-  useEffect(() => {
-    setPickedDate(defaultPickedDate(currentMonth));
-  }, [currentMonth]);
+  const data = useAsyncResource<{ linkedTodos: Todo[]; progress: GoalProgress | null }>(
+    `${sub.id}:${format(currentMonth, 'yyyy-MM')}`,
+    async () => {
+      const [linkedTodos, progress] = await Promise.all([listByParentGoal(sub.id), computeGoalProgress(sub.id, currentMonth)]);
+      return { linkedTodos, progress };
+    }, { linkedTodos: [], progress: null }, ['todos', 'habitLogs', 'annualGoals'],
+  );
+  const { linkedTodos, progress } = data.value;
 
   const monthBadges = Array.from(
     linkedTodos.reduce((acc, t) => {
@@ -77,10 +78,7 @@ export const SubCard = ({ sub, currentMonth }: Props) => {
       status: 'pending',
       order: Date.now(),
     });
-    const ts = await listByParentGoal(sub.id);
-    setLinkedTodos(ts);
-    const p = await computeGoalProgress(sub.id);
-    setProgress(p);
+    await data.refresh();
     setBusy(false);
     setShowPicker(false);
   };

@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Plus, Trash2 } from 'lucide-react';
 import { Todo, TodoScope } from '@/lib/types';
 import {
@@ -12,7 +13,8 @@ import {
 import { useBinder } from '@/store';
 import { tint } from '@/lib/utils/color';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
-import { statusRowClass } from '@/lib/utils/todoStatus';
+import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
   scope: TodoScope;
@@ -22,42 +24,19 @@ interface Props {
 
 export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
   const { goals, categories } = useBinder();
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
 
-  const reload = () => listByScope(scope, scopeKey).then(setTodos);
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, scopeKey]);
+  const { value: todos, refresh } = useAsyncResource(
+    `${scope}:${scopeKey}`, () => listByScope(scope, scopeKey), [], ['todos'],
+  );
+  const reload = () => refresh();
 
-  const add = async () => {
-    if (!draft.trim()) {
-      setAdding(false);
-      setDraft('');
-      return;
-    }
-    await createTodo({
-      title: draft.trim(),
-      scope,
-      scopeKey,
-      status: 'pending',
-      order: todos.length,
-    });
-    setDraft('');
-    setAdding(false);
+  const editTitle = async (t: Todo, nextTitle: string) => {
+    await updateTodo(t.id, { title: nextTitle });
     reload();
   };
 
-  const editTitle = async (t: Todo, v: string) => {
-    const trimmed = v.trim();
-    if (!trimmed || trimmed === t.title) return;
-    await updateTodo(t.id, { title: trimmed });
-    reload();
-  };
-
-  const setCategory = async (id: string, categoryId: string | undefined) => {
+  const setCategory = async (id: string, categoryId: string | null) => {
     await updateTodo(id, { categoryId });
     reload();
   };
@@ -68,10 +47,10 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
     reload();
   };
 
-  const goalTitle = (id?: string) =>
+  const goalTitle = (id?: string | null) =>
     id ? goals.find((g) => g.id === id)?.title : null;
 
-  const category = (id?: string) =>
+  const category = (id?: string | null) =>
     id ? categories.find((c) => c.id === id) : undefined;
 
   return (
@@ -110,13 +89,11 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                 />
               </div>
               <div className="flex-1 min-w-0 py-1">
-                <input
-                  type="text"
-                  defaultValue={t.title}
-                  onBlur={(e) => editTitle(t, e.target.value)}
-                  className={`w-full bg-transparent border-none outline-none text-sm text-zinc-800 dark:text-zinc-50 ${statusRowClass(
-                    t.status,
-                  )}`}
+                <TodoTitleEditor
+                  todo={t}
+                  onCommit={editTitle}
+                  className="py-0.5"
+                  textClassName="text-sm text-zinc-800 dark:text-zinc-50"
                 />
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
                   {cat && (
@@ -142,7 +119,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
               </div>
               <select
                 value={t.categoryId ?? ''}
-                onChange={(e) => setCategory(t.id, e.target.value || undefined)}
+                onChange={(e) => setCategory(t.id, e.target.value || null)}
                 className="opacity-0 group-hover:opacity-100 focus:opacity-100 mt-1.5 text-[10px] border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5 bg-white dark:bg-zinc-950 transition"
                 title="카테고리"
               >
@@ -164,20 +141,12 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
         })}
       </ul>
       {adding ? (
-        <input
-          type="text"
-          value={draft}
-          autoFocus
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={add}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') add();
-            if (e.key === 'Escape') {
-              setAdding(false);
-              setDraft('');
-            }
-          }}
-          placeholder="할 일"
+        <TodoCreateInput
+          key={`${scope}:${scopeKey}`}
+          onCreate={title => createTodo({
+            title, scope, scopeKey, status: 'pending', order: todos.length,
+          })}
+          onDone={() => { setAdding(false); void reload(); }}
           className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       ) : (

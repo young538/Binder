@@ -4,9 +4,9 @@ export interface Goal {
   id: string;
   userId: string;
   title: string;
-  parentId?: string;
+  parentId?: string | null;
   level: GoalLevel;
-  color?: string;
+  color?: string | null;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -34,6 +34,8 @@ export const STATUS_ICON: Record<TodoStatus, string> = {
   cancelled: '❌',
 };
 
+// 연결 해제(null)를 PATCH 로 보낼 수 있도록, 해제 가능한 FK/옵션 필드는
+// `| null` 을 허용한다. undefined = 변경 없음, null = 연결 해제, 값 = 연결.
 export interface Todo {
   id: string;
   userId: string;
@@ -42,15 +44,15 @@ export interface Todo {
   scopeKey: string;
   status: TodoStatus;
   order: number;
-  parentGoalId?: string;
-  priority?: TodoPriority;
-  categoryId?: string;
-  note?: string;
+  parentGoalId?: string | null;
+  priority?: TodoPriority | null;
+  categoryId?: string | null;
+  note?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type FocusScope = 'year' | 'month' | 'week' | 'board';
+export type FocusScope = 'year' | 'month' | 'week' | 'day' | 'board';
 
 export interface FocusNote {
   id: string;
@@ -72,8 +74,8 @@ export interface TimeBlock {
   text: string;
   kind: TimeBlockKind;
   categoryId: string;
-  goalId?: string;
-  todoId?: string;
+  goalId?: string | null;
+  todoId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +100,7 @@ export interface Retrospective {
     good?: string;
     bad?: string;
     nextStep?: string;
+    reading?: string;
   };
   freeText?: string;
   createdAt: string;
@@ -118,13 +121,13 @@ export interface AnnualGoal {
   year: string;
   order: number;
   title: string;
-  deadline?: string;
-  action?: string;
-  metric?: string;
-  target?: number;
+  deadline?: string | null;
+  action?: string | null;
+  metric?: string | null;
+  target?: number | null;
   monthlyTargets: (number | null)[];
   monthlyActuals: (number | null)[];
-  parentGoalId?: string;
+  parentGoalId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -146,10 +149,10 @@ export interface Habit {
   color: string;
   order: number;
   schedule?: HabitSchedule;
-  categoryId?: string;
-  note?: string;
-  parentGoalId?: string;
-  annualGoalId?: string;
+  categoryId?: string | null;
+  note?: string | null;
+  parentGoalId?: string | null;
+  annualGoalId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,23 +170,13 @@ export interface Book {
   userId: string;
   year: string;
   order: number;
-  category?: string;
+  category?: string | null;
   title: string;
-  oneThing?: string;
-  keywords?: string;
-  reviewUrl?: string;
-  startedAt?: string;
-  finishedAt?: string;
+  oneThing?: string | null;
+  keywords?: string | null;
+  reviewUrl?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface BinderData {
-  version: number;
-  updatedAt: string;
-  goals: Goal[];
-  categories: Category[];
-  timeBlocks: TimeBlock[];
-  retrospectives: Retrospective[];
-  settings: Settings;
 }
