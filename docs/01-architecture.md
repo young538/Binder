@@ -6,7 +6,7 @@
 
 | 계층 | 사용 기술 | 역할 |
 |---|---|---|
-| 웹 프레임워크 | Next.js 16.2.4 App Router | URL, 레이아웃, API, 서버 빌드 |
+| 웹 프레임워크 | Next.js 16.4.3 App Router | URL, 레이아웃, API, 서버 빌드 |
 | UI | React 19.2.4 + TypeScript | 화면 상태와 입력 이벤트 |
 | 스타일 | Tailwind CSS 4, lucide-react | 반응형 레이아웃, 테마, 아이콘 |
 | 움직임 | motion/react | 루틴 목록 드래그 정렬 |

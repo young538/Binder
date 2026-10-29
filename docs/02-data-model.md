@@ -118,3 +118,9 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 기간 조회 인덱스와 사용자 인덱스는 있지만 `habitId+date`, `scope+scopeKey`, `type+dateOrWeek`의 논리상 단일 레코드를 모두 UNIQUE로 강제하지 않습니다. 습관 토글, 회고·한 문장 upsert는 즉시 트랜잭션으로 read/write를 직렬화합니다. 연간 기본 7행 확보도 조회와 부족분 삽입을 같은 즉시 트랜잭션에서 수행합니다. 다른 경로와 외부 직접 DB 쓰기까지 UNIQUE 제약으로 강제하는 것은 아닙니다.
 
 내보내기는 version 10의 10개 배열과 settings를 사용합니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupDocument`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
+
+## TODO 작업 기록
+
+0006 마이그레이션은 `todo_create_requests`(user_id+request_key 복합 PK, 본문 해시·최초 응답·생성 시각)와 `todo_trash`(TODO ID PK, 소유자·스냅샷·만료 시각)를 추가합니다. 요청 기록은 삭제 이후의 지연 재요청도 새 항목을 만들지 않도록 유지합니다. 휴지통은 30초 후 복원이 차단되고 다음 TODO 삭제 시 만료 행을 정리합니다.
+
+운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다.

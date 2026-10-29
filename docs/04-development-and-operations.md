@@ -6,7 +6,7 @@
 
 ## 1. 실행에 필요한 것
 
-Node.js/npm, SQLite·argon2 네이티브 모듈을 설치할 수 있는 환경이 필요합니다. Dockerfile은 `node:20-alpine`을 사용하며 빌드 단계에 python3·make·g++·libc6-compat를 설치합니다. 운영은 Node와 SQLite 파일을 유지할 수 있는 서버를 전제로 합니다.
+Node.js/npm, SQLite·argon2 네이티브 모듈을 설치할 수 있는 환경이 필요합니다. Dockerfile은 `node:22-alpine`을 사용하며 빌드 단계에 python3·make·g++·libc6-compat를 설치합니다. 운영은 Node와 SQLite 파일을 유지할 수 있는 서버를 전제로 합니다.
 
 [package.json](../package.json)의 명령:
 
@@ -76,7 +76,7 @@ Dockerfile/Compose에 TZ 지정은 없습니다. 기본 `/daily` 진입은 브�
 
 기본 카테고리는 주원씽·부원씽·강의·개인·성장·사람·재미·낭비입니다. 습관·목표·책 전체를 자동 seed하는 것은 아닙니다. 일일 프리셋은 화면에서 별도로 추가합니다.
 
-현재 마이그레이션은 0000_petite_joshua_kane, 0001_demonic_screwball, 0002_multi_user_schema, 0003_add_user_id, 0004_settings_per_user, 0005_annual_actual_adjustments입니다. 0005는 연간 실적의 수동 보정값을 추가하고 기존 표시값을 유지하도록 초기화합니다. 소스 스키마를 바꿀 때는 `npx drizzle-kit generate`로 SQL을 생성·검토하고 테스트 DB에 적용합니다. 빌드 명령이 자동으로 새 migration을 생성하지는 않습니다.
+현재 마이그레이션은 0000_petite_joshua_kane, 0001_demonic_screwball, 0002_multi_user_schema, 0003_add_user_id, 0004_settings_per_user, 0005_annual_actual_adjustments, 0006_todo_operations입니다. 0006은 TODO 요청 중복 방지 기록과 삭제 취소용 임시 보관 테이블을 추가합니다. 0005는 연간 실적의 수동 보정값을 추가하고 기존 표시값을 유지하도록 초기화합니다. 소스 스키마를 바꿀 때는 `npx drizzle-kit generate`로 SQL을 생성·검토하고 테스트 DB에 적용합니다. 빌드 명령이 자동으로 새 migration을 생성하지는 않습니다.
 
 ## 5. 사용자 관리
 
@@ -145,6 +145,21 @@ $binderEnvLines.Replace('\$', '$$').Replace('DB_PATH=./data/binder.sqlite', 'DB_
 
 ## 8. 백업
 
+Compose의 `backup` 서비스가 최초 실행 및 매일 **Asia/Seoul 03시**에 SQLite 온라인 백업을 수행합니다. 검증된 자동 백업은 `./backups`에 30일간 보관합니다. 매번 임시 DB로 복사해 무결성 검사·테이블 읽기·시험 쓰기/삭제를 확인하며, 검증 성공 후에만 오래된 자동 백업을 정리합니다. 수동 배포 백업은 정리 대상이 아닙니다. 호스트가 꺼져 있으면 실행되지 않으며 재시작 때 누락분을 보완합니다.
+
+```powershell
+docker compose -p binder logs --tail 30 backup
+docker compose -p binder exec -T backup node scripts/backup.mjs status
+docker compose -p binder exec -T backup node scripts/backup.mjs once
+# 출력된 파일명으로 체크섬과 복원을 다시 확인
+docker compose -p binder exec -T backup node scripts/backup.mjs verify /backups/binder-auto-실제파일명.sqlite
+```
+
+`BACKUP_RETENTION_DAYS`, `BACKUP_TIMEZONE`, `BACKUP_HOUR`는 Compose의 backup 환경변수입니다. DB 볼륨은 읽기 전용, 백업 볼륨은 쓰기 가능하며 서비스에는 네트워크와 비밀 환경변수를 주지 않습니다. Linux에서는 UID/GID 1001이 backups에 쓸 수 있어야 합니다. 복원 검사는 `/tmp` 256MB에서 수행하므로 DB가 커지면 tmpfs 크기도 늘리세요. `backup-status.json`에 최근 성공·실패를 저장하고 26시간 넘게 성공하지 못하거나 최근 시도가 실패하면 healthcheck가 실패합니다. 실패는 5분 후 재시도합니다.
+
+자동 백업은 동일 호스트에 있으므로 디스크 고장 대비 외부 복사까지 제공하지는 않습니다. 실제 운영 DB 교체 복구는 아래 절차대로 별도로 수행합니다.
+
+
 설정의 JSON 내보내기는 로그인 계정의 도메인 데이터 백업입니다. users·비밀번호·다른 계정은 제외합니다. 서버 전체 복구에는 SQLite 파일과 환경변수·프록시 설정을 별도로 보관해야 합니다.
 
 실행 중인 WAL DB의 메인 파일만 `cat`하거나 변경 중인 DB/WAL을 따로 복사하면 일관된 백업을 보장하지 못합니다. 기존 설치 문서의 이런 예제는 사용하지 않고 SQLite backup API를 사용합니다. 현재 설치된 better-sqlite3로 컨테이너 내부 백업 파일을 만든 뒤 호스트 backups로 복사할 수 있습니다.
@@ -181,3 +196,7 @@ Copy-Item -LiteralPath 'data/backup-latest.sqlite' -Destination (Join-Path 'back
 `scripts/parse-binder.mjs`는 특정 로컬 경로의 2026년 Google Sheets HTML 내보내기를 cheerio로 읽어 `scripts/data/seed-2026.json`으로 바꾸는 도구입니다. 원본 경로와 연도가 코드에 고정되어 있고 라이브 Google Sheets 연동이 아닙니다.
 
 `public/data/seed-2026.json`도 남아 있지만 앱 첫 실행에서 자동 가져오지는 않습니다. 필요할 때 형식을 확인해 설정의 JSON 가져오기를 사용합니다. 파일에 있는 ID를 유지하는 import 특성도 확인해야 합니다.
+
+## 11. 지속적 검증
+
+[GitHub Actions](../.github/workflows/ci.yml)는 main push와 PR에서 Node 22 기반 설치·lint·타입·Vitest·문서 링크·npm audit·프로덕션 빌드를 실행합니다. 별도 작업에서 Chromium E2E와 Docker 빌드를 수행하며, 실패한 브라우저 테스트 결과는 7일 보관합니다. Actions는 커밋 SHA로 고정했습니다. CI는 이미지를 배포하거나 운영 DB에 접근하지 않습니다.

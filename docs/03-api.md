@@ -11,7 +11,7 @@
 - 생성 성공은 대부분 201과 생성 행입니다.
 - 목록은 JSON 배열입니다.
 - ID PATCH와 완료 토글은 대상이 없거나 다른 사용자 소유면 404입니다.
-- 일반 DELETE는 대상 유무와 관계없이 `{ "ok": true }`입니다.
+- 일반 DELETE는 대상 유무와 관계없이 `{ "ok": true }`입니다. TODO 삭제는 복원 가능한 경우 `undo: {id, expiresAt}`도 반환합니다.
 - 기간 단건 조회인 focus-notes·retrospectives는 없으면 200과 null입니다.
 - 인증 실패는 proxy에서 JSON 401, requireSession에서 텍스트 401일 수 있습니다.
 - 기본 오류 객체는 `{ "error": "설명" }`이며 도메인 DB 예외가 모두 이 형식으로 정규화되지는 않습니다.
@@ -56,7 +56,21 @@ annual-goals의 일반 POST는 빈 제목과 12개의 null 계획·실적 배열
 
 `POST /api/todos/[id]/toggle-done`은 body 없이 done↔pending을 전환합니다. done 외 상태는 done이 됩니다. 임의 상태 선택은 일반 PATCH `{status:"postponed"}` 같은 요청입니다. 현재 공통 UI는 다섯 상태 선택 메뉴를 사용합니다.
 
-우선순위는 1·2·3이며 PATCH `{priority:null}`로 해제합니다. 키 생략은 기존 값을 유지합니다. 생성 API는 같은 제목의 여러 TODO를 허용하고, Enter/blur 이벤트 중복 방지는 공통 입력 컴포넌트에서 처리합니다.
+우선순위는 1·2·3이며 PATCH `{priority:null}`로 해제합니다. 키 생략은 기존 값을 유지합니다. 생성 API는 같은 제목의 여러 TODO를 허용합니다. `Idempotency-Key` 헤더(영문·숫자·밑줄·하이픈, 8~128자)를 보내면 사용자+키별로 한 번만 생성하고 같은 본문 재요청에 최초 응답을 반환합니다. 같은 키에 다른 본문은 409, 잘못된 키는 400입니다. 헤더가 없는 기존 클라이언트는 매 요청을 생성합니다. 공통 입력은 한글 조합·Enter/blur 잠금을 적용하고 실패 후 동일 초안 재시도에 최초 키와 본문을 재사용합니다.
+
+| 메서드·경로 | 입력 | 응답 |
+|---|---|---|
+| DELETE `/api/todos/[id]` | 없음 | `{ok:true, undo?:{id, expiresAt}}`; 30초 동안 복원 가능 |
+| POST `/api/todos/[id]/restore` | 없음 | 같은 ID의 복원된 TODO; 없음/다른 사용자 404, 만료 410 |
+| POST `/api/todos/rollover` | `{date:"2026-12-31", ids:["..."]}` | `{moved:1, date:"2027-01-01"}` |
+
+이월은 현재 사용자의 지정 날짜 day TODO 중 선택 ID의 pending·postponed만 다음 날 끝으로 이동합니다. ID·카테고리·목표·상태는 유지하고 시간블록은 옮기지 않습니다. IDs는 1~500개이며 재요청 시 이미 이동한 행은 0개 처리합니다. 삭제·복원 재요청도 중복 행을 만들지 않습니다. 복원 시 삭제된 카테고리·목표 연결은 null이 됩니다.
+
+## 전체 검색
+
+`GET /api/search?q=검색어&type=todos&offset=0`은 인증 사용자 소유 데이터만 검색합니다. 검색어는 trim 후 1~100자, type은 생략하거나 todos·goals·annualGoals·habits·books·focusNotes·retrospectives·timeBlocks·categories, offset은 0~10000 정수입니다. 잘못된 값은 400입니다.
+
+응답은 `{items:[{kind,id,title,excerpt,period,href}], offset, hasMore}`이고 한 페이지는 20개입니다. 최근 수정 순(동률은 kind·id)으로 정렬하며 `%`, `_`, 따옴표도 일반 문자로 검색합니다. 반환 링크는 관련 화면이며 항목 자동 강조나 직접 편집은 제공하지 않습니다.
 
 ## 5. 기간별 메모·회고·습관 로그
 

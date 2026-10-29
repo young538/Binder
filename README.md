@@ -16,6 +16,7 @@
 | 테스트, 현재 제약, 유지보수 | [검증과 구현 한계](docs/05-verification-and-limitations.md) |
 | 책임 분리, 기능 확장 방법 | [유지보수 가이드](docs/06-maintenance.md) |
 | 1차 문서 대조 결과 | [소스·문서 점검 기록](docs/07-source-doc-audit.md) |
+| 보안·자동 백업·CI·TODO 편의 기능·검색 | [후속 개선 기록](docs/09-follow-up-improvements.md) |
 | 전체 계층 리팩토링과 최종 검증 | [전체 리팩토링 기록](docs/08-full-refactor.md) |
 
 ## 페이지별 설명
@@ -24,6 +25,6 @@
 
 ## 기술 구성
 
-Next.js 16.2.4 / React 19.2.4 / TypeScript / Tailwind CSS 4 / Zustand / SQLite + Drizzle ORM / iron-session + argon2 / Vitest + Playwright.
+Next.js 16.4.3 / React 19.2.4 / TypeScript / Tailwind CSS 4 / Zustand / SQLite + Drizzle ORM / iron-session + argon2 / Vitest + Playwright.
 
 라우팅은 `app/`, 화면은 `components/`, 브라우저 API 호출은 `lib/repo/`, DB 처리는 `lib/server/`에 있습니다. 실행 전 [환경변수와 초기화 순서](docs/04-development-and-operations.md)를 확인하세요.

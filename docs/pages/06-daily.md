@@ -111,3 +111,7 @@
 | [DailyReading](../../components/daily/DailyReading.tsx) | 날짜별 책·쪽수·독서 메모 |
 | [DailyRecord](../../components/daily/DailyRecord.tsx) | 인라인 일일 회고 기록 |
 | [일정 유틸](../../lib/utils/habitSchedule.ts) | 고정/횟수형 분리, 적용 날짜, 일정 라벨 |
+
+## TODO 이월과 삭제 취소
+
+날짜별 TODO 목록의 **미완료 N개 다음 날로**를 누르면 pending·postponed 항목이 다음 날짜로 이동합니다. 같은 ID를 유지하며 시간 기록은 원래 날짜에 남습니다. 월/주 단위 TODO에는 이월 버튼을 표시하지 않습니다. 삭제 후 하단 알림의 **실행 취소**로 30초 이내 같은 TODO를 복원할 수 있습니다. 알림은 현재 브라우저에서만 표시되고 새로고침 뒤에는 유지되지 않습니다.

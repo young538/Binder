@@ -1,11 +1,15 @@
 # Repository Guidelines
 
-Super 플래너(Binder)는 목표·일정·습관·독서·회고를 관리하는 다중 사용자 앱입니다. Next.js 16.2.4 App Router, React 19, TypeScript, Tailwind CSS 4, Zustand, SQLite와 Drizzle ORM을 사용합니다.
+Super 플래너(Binder)는 목표·일정·습관·독서·회고를 관리하는 다중 사용자 앱입니다. Next.js 16.4.3 App Router, React 19, TypeScript, Tailwind CSS 4, Zustand, SQLite와 Drizzle ORM을 사용합니다.
 
 <!-- BEGIN:nextjs-agent-rules -->
-## Next.js 작업 전 필수 확인
 
-이 버전은 익숙한 Next.js와 API·규칙·파일 구조가 다를 수 있습니다. **코드를 작성하기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 읽고**, 폐기·변경된 API 안내를 따르세요. 라우팅은 `01-app/01-getting-started/03-layouts-and-pages.md`, API는 같은 폴더의 `15-route-handlers.md`, 버전 변경은 `01-app/02-guides/upgrading/version-16.md`를 확인합니다. 동적 라우트의 `params`는 Promise이므로 비동기로 읽습니다.
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 ## 프로젝트 구조와 변경 위치
@@ -25,7 +29,7 @@ Super 플래너(Binder)는 목표·일정·습관·독서·회고를 관리하�
 
 ## 설치·실행·검증 명령
 
-Node.js 20.9 이상과 npm을 사용합니다. `better-sqlite3`와 `argon2`는 네이티브 모듈이므로 설치 환경에 빌드 도구가 필요할 수 있습니다.
+Node.js 22.22 이상(22.x LTS)과 npm을 사용합니다. `better-sqlite3`와 `argon2`는 네이티브 모듈이므로 설치 환경에 빌드 도구가 필요할 수 있습니다.
 
 | 명령 | 설명 |
 | --- | --- |
@@ -41,7 +45,7 @@ Node.js 20.9 이상과 npm을 사용합니다. `better-sqlite3`와 `argon2`는 �
 ## 코드 스타일과 데이터 처리
 
 - TypeScript의 strict 설정을 유지하고, 들여쓰기 2칸·세미콜론·기존 파일의 따옴표 스타일을 따릅니다. 경로 별칭은 `@/`입니다. 별도 Prettier 설정은 없습니다.
-- 책임과 의존성을 기준으로 분리하고 상속보다 조합을 우선합니다. React 화면은 함수 컴포넌트를 유지하며, 연결·트랜잭션·조작 정책은 생성자로 의존성을 받는 객체에 둡니다. 새 TODO 입력은 `TodoCreateInput`을 재사용해 한글 조합 Enter와 중복 제출을 방지합니다.
+- 책임과 의존성을 기준으로 분리하고 상속보다 조합을 우선합니다. React 화면은 함수 컴포넌트를 유지하며, 연결·트랜잭션·조작 정책은 생성자로 의존성을 받는 객체에 둡니다. 새 TODO 입력은 `TodoCreateInput`을 재사용해 한글 조합 Enter와 중복 제출을 방지하고 `onCreate(title, requestKey)`의 키를 createTodo에 전달합니다.
 - 컴포넌트·타입은 PascalCase, 함수·변수는 camelCase를 사용합니다. 예: `WeeklyViews.tsx`, `listTodos`. Next.js 파일명은 `page.tsx`, `layout.tsx`, `route.ts` 규칙을 따릅니다.
 - 브라우저 이벤트·상태가 필요한 컴포넌트에 `'use client'`를 선언하고, DB·인증 코드는 `lib/server/`에 둡니다.
 - API는 `authenticated()` 경계에서 얻은 `userId`로 `getUserRepositories(userId)`를 만들고 기존 `readMutation()` 검증을 재사용합니다. 요청 본문의 소유자 값을 신뢰하지 않습니다.
@@ -69,7 +73,7 @@ Compose는 앱의 3000 포트를 호스트 `127.0.0.1:3000`에 연결하고 Cadd
 
 프로젝트 폴더 이동·이름 변경 후에는 컨테이너가 예전 경로를 참조하는지 `docker inspect`로 확인하세요. 경로 재연결에는 현재 폴더에서 기존 Compose 프로젝트명을 지정한 컨테이너 재생성이 필요합니다. 이 PC의 기존 프로젝트명은 `binder`입니다. 운영 변경 전 DB 백업과 이미지·볼륨 보존을 확인하세요.
 
-상태는 `docker compose -p binder ps`, 로그는 `docker compose -p binder logs --tail 100 app caddy`로 확인합니다. 현재 healthcheck는 `/login` 응답만 검사하므로 `healthy`만으로 DB 정상 여부를 판단하지 말고, 실제 로그인·데이터 조회도 확인하세요.
+상태는 `docker compose -p binder ps`, 로그는 `docker compose -p binder logs --tail 100 app caddy`로 확인합니다. 자동 백업 서비스는 `./backups`에 서울 새벽 3시 온라인 백업·임시 복원 검사를 수행하고 30일 보관합니다. `docker compose -p binder logs --tail 30 backup`으로 확인합니다. 앱 healthcheck는 `/login` 응답만 검사하므로 `healthy`만으로 DB 정상 여부를 판단하지 말고, 실제 로그인·데이터 조회도 확인하세요.
 
 ## 커밋과 Pull Request
 

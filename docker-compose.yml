@@ -19,6 +19,33 @@ services:
       retries: 3
       start_period: 20s
 
+  backup:
+    image: super-planner:latest
+    restart: unless-stopped
+    command: ["node", "scripts/backup-scheduler.mjs"]
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    environment:
+      DB_PATH: /source/binder.sqlite
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: "30"
+      BACKUP_TIMEZONE: Asia/Seoul
+      BACKUP_HOUR: "3"
+    volumes:
+      - ./data:/source:ro
+      - ./backups:/backups
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/backup.mjs", "status"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   caddy:
     image: caddy:2-alpine
     container_name: super-planner-caddy

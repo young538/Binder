@@ -42,13 +42,13 @@ flowchart TD
 
 ## 2. TODO 입력을 바꿀 때
 
-공통 [TodoCreateInput](../components/common/TodoCreateInput.tsx)에 `onCreate(title)`와 `onDone()`을 전달합니다. 월/주/일의 scope, scopeKey, order는 호출부가 정하고, 입력 컴포넌트가 저장 잠금·한글 조합·취소·실패 표시를 관리합니다.
+공통 [TodoCreateInput](../components/common/TodoCreateInput.tsx)에 `onCreate(title, requestKey)`와 `onDone()`을 전달합니다. 월/주/일의 scope, scopeKey, order는 호출부가 정하고, 입력 컴포넌트가 저장 잠금·한글 조합·취소·실패 표시를 관리합니다.
 
 - Enter와 blur는 같은 제출 경로를 사용합니다. 비동기 요청 전에 ref를 잠가 같은 틱의 중복 이벤트도 막습니다.
 - 한글 조합 중 Enter, keyCode 229, 키를 누르고 있을 때의 반복 이벤트는 제출하지 않습니다.
 - 실패하면 입력을 유지하고 재시도할 수 있습니다. 성공하거나 Escape로 취소한 입력 세션은 다시 제출하지 않습니다.
 - 같은 제목의 별도 TODO 작성은 허용합니다. 제목 기반 중복 제거를 추가하지 마세요.
-- 다른 날짜로 바뀌는 입력에는 scope/date 기반 `key`를 사용합니다. 네트워크 응답 유실 후 재시도까지 서버에서 중복 방지하는 계약은 아직 없습니다.
+- 다른 날짜로 바뀌는 입력에는 scope/date 기반 `key`를 사용합니다. 네트워크 응답 유실 후 같은 초안을 재시도할 때 최초 UUID와 본문을 유지합니다. 서버의 사용자+요청 키 기록이 재생성을 막습니다.
 
 회귀 테스트는 [todo-create 단위 테스트](../tests/unit/todo-create.test.tsx)와 [브라우저 테스트](../tests/e2e/todo-create.spec.ts)입니다. 세 입력 경로, 한글 조합, 지연 응답, 실패·재시도, 월간 우선순위 해제를 확인합니다.
 
@@ -95,3 +95,9 @@ npm run build
 운영 DB와 분리한 환경을 사용합니다. E2E는 3100과 `tmp-test/e2e.sqlite`, 수동 개발은 3101과 별도 DB를 사용합니다. 이미 켜진 3100 서버를 재사용하면 그 서버의 DB 설정도 확인합니다. `docs:check`는 Markdown 상대 파일 링크만 확인하며, 문장 정확성·앵커·외부 URL 검사는 대신하지 않습니다.
 
 작업 전 기존 미커밋 변경을 확인하고 보존합니다. 소스 검증과 Docker 배포는 구분해 기록하며, 운영 반영은 [개발·운영 절차](04-development-and-operations.md)를 따릅니다.
+
+## 추가 기능 변경 위치
+
+- TODO 원자적 생성·삭제·복원·이월은 [TodoActions](../lib/server/todos/actions.ts)가 DB·사용자·시계를 주입받습니다. 새 UI도 같은 요청 키를 `createTodo`에 전달하세요.
+- 검색은 [SearchRepository](../lib/server/search/repository.ts)의 사용자 조건을 모든 UNION 분기에서 유지합니다. 도메인 추가 시 공유 타입·화면 필터·목적지·소유권 테스트를 함께 수정하세요.
+- 자동 백업은 [SqliteBackup](../scripts/lib/sqlite-backup.mjs)가 온라인 백업·복원 검사·보관 정책을 맡고 scheduler는 실행 시각과 상태만 관리합니다. 검증 이전 보관 정리를 금지하며 수동 백업을 삭제하지 않습니다.
