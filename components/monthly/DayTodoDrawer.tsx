@@ -9,6 +9,7 @@ import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
@@ -57,6 +58,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
         </header>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          <TodoRolloverButton date={dateStr} todos={todos} />
           {todos.length === 0 && !adding && (
             <div className="text-center text-sm text-zinc-400 py-8">할 일을 추가하세요</div>
           )}
@@ -119,9 +121,9 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
           {adding && (
             <TodoCreateInput
               key={dateStr}
-              onCreate={title => createTodo({
+              onCreate={(title, requestKey) => createTodo({
                 title, scope: 'day', scopeKey: dateStr, status: 'pending', order: todos.length,
-              })}
+              }, requestKey)}
               onDone={() => { setAdding(false); void reload(); }}
               className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />

@@ -9,6 +9,7 @@ import {
   Target,
   NotebookPen,
   MoreHorizontal,
+  Search,
   BookOpen,
   Settings as SettingsIcon,
   Sun,
@@ -26,6 +27,7 @@ const primary = [
 ];
 
 const more = [
+  { label: '전체 검색', Icon: Search, basePath: '/search', href: () => '/search' },
   { label: '회고', Icon: NotebookPen,  basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
   { label: '독서', Icon: BookOpen,     basePath: '/reading',  href: () => '/reading' },
   { label: '설정', Icon: SettingsIcon, basePath: '/settings', href: () => '/settings' },

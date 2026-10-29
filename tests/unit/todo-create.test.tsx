@@ -41,7 +41,7 @@ describe('TODO creation across all entry points', () => {
     fireEvent.blur(input);
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(createTodo).toHaveBeenCalledTimes(1);
-    expect(createTodo).toHaveBeenCalledWith(expect.objectContaining({ title: '한글 할 일', scopeKey: '2026-10-29' }));
+    expect(createTodo).toHaveBeenCalledWith(expect.objectContaining({ title: '한글 할 일', scopeKey: '2026-10-29' }), expect.any(String));
   });
 
   it.each(['common', 'weekly', 'monthly'] as const)('%s ignores the Enter that confirms Korean composition', async view => {
@@ -69,6 +69,7 @@ describe('TODO creation across all entry points', () => {
     fireEvent.blur(input);
     await waitFor(() => expect(screen.queryByPlaceholderText('할 일')).not.toBeInTheDocument());
     expect(createTodo).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(createTodo).mock.calls[1]).toEqual(vi.mocked(createTodo).mock.calls[0]);
   });
 
   it('Escape cancels without allowing a subsequent blur to create a TODO', async () => {

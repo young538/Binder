@@ -3,7 +3,8 @@ import { and, asc, between, eq } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { todos } from '../db/schema';
 import { Todo, TodoScope, TodoStatus } from '@/lib/types';
-import { newId } from '@/lib/utils/id';
+import { TodoActions } from '../todos/actions';
+import type { TodoDeleteResult, TodoRolloverResult } from '@/lib/todos/contracts';
 import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
 
@@ -49,13 +50,8 @@ export class TodoRepository {
     return rows as Todo[];
   }
 
-  async create(data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Todo> {
-    const userId = this.userId;
-    const db = this.database;
-    const now = new Date().toISOString();
-    const row: Todo = { ...data, id: newId(), userId, createdAt: now, updatedAt: now };
-    await db.insert(todos).values(row).run();
-    return row;
+  async create(data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, requestKey?: string): Promise<Todo> {
+    return new TodoActions(this.database, this.userId).create(data, requestKey);
   }
 
   async update(id: string, patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>): Promise<Todo | null> {
@@ -74,10 +70,16 @@ export class TodoRepository {
     return (row as Todo | undefined) ?? null;
   }
 
-  async delete(id: string): Promise<void> {
-    const userId = this.userId;
-    const db = this.database;
-    await db.delete(todos).where(and(eq(todos.userId, userId), eq(todos.id, id))).run();
+  async delete(id: string): Promise<TodoDeleteResult> {
+    return new TodoActions(this.database, this.userId).remove(id);
+  }
+
+  async restore(id: string): Promise<Todo> {
+    return new TodoActions(this.database, this.userId).restore(id);
+  }
+
+  async rollover(date: string, ids: string[]): Promise<TodoRolloverResult> {
+    return new TodoActions(this.database, this.userId).rollover(date, ids);
   }
 
   async setStatus(id: string, status: TodoStatus): Promise<Todo | null> {
@@ -115,8 +117,9 @@ export const createTodo = async (userId: string, data: Omit<Todo, 'id' | 'userId
 export const updateTodo = async (userId: string, id: string, patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>): Promise<Todo | null> =>
   new TodoRepository(getDb(), userId).update(id, patch);
 
-export const deleteTodo = async (userId: string, id: string): Promise<void> =>
-  new TodoRepository(getDb(), userId).delete(id);
+export const deleteTodo = async (userId: string, id: string): Promise<void> => {
+  await new TodoRepository(getDb(), userId).delete(id);
+};
 
 export const setTodoStatus = async (userId: string, id: string, status: TodoStatus): Promise<Todo | null> =>
   new TodoRepository(getDb(), userId).setStatus(id, status);

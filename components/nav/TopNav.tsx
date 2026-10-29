@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut, Sun } from 'lucide-react';
+import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut, Sun, Search } from 'lucide-react';
 import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 import { useBinder } from '@/store';
@@ -24,6 +24,14 @@ export const TopNav = () => {
   const me = useBinder(s => s.me);
   const [busy, setBusy] = useState(false);
   const settingsActive = path.startsWith('/settings');
+
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); router.push('/search'); }
+    };
+    window.addEventListener('keydown', shortcut);
+    return () => window.removeEventListener('keydown', shortcut);
+  }, [router]);
 
   const onLogout = async () => {
     if (busy) return;
@@ -63,6 +71,7 @@ export const TopNav = () => {
           {me.username}
         </span>
       )}
+      <Link href="/search" aria-label="전체 검색" title="전체 검색 (Ctrl/Cmd+K)" className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"><Search size={18} /></Link>
       <Link href="/settings"
         className={`p-2 rounded-full transition-colors
           ${settingsActive

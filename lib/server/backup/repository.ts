@@ -50,6 +50,8 @@ export class UserBackupRepository implements BackupLookup {
   }
 
   clear(): void {
+    // Do not let undo restore rows removed by a later full replacement.
+    this.db.delete(schema.todoTrash).where(eq(schema.todoTrash.userId, this.userId)).run();
     const order: BackupCollection[] = [
       'habitLogs', 'habits', 'annualGoals', 'todos', 'focusNotes',
       'retrospectives', 'timeBlocks', 'books', 'categories', 'goals',

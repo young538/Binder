@@ -13,6 +13,7 @@ import { useWeeklyData } from './WeeklyDataProvider';
 import { tint } from '@/lib/utils/color';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
@@ -50,6 +51,7 @@ export const DayTodoColumn = ({
 
   return (
     <div className="flex flex-col border-r border-zinc-100 dark:border-zinc-900 last:border-r-0 min-h-[120px]">
+      <TodoRolloverButton date={dateStr} todos={todos} />
       <ul className="flex-1 p-1.5 space-y-1 overflow-y-auto max-h-48">
         {todos.length === 0 && !adding && (
           <li className="text-[10px] text-zinc-400 text-center py-3">할 일 없음</li>
@@ -124,9 +126,9 @@ export const DayTodoColumn = ({
           <li>
             <TodoCreateInput
               key={dateStr}
-              onCreate={title => createTodo({
+              onCreate={(title, requestKey) => createTodo({
                 title, scope: 'day', scopeKey: dateStr, status: 'pending', order: todos.length,
-              })}
+              }, requestKey)}
               onDone={() => { setAdding(false); }}
               className="w-full border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-1 text-[11px] bg-white dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />

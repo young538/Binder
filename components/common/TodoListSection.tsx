@@ -14,6 +14,7 @@ import { useBinder } from '@/store';
 import { tint } from '@/lib/utils/color';
 import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
+import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 
 interface Props {
@@ -58,6 +59,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
       <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50 mb-3">
         {title}
       </h3>
+      {scope === 'day' && <TodoRolloverButton date={scopeKey} todos={todos} />}
       <ul className="space-y-1.5">
         {todos.length === 0 && !adding && (
           <li className="text-xs text-zinc-400 py-1">없음</li>
@@ -131,6 +133,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                 ))}
               </select>
               <button
+                aria-label={`${t.title} 삭제`}
                 onClick={() => remove(t.id)}
                 className="opacity-0 group-hover:opacity-100 p-1 mt-1 text-zinc-400 hover:text-red-600 transition shrink-0"
               >
@@ -143,9 +146,9 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
       {adding ? (
         <TodoCreateInput
           key={`${scope}:${scopeKey}`}
-          onCreate={title => createTodo({
+          onCreate={(title, requestKey) => createTodo({
             title, scope, scopeKey, status: 'pending', order: todos.length,
-          })}
+          }, requestKey)}
           onDone={() => { setAdding(false); void reload(); }}
           className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />

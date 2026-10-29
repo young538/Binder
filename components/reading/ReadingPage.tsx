@@ -5,8 +5,8 @@ import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Book } from '@/lib/types';
 import { listByYear, createBook, updateBook, deleteBook } from '@/lib/repo/books';
 
-export const ReadingPage = () => {
-  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+export const ReadingPage = ({ initialYear }: { initialYear?: string }) => {
+  const [year, setYear] = useState(() => initialYear ?? String(new Date().getFullYear()));
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const { value: books, refresh: reload } = useAsyncResource(year, () => listByYear(year), [], ['books']);

@@ -189,7 +189,7 @@ test('create, edit, delete time block via selection', async ({ page }) => {
   const block = page.locator('[data-testid="time-block"]').filter({ hasText: '수정됨' }).first();
   await block.click();
   await page.getByTestId('week-selection-edit').click();
-  await page.getByRole('button', { name: '삭제' }).click();
+  await page.getByRole('button', { name: '삭제', exact: true }).click();
   await expect(page.getByText('수정됨')).toHaveCount(0);
 });
 

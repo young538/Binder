@@ -43,6 +43,13 @@
       "when": 1788912000000,
       "tag": "0005_annual_actual_adjustments",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793269793517,
+      "tag": "0006_todo_operations",
+      "breakpoints": true
     }
   ]
 }

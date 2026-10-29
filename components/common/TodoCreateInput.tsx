@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface Props {
-  onCreate: (title: string) => Promise<unknown>;
+  onCreate: (title: string, requestKey: string) => Promise<unknown>;
   onDone: () => void;
   className?: string;
 }
@@ -16,6 +16,7 @@ export function TodoCreateInput({ onCreate, onDone, className }: Props) {
   const phase = useRef<'idle' | 'saving' | 'done'>('idle');
   const composing = useRef(false);
   const mounted = useRef(true);
+  const attempt = useRef<{ title: string; run: () => Promise<unknown> } | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -36,7 +37,12 @@ export function TodoCreateInput({ onCreate, onDone, className }: Props) {
     setSaving(true);
     setError('');
     try {
-      await onCreate(title);
+      if (attempt.current?.title !== title) {
+        const requestKey = crypto.randomUUID();
+        // Keep both the key and first payload/callback across an uncertain response.
+        attempt.current = { title, run: () => onCreate(title, requestKey) };
+      }
+      await attempt.current.run();
     } catch {
       phase.current = 'idle';
       if (mounted.current) {

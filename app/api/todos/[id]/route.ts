@@ -17,6 +17,6 @@ export const PATCH = authenticated(async (session, req: Request, ctx: { params: 
 export const DELETE = authenticated(async (session, _req: Request, ctx: { params: Promise<{ id: string }> }) => {
   const repositories = getUserRepositories(session.userId);
   const { id } = await ctx.params;
-  await repositories.todos.delete(id);
-  return NextResponse.json({ ok: true });
+  const result = await repositories.todos.delete(id);
+  return NextResponse.json(result);
 });

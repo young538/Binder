@@ -1,5 +1,6 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
 import { PENDING_ADMIN_USER_ID } from './constants';
+import type { Todo } from '@/lib/types';
 
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
@@ -70,6 +71,22 @@ export const todos = sqliteTable(
     userIdx: index('todos_user_idx').on(t.userId),
   })
 );
+
+// Internal operation records: included in SQLite backups, not portable JSON exports.
+export const todoCreateRequests = sqliteTable('todo_create_requests', {
+  userId: text('user_id').notNull(),
+  requestKey: text('request_key').notNull(),
+  payloadHash: text('payload_hash').notNull(),
+  response: text('response', { mode: 'json' }).$type<Todo>().notNull(),
+  createdAt: text('created_at').notNull(),
+}, t => [primaryKey({ columns: [t.userId, t.requestKey] })]);
+
+export const todoTrash = sqliteTable('todo_trash', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  snapshot: text('snapshot', { mode: 'json' }).$type<Todo>().notNull(),
+  expiresAt: text('expires_at').notNull(),
+}, t => [index('todo_trash_user_idx').on(t.userId), index('todo_trash_expiry_idx').on(t.expiresAt)]);
 
 // FocusNotes
 export const focusNotes = sqliteTable(

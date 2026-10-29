@@ -30,6 +30,6 @@ export const POST = authenticated(async (session, req: Request) => {
   const repositories = getUserRepositories(session.userId);
   const body = await readMutation(req, 'todos', session.userId);
   if (body instanceof Response) return body;
-  const row = await repositories.todos.create(body);
+  const row = await repositories.todos.create(body, req.headers.get('Idempotency-Key') ?? undefined);
   return NextResponse.json(row, { status: 201 });
 });

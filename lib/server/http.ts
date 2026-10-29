@@ -1,5 +1,6 @@
 import 'server-only';
 import { requireSession, type RequiredSession } from './auth';
+import { DomainError } from './errors';
 
 /** Authenticate once and preserve real server failures instead of returning them as responses. */
 export function authenticated<Args extends unknown[]>(
@@ -11,6 +12,7 @@ export function authenticated<Args extends unknown[]>(
       return await handler(session, ...args);
     } catch (error) {
       if (error instanceof Response) return error;
+      if (error instanceof DomainError) return Response.json({ error: error.message }, { status: error.status });
       throw error;
     }
   };

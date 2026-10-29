@@ -7,10 +7,10 @@ export class HttpClient {
     private readonly unauthorized: () => void = () => { },
   ) { }
 
-  private async request<T>(method: string, url: string, body?: unknown): Promise<T> {
-    const init: RequestInit = { method, credentials: 'same-origin' };
+  private async request<T>(method: string, url: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+    const init: RequestInit = { method, credentials: 'same-origin', ...(headers ? { headers } : {}) };
     if (body !== undefined) {
-      init.headers = { 'Content-Type': 'application/json' };
+      init.headers = { ...headers, 'Content-Type': 'application/json' };
       init.body = JSON.stringify(body);
     }
     const response = await this.transport(url, init);
@@ -31,7 +31,7 @@ export class HttpClient {
   }
 
   get = <T>(url: string) => this.request<T>('GET', url);
-  post = <T>(url: string, body?: unknown) => this.request<T>('POST', url, body ?? {});
+  post = <T>(url: string, body?: unknown, headers?: Record<string, string>) => this.request<T>('POST', url, body ?? {}, headers);
   put = <T>(url: string, body: unknown) => this.request<T>('PUT', url, body);
   patch = <T>(url: string, body: unknown) => this.request<T>('PATCH', url, body);
   del = <T = void>(url: string) => this.request<T>('DELETE', url);
