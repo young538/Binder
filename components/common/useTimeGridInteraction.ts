@@ -36,6 +36,7 @@ export function useTimeGridInteraction(
   const [drag, setDrag] = useState<DragState | null>(null);
   const [blockDrag, setBlockDrag] = useState<BlockDragState | null>(null);
   const blockDragRef = useRef<BlockDragState | null>(null);
+  const lastPointerType = useRef<string | null>(null);
   const suppressBlockClickId = useRef<string | null>(null);
   // 드래그 생성 직후 잔여 클릭 무시용.
   const suppressSlotClickUntil = useRef(0);
@@ -95,6 +96,9 @@ export function useTimeGridInteraction(
   };
 
   const handleColumnPointerDown = (e: ReactPointerEvent<HTMLElement>, dateStr: string, kind: TimeBlockKind) => {
+    lastPointerType.current = e.pointerType;
+    // Touch gestures belong to native scrolling; taps select through onClick.
+    if (e.pointerType === 'touch') return;
     if (e.button !== 0) return;
     if (blockDrag) return;
     if (drag) return; // 멀티터치 방지: 이미 드래그 중이면 새 포인터 무시
@@ -167,8 +171,9 @@ export function useTimeGridInteraction(
   };
 
   const handleBlockPointerDown = (e: ReactPointerEvent<HTMLElement>, b: TimeBlock) => {
-    if (e.button !== 0) return;
+    lastPointerType.current = e.pointerType;
     e.stopPropagation();
+    if (e.pointerType === 'touch' || e.button !== 0) return;
     if (drag || blockDragRef.current) return;
     const targetRow = geometry.fitRow(Math.round(geometry.rowAt(b.startMin)), b);
     try {
@@ -271,5 +276,6 @@ export function useTimeGridInteraction(
   };
   const canSelectSlot = () => Date.now() >= suppressSlotClickUntil.current;
   const canSelectBlock = (id: string) => suppressBlockClickId.current !== id;
-  return { drag, blockDrag, canSelectSlot, canSelectBlock, handleColumnPointerDown, handleColumnPointerMove, handleColumnPointerUp, handleColumnPointerCancel, handleBlockPointerDown, handleBlockPointerMove, handleBlockPointerUp, handleBlockPointerCancel };
+  const canDoubleClick = () => lastPointerType.current !== 'touch';
+  return { drag, blockDrag, canSelectSlot, canSelectBlock, canDoubleClick, handleColumnPointerDown, handleColumnPointerMove, handleColumnPointerUp, handleColumnPointerCancel, handleBlockPointerDown, handleBlockPointerMove, handleBlockPointerUp, handleBlockPointerCancel };
 }

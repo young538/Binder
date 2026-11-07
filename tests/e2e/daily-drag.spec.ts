@@ -245,7 +245,8 @@ test('desktop timeline block click edits, moves, and Alt-copies across columns',
   await page.screenshot({ path: 'test-results/daily-drag-mobile.png', fullPage: true });
 });
 
-test('mobile touch drag opens the timeline range editor', async ({ browser }) => {
+test('mobile swipes scroll without mutations and taps require explicit edit buttons', async ({ browser }) => {
+  test.setTimeout(90000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 1000 },
     hasTouch: true,
@@ -254,29 +255,95 @@ test('mobile touch drag opens the timeline range editor', async ({ browser }) =>
   const page = await context.newPage();
   try {
     await prepareDailyPage(page);
+    const categoriesResponse = await page.request.get('/api/categories');
+    expect(categoriesResponse.ok()).toBeTruthy();
+    const categories = (await categoriesResponse.json()) as Array<{ id: string }>;
+    const seededResponse = await page.request.post('/api/time-blocks', {
+      data: {
+        date: DATE, startMin: 540, endMin: 630, kind: 'plan',
+        text: '스크롤해도 유지할 일정', categoryId: categories[0].id,
+        goalId: null, todoId: null,
+      },
+    });
+    expect(seededResponse.ok()).toBeTruthy();
+    const seeded = (await seededResponse.json()) as Block;
     await page.setViewportSize({ width: 390, height: 1000 });
     await page.goto(`/daily/${DATE}`);
-    const source = row(page, 'actual', 540);
-    const target = row(page, 'actual', 600);
-    await target.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-    await expect(source).toBeInViewport({ ratio: 1 });
-    await expect(target).toBeInViewport({ ratio: 1 });
-    const sourceBox = (await source.boundingBox())!;
-    const targetBox = (await target.boundingBox())!;
+    const block = page.locator(`[data-block-id="${seeded.id}"]`);
+    await expect(block).toBeVisible();
+    const timeline = page.locator('[data-daily-timeline]');
+    const mutations: string[] = [];
+    page.on('request', request => {
+      if (request.url().includes('/api/time-blocks') && request.method() !== 'GET') {
+        mutations.push(request.method());
+      }
+    });
     const cdp = await context.newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchStart',
-      touchPoints: [{ id: 1, x: sourceBox.x + sourceBox.width / 2, y: sourceBox.y + sourceBox.height / 2 }],
-    });
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchMove',
-      touchPoints: [{ id: 1, x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 }],
-    });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    // Exercise native touch scrolling from both an empty cell and an existing
+    // block, including pointer cancellation when the browser takes over.
+    for (const source of [row(page, 'actual', 540), block]) {
+      await source.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+      await expect(source).toBeInViewport({ ratio: 1 });
+      const before = await timeline.evaluate(element => element.scrollTop);
+      const box = (await source.boundingBox())!;
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart', touchPoints: [{ id: 1, x, y }],
+      });
+      for (let step = 1; step <= 8; step++) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove', touchPoints: [{ id: 1, x, y: y - step * 16 }],
+        });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => timeline.evaluate(element => element.scrollTop)).toBeGreaterThan(before + 50);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByTestId('week-selection-bar')).toHaveCount(0);
+    }
+    expect(mutations).toEqual([]);
+    expect(await listBlocks(page)).toEqual([seeded]);
+
+    // Repeated taps select only; creation requires the explicit button.
+    const slot = row(page, 'actual', 480);
+    await slot.tap();
+    await slot.tap();
+    await expect(slot).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(mutations).toEqual([]);
+    await page.getByTestId('week-selection-new').tap();
     const times = await dialogTimes(page);
-    expect(times.start).toBe('09:00');
-    expect(times.end).toBe('10:30');
-    await page.keyboard.press('Escape');
+    expect(times.start).toBe('08:00');
+    expect(times.end).toBe('08:30');
+    await times.dialog.getByPlaceholder('내용').fill('버튼으로 추가한 실제');
+    await times.dialog.getByRole('button', { name: '저장', exact: true }).tap();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await block.tap();
+    await block.tap();
+    await expect(block).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(mutations).toEqual(['POST']);
+    await page.getByTestId('week-selection-edit').tap();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByPlaceholder('내용')).toHaveValue(seeded.text);
+    await dialog.getByPlaceholder('내용').fill('버튼으로 수정한 일정');
+    await dialog.getByRole('button', { name: '저장', exact: true }).tap();
+    await expect(dialog).toHaveCount(0);
+
+    await page.reload();
+    await expect(block).toContainText('버튼으로 수정한 일정');
+    const persisted = await listBlocks(page);
+    expect(persisted).toHaveLength(2);
+    expect(persisted.find(item => item.id === seeded.id)).toMatchObject({
+      startMin: 540, endMin: 630, kind: 'plan', text: '버튼으로 수정한 일정',
+    });
+    expect(persisted.find(item => item.id !== seeded.id)).toMatchObject({
+      startMin: 480, endMin: 510, kind: 'actual', text: '버튼으로 추가한 실제',
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await block.tap();
+    await page.screenshot({ path: 'test-results/daily-touch-mobile.png', fullPage: true });
   } finally {
     await context.close();
   }

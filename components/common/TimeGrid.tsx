@@ -143,7 +143,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                 : ''}
           </span>
           <span className="text-blue-700/70 dark:text-blue-200/70">
-            Enter로 편집 · 더블클릭으로도 편집
+            선택한 시간이나 기록을 버튼으로 추가·편집하세요.
           </span>
           <span className="ml-auto flex items-center gap-1.5">
             <button
@@ -284,7 +284,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                 data-date={dateStr}
                 data-kind={kind}
                 data-day-index={col}
-                className={`relative touch-none select-none
+                className={`relative touch-manipulation select-none
                   ${isToday ? 'bg-zinc-50 dark:bg-zinc-900/30' : ''}
                   ${kind === 'plan'
                     ? 'border-r border-zinc-100/70 dark:border-zinc-900'
@@ -333,6 +333,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                       }}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
+                        if (!interaction.canDoubleClick()) return;
                         if (!interaction.canSelectSlot()) return;
                         openEditorForSlot(dateStr, kind, row);
                       }}
@@ -405,6 +406,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                       }}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
+                        if (!interaction.canDoubleClick()) return;
                         if (!interaction.canSelectSlot()) return;
                         if (!interaction.canSelectBlock(b.id)) return;
                         openEditorForBlock(b);
@@ -414,7 +416,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                       onPointerUp={e => interaction.handleBlockPointerUp(e, b)}
                       onPointerCancel={e => interaction.handleBlockPointerCancel(e, b)}
                       className={`absolute left-0.5 right-0.5 rounded-md text-left overflow-hidden transition
-                        cursor-grab active:cursor-grabbing touch-none focus-visible:outline-2 focus-visible:outline-blue-500
+                        cursor-grab active:cursor-grabbing touch-manipulation focus-visible:outline-2 focus-visible:outline-blue-500
                         ${isDraggingThis ? 'opacity-45' : ''}
                         ${
                           isSelected
