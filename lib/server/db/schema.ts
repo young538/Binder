@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
 import { PENDING_ADMIN_USER_ID } from './constants';
-import type { Todo } from '@/lib/types';
+import type { Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
 
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
@@ -54,7 +54,7 @@ export const todos = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull().default(PENDING_ADMIN_USER_ID),
     title: text('title').notNull(),
-    scope: text('scope').notNull(), // 'day' | 'week' | 'month' | 'year'
+    scope: text('scope').notNull(), // day | week | month | year | inbox
     scopeKey: text('scope_key').notNull(),
     status: text('status').notNull(), // 'pending' | 'done' | 'postponed' | 'delegated' | 'cancelled'
     order: integer('order').notNull(),
@@ -62,6 +62,10 @@ export const todos = sqliteTable(
     priority: integer('priority'),
     categoryId: text('category_id'),
     note: text('note'),
+    repeatRule: text('repeat_rule', { mode: 'json' }).$type<TodoRepeatRule>(),
+    sourceRetro: text('source_retro', { mode: 'json' }).$type<RetroSource>(),
+    completedAt: text('completed_at'),
+    repeatGenerated: integer('repeat_generated', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -73,6 +77,15 @@ export const todos = sqliteTable(
 );
 
 // Internal operation records: included in SQLite backups, not portable JSON exports.
+export const weeklyTemplates = sqliteTable('weekly_templates', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  blocks: text('blocks', { mode: 'json' }).$type<WeeklyTemplateBlock[]>().notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [index('weekly_templates_user_idx').on(t.userId)]);
+
 export const todoCreateRequests = sqliteTable('todo_create_requests', {
   userId: text('user_id').notNull(),
   requestKey: text('request_key').notNull(),

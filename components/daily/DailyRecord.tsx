@@ -8,7 +8,7 @@ import { NotebookPen } from 'lucide-react';
 export function DailyRecord({ date }: { date: string }) {
   const editor = useRetrospectiveEditor('daily', date);
   return (
-    <section aria-label="하루 기록" className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm dark:border-blue-900 dark:bg-zinc-900">
+    <section id="daily-record" aria-label="하루 기록" className="scroll-mt-20 overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm dark:border-blue-900 dark:bg-zinc-900">
       <div className="flex items-start gap-3 border-b border-blue-100 bg-blue-50/60 p-5 dark:border-blue-900/60 dark:bg-blue-950/20">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
           <NotebookPen size={20} />
@@ -19,7 +19,7 @@ export function DailyRecord({ date }: { date: string }) {
         </div>
       </div>
       <div className="p-5">
-        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} layout="wide" />}
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} beforeCreate={editor.flush} layout="wide" source={{ type: 'daily', dateOrWeek: date }} />}
         <AutosaveStatus {...editor} />
       </div>
     </section>

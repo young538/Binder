@@ -49,7 +49,7 @@ lib/
   server/http.ts            authenticated 인증 경계
   server/db/                DatabaseConnection, 사용자 초기화, 스키마, PATCH 유틸
   server/backup/            BackupService와 사용자별 백업 repository
-  server/repos/             11개 저장소 클래스, UserRepositories 조립
+  server/repos/             13개 저장소 클래스, UserRepositories 조립
   server/progress.ts        목표 진행률 계산
   aggregate.ts              시간블록 분 단위 합산
   mandalart.ts              9×9 보드 배치
@@ -141,7 +141,7 @@ TODO, 책, 습관 로그, 일일 시간블록 등의 조회 상태는 [useAsyncR
 
 - DatabaseConnection은 연결·마이그레이션·초기화 성공 여부·close를 관리합니다.
 - BackupService는 검증·트랜잭션·집계 순서를, UserBackupRepository는 계정별 SQL을 담당합니다.
-- UserRepositories가 DB와 사용자 ID로 11개 도메인 저장소를 조립합니다. 각 저장소가 SQL과 소유권 조건을 보유하며 SettingsRepository는 기본값과 원자적 설정 갱신을 담당합니다.
+- UserRepositories가 DB와 사용자 ID로 13개 저장소를 조립합니다. 기존 11개에 주간 템플릿 저장소와 독서/목표 점검 조회 저장소를 추가했습니다. 각 저장소가 SQL과 소유권 조건을 보유하며 SettingsRepository는 기본값과 원자적 설정 갱신을 담당합니다.
 - GoalProgressService는 주입받은 DB와 기준 날짜로 목표 진행률을 계산합니다.
 - HttpClient는 전송·오류·인증 만료 처리를, AsyncResource는 조회 상태·최신 응답 반영을 담당합니다.
 - TimeGridGeometry는 좌표 계산, TimeBlockCommands는 주입받은 저장 인터페이스로 이동·복사를 수행합니다.

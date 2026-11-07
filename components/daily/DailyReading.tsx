@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
-import { Book } from '@/lib/types';
-import { listByYear } from '@/lib/repo/books';
+import { listAllBooks } from '@/lib/repo/books';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { parseReadingEntry, type ReadingEntry } from '@/lib/reading';
 import { useRetrospectiveEditor } from '@/lib/autosave/editors';
 import { AutosaveStatus } from '@/components/common/AutosaveStatus';
 import { GrowingTextarea } from '@/components/common/GrowingTextarea';
@@ -16,62 +17,20 @@ const DAILY_PAGES = 10;
 
 /**
  * 일일 페이지 고정 섹션: 오늘의 독서 (하루 10쪽 소량 기록용).
- * - 책: 독서 리스트(올해)에서 선택, 없으면 직접 입력
+ * - 책: 모든 연도의 독서 리스트에서 선택, 없으면 직접 입력
  * - 읽은 쪽수: 숫자 입력 (기본 10)
  * - 독서 노트: 기억할 문장과 생각을 긴 글로도 기록
  * 저장은 retrospectives(type='daily', dateOrWeek=date).template.reading 에
  * JSON 문자열 한 덩어리로 보관 — 스키마 변경·마이그레이션 불필요.
  */
-interface ReadingEntry {
-  bookId?: string;
-  bookTitle: string;
-  pages: number;
-  memo: string;
-}
-
-const parseEntry = (raw?: string): ReadingEntry => {
-  if (!raw) return { bookTitle: '', pages: DAILY_PAGES, memo: '' };
-  try {
-    const p = JSON.parse(raw) as Partial<ReadingEntry>;
-    return {
-      bookId: typeof p.bookId === 'string' ? p.bookId : undefined,
-      bookTitle: typeof p.bookTitle === 'string' ? p.bookTitle : '',
-      pages: typeof p.pages === 'number' && Number.isFinite(p.pages) ? p.pages : DAILY_PAGES,
-      memo: typeof p.memo === 'string' ? p.memo : '',
-    };
-  } catch {
-    // 구버전/수동 입력 등 JSON 이 아니면 메모로 취급
-    return { bookTitle: '', pages: DAILY_PAGES, memo: raw };
-  }
-};
-
 export const DailyReading = ({ date }: Props) => {
   const editor = useRetrospectiveEditor('daily', date);
-  const entry = parseEntry(editor.value.template?.reading);
+  const entry = parseReadingEntry(editor.value.template?.reading);
   const [customDate, setCustomDate] = useState<string | null>(null);
   const customTitle = customDate === date;
   const setCustomTitle = (custom: boolean) => setCustomDate(custom ? date : null);
   const [open, setOpen] = useState(true);
-  const [books, setBooks] = useState<Book[]>([]);
-
-  // 올해 독서 리스트는 날짜와 무관 — 마운트 시 한 번만 불러온다.
-  // (날짜 이동마다 다시 불러오면 select 옵션이 늦게 붙어 e2e/사용자 선택이 어긋남)
-  const [booksLoaded, setBooksLoaded] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    listByYear(String(new Date().getFullYear()))
-      .then((bs) => {
-        if (cancelled) return;
-        setBooks(bs);
-        setBooksLoaded(true);
-      })
-      .catch(() => {
-        if (!cancelled) setBooksLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { value: books, loading: booksLoading, error: booksError, refresh: reloadBooks } = useAsyncResource('dailyReading:books', listAllBooks, [], ['books']);
 
 
   const patch = (p: Partial<ReadingEntry>) => {
@@ -79,7 +38,7 @@ export const DailyReading = ({ date }: Props) => {
   };
 
   if (!editor.loaded) return <AutosaveStatus {...editor} />;
-  if (!booksLoaded) return null;
+  if (booksLoading) return <p className="p-4 text-sm text-zinc-500">책 목록을 불러오는 중…</p>;
 
   const hasRecord = entry.bookTitle.trim() !== '' || entry.memo.trim() !== '';
   const summary = hasRecord
@@ -116,6 +75,7 @@ export const DailyReading = ({ date }: Props) => {
       </button>
       {open && (
         <div className="space-y-5 p-5">
+          {!!booksError && <button onClick={() => void reloadBooks()} className="text-sm text-red-600">책 목록을 불러오지 못했어요. 다시 시도</button>}
           {books.length > 0 && !customTitle ? (
             <div>
               <label
@@ -146,6 +106,7 @@ export const DailyReading = ({ date }: Props) => {
                   className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
                 >
                   <option value="">책 선택</option>
+                  {entry.bookId && !books.some(book => book.id === entry.bookId) && <option value={entry.bookId}>{entry.bookTitle} (목록에서 삭제됨)</option>}
                   {books.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.title || '(제목 없음)'}

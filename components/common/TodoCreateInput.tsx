@@ -6,11 +6,13 @@ interface Props {
   onCreate: (title: string, requestKey: string) => Promise<unknown>;
   onDone: () => void;
   className?: string;
+  initialValue?: string;
+  submitLabel?: string;
 }
 
 /** One draft has one successful submission, even when Enter and blur overlap. */
-export function TodoCreateInput({ onCreate, onDone, className }: Props) {
-  const [draft, setDraft] = useState('');
+export function TodoCreateInput({ onCreate, onDone, className, initialValue = '', submitLabel }: Props) {
+  const [draft, setDraft] = useState(initialValue);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const phase = useRef<'idle' | 'saving' | 'done'>('idle');
@@ -67,7 +69,7 @@ export function TodoCreateInput({ onCreate, onDone, className }: Props) {
         onChange={event => setDraft(event.target.value)}
         onCompositionStart={() => { composing.current = true; }}
         onCompositionEnd={() => { composing.current = false; }}
-        onBlur={event => { void submit(event.currentTarget.value); }}
+        onBlur={event => { if (!submitLabel) void submit(event.currentTarget.value); }}
         onKeyDown={event => {
           if (event.key !== 'Enter' && event.key !== 'Escape') return;
           // keyCode 229 also covers browsers ending IME composition before keydown.
@@ -81,6 +83,8 @@ export function TodoCreateInput({ onCreate, onDone, className }: Props) {
         placeholder="할 일"
         className={className}
       />
+      {submitLabel && <button type="button" disabled={saving || !draft.trim()} onClick={() => void submit(draft)}
+        className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{saving ? '저장 중…' : submitLabel}</button>}
       {error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
     </>
   );

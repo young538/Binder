@@ -2,7 +2,7 @@
 
 [전체 목차](README.md) · [구조](01-architecture.md) · [전체 리팩토링 기록](08-full-refactor.md)
 
-이 문서는 2026-10-29 책임 분리 이후의 변경 위치와 검증 방법을 설명합니다. 서버의 11개 저장소는 DB와 사용자 ID를 주입받는 객체입니다. 기존 함수형 API는 호환용으로 유지하고 새 호출은 UserRepositories를 사용합니다. 화면은 기능별 훅과 표시 컴포넌트로 나누고, 조회·전송·저장 큐를 공통화했습니다.
+이 문서는 책임 분리 이후의 변경 위치와 검증 방법을 설명합니다. 서버의 13개 저장소는 DB와 사용자 ID를 주입받는 객체입니다. 기존 함수형 API는 호환용으로 유지하고 새 호출은 UserRepositories를 사용합니다. 화면은 기능별 훅과 표시 컴포넌트로 나누고, 조회·전송·저장 큐를 공통화했습니다.
 
 ## 1. 책임과 의존성
 
@@ -26,7 +26,7 @@ flowchart TD
 | [bootstrap](../lib/server/db/bootstrap.ts) | 최초 사용자·기본 카테고리·기존 데이터 소유자 설정 | 주입받은 트랜잭션만 사용 |
 | [BackupService](../lib/server/backup/service.ts) | 가져오기 전체 순서와 트랜잭션 | 검증·replace 삭제·삽입·집계를 한 즉시 트랜잭션으로 실행 |
 | [UserBackupRepository](../lib/server/backup/repository.ts) | 백업 SQL과 소유권 조회 | 생성자의 userId로 데이터 범위를 제한 |
-| [UserRepositories](../lib/server/repos/index.ts) | 같은 DB·사용자 기준으로 11개 저장소 조립 | 요청마다 인증된 userId 사용, 다른 계정 객체 재사용 금지 |
+| [UserRepositories](../lib/server/repos/index.ts) | 같은 DB·사용자 기준으로 13개 저장소 조립 | 요청마다 인증된 userId 사용, 다른 계정 객체 재사용 금지 |
 | [authenticated](../lib/server/http.ts) | 세션 조회와 인증 Response 처리 | DB·설정 오류를 401로 숨기지 않기 |
 | [GoalProgressService](../lib/server/progress.ts) | 기준 날짜의 목표별 집계 | 직접 연결·실제 시간 기준 유지 |
 | [HttpClient](../lib/client/HttpClient.ts) | JSON 전송·오류·인증 만료 처리 | null·undefined·204 계약 유지 |
@@ -48,6 +48,7 @@ flowchart TD
 - 한글 조합 중 Enter, keyCode 229, 키를 누르고 있을 때의 반복 이벤트는 제출하지 않습니다.
 - 실패하면 입력을 유지하고 재시도할 수 있습니다. 성공하거나 Escape로 취소한 입력 세션은 다시 제출하지 않습니다.
 - 같은 제목의 별도 TODO 작성은 허용합니다. 제목 기반 중복 제거를 추가하지 마세요.
+- 회고 변환만 원본 회고·제목·대상 기간을 함께 비교해 같은 액션을 재사용합니다. 일반 TODO 입력에는 적용하지 않습니다. `submitLabel`이 있는 입력은 blur로 저장하지 않고 명시적 버튼·Enter로 제출합니다.
 - 다른 날짜로 바뀌는 입력에는 scope/date 기반 `key`를 사용합니다. 네트워크 응답 유실 후 같은 초안을 재시도할 때 최초 UUID와 본문을 유지합니다. 서버의 사용자+요청 키 기록이 재생성을 막습니다.
 
 회귀 테스트는 [todo-create 단위 테스트](../tests/unit/todo-create.test.tsx)와 [브라우저 테스트](../tests/e2e/todo-create.spec.ts)입니다. 세 입력 경로, 한글 조합, 지연 응답, 실패·재시도, 월간 우선순위 해제를 확인합니다.
@@ -97,6 +98,9 @@ npm run build
 작업 전 기존 미커밋 변경을 확인하고 보존합니다. 소스 검증과 Docker 배포는 구분해 기록하며, 운영 반영은 [개발·운영 절차](04-development-and-operations.md)를 따릅니다.
 
 ## 추가 기능 변경 위치
+
+- [연결 기능 안내](10-planning-workflow.md)에 반복·템플릿·독서·목표 점검의 저장 규칙과 파일 위치를 정리했습니다. `TodoActions.update`의 완료 기록·다음 항목 생성은 같은 트랜잭션을 유지하고 `repeatGenerated`는 백업에 보존하세요.
+- `WeeklyTemplateRepository.apply`는 사용자·템플릿·주차·항목 위치로 안정적인 블록 ID를 만듭니다. JSON 백업 검증에서 템플릿 내부 참조도 반드시 검사하세요.
 
 - TODO 원자적 생성·삭제·복원·이월은 [TodoActions](../lib/server/todos/actions.ts)가 DB·사용자·시계를 주입받습니다. 새 UI도 같은 요청 키를 `createTodo`에 전달하세요.
 - 검색은 [SearchRepository](../lib/server/search/repository.ts)의 사용자 조건을 모든 UNION 분기에서 유지합니다. 도메인 추가 시 공유 타입·화면 필터·목적지·소유권 테스트를 함께 수정하세요.

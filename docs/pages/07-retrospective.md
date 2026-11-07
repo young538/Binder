@@ -16,6 +16,8 @@
 
 ## 주간 통계
 
+**내일/다음주 1가지** 아래의 **할 일로 추가**에서 제목과 다음 날짜·주차를 선택할 수 있습니다. 회고 저장 후 TODO를 생성하고 원래 회고로 돌아가는 링크를 보관합니다. 중복 등록·실패 재시도·날짜 경계 규칙은 [연결 기능 안내](../10-planning-workflow.md#1-회고를-다음-행동으로-옮기기)를 확인하세요.
+
 선택 주 월~일의 시간블록·일일 TODO·습관 로그와 전체 습관을 조회합니다.
 
 | 통계 | 실제 계산 |
@@ -27,6 +29,7 @@
 | 카테고리별 | actual 블록을 categoryId별 합산 |
 | 목표별 | actual 블록을 goalId별 합산; 미지정 별도 |
 | TODO별 | actual 블록을 todoId별 합산; 미연결 별도 |
+| 계획 대비 실제 | 카테고리별 plan/actual 분 합계와 실제−계획 차이; 별도 비교 카드 |
 | 요일별 | actual 블록을 날짜별 합산하고 최대값 대비 막대 표시 |
 
 취소·연기·위임 TODO도 완료율 분모에 들어갑니다. 주 TODO(`scope=week`) 자체는 이 완료율에 포함하지 않습니다. 습관 기대치는 매일/요일형의 해당 날짜 수, 주 N회의 N, 월 N회의 날짜 비율 환산값으로 계산하며 습관별 반올림합니다.
@@ -50,4 +53,4 @@
 | [aggregate.ts](../../lib/aggregate.ts) | 그룹별 분 합산 |
 | [회고 repository](../../lib/server/repos/retrospectives.ts) | 사용자·기간별 조회 및 upsert |
 
-`aggregate.ts` 함수 자체는 plan/actual을 필터링하지 않습니다. 호출하는 `WeeklySummary`와 `GoalCoverageBar`에서 actual을 먼저 선택합니다. 다른 호출부까지 실제만 합산한다고 일반화하면 안 됩니다.
+`aggregate.ts` 함수 자체는 plan/actual을 필터링하지 않습니다. 기존 실행 통계는 `WeeklySummary`와 `GoalCoverageBar`에서 actual을 먼저 선택합니다. 새 `PlanActualComparison`은 전체 블록을 받아 계획과 실제를 각각 합산합니다.

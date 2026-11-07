@@ -45,6 +45,12 @@ export function validateImport(
         if (adjustments !== null && (!Array.isArray(adjustments) || adjustments.length !== 12 || adjustments.some(v => v !== null && (typeof v !== 'number' || !Number.isFinite(v))))) fail('Invalid monthlyActualAdjustments');
         delete fields.monthlyActualAdjustments;
       }
+      if (name === 'todos') {
+        if (fields.completedAt !== undefined && fields.completedAt !== null && !timestamp(fields.completedAt)) fail('Invalid completedAt');
+        if (fields.repeatGenerated !== undefined && typeof fields.repeatGenerated !== 'boolean') fail('Invalid repeatGenerated');
+        delete fields.completedAt;
+        delete fields.repeatGenerated;
+      }
       validateFields(name, fields);
       validateRelationships(name, fields);
       const owner = lookup.ownerOf(name, id);
@@ -54,6 +60,15 @@ export function validateImport(
   for (const name of names) {
     const rows = data[name] as Record<string, unknown>[] | undefined;
     for (const row of rows ?? []) {
+      if (name === 'weeklyTemplates') {
+        for (const block of row.blocks as Record<string, unknown>[]) {
+          for (const [field, target] of [['categoryId', 'categories'], ['goalId', 'goals']] as const) {
+            const id = block[field];
+            if (typeof id !== 'string' || ids.get(target)?.has(id)) continue;
+            if (raw.mode !== 'merge' || lookup.ownerOf(target, id) !== userId) fail(`Invalid reference: weeklyTemplates.${field}`);
+          }
+        }
+      }
       for (const [field, target] of Object.entries(referenceFields[name] ?? {})) {
         const id = row[field];
         if (typeof id !== 'string' || ids.get(target)?.has(id)) continue;

@@ -9,6 +9,7 @@ const tables = {
   goals: schema.goals, categories: schema.categories, timeBlocks: schema.timeBlocks,
   retrospectives: schema.retrospectives, todos: schema.todos, focusNotes: schema.focusNotes,
   annualGoals: schema.annualGoals, habits: schema.habits, habitLogs: schema.habitLogs, books: schema.books,
+  weeklyTemplates: schema.weeklyTemplates,
 } satisfies Record<BackupCollection, unknown>;
 
 export interface BackupLookup {
@@ -45,6 +46,7 @@ export class UserBackupRepository implements BackupLookup {
         monthlyActualAdjustments: actualAdjustments(goal, automaticMonthlyActuals(this.db, goal)),
       })),
       habits: this.list('habits'), habitLogs: this.list('habitLogs'), books: this.list('books'),
+      weeklyTemplates: this.list('weeklyTemplates'),
       settings: settingsOut,
     };
   }
@@ -54,7 +56,7 @@ export class UserBackupRepository implements BackupLookup {
     this.db.delete(schema.todoTrash).where(eq(schema.todoTrash.userId, this.userId)).run();
     const order: BackupCollection[] = [
       'habitLogs', 'habits', 'annualGoals', 'todos', 'focusNotes',
-      'retrospectives', 'timeBlocks', 'books', 'categories', 'goals',
+      'retrospectives', 'timeBlocks', 'books', 'weeklyTemplates', 'categories', 'goals',
     ];
     for (const name of order) {
       const table = tables[name];

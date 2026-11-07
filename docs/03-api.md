@@ -34,10 +34,10 @@
 |---|---|---|---|
 | `/api/goals` | 없음 | title, level, order, parentId?, color? | title, level, parentId, color, order |
 | `/api/categories` | 없음 | name, color, order | name, color, order |
-| `/api/todos` | 아래 별도 설명 | title, scope, scopeKey, status, order, parentGoalId?, priority?, categoryId?, note? | 동일 도메인 필드 |
+| `/api/todos` | 아래 별도 설명 | title, scope, scopeKey, status, order, parentGoalId?, priority?, categoryId?, note?, repeatRule?, sourceRetro? | 동일 도메인 필드; completedAt/repeatGenerated는 수정 불가 |
 | `/api/annual-goals` | `year` 필수 | year, order 또는 year, ensureSeven:true | year, order, title, deadline, action, metric, target, monthlyTargets, monthlyActuals, parentGoalId |
 | `/api/habits` | 없음 | name, color, order, schedule?, categoryId?, note?, parentGoalId?, annualGoalId? | 동일 도메인 필드 |
-| `/api/books` | `year` 필수 | year, order, title, category?, oneThing?, keywords?, reviewUrl?, startedAt?, finishedAt? | 동일 도메인 필드 |
+| `/api/books` | `year` 필수 또는 `all=true`로 모든 연도 | year, order, title, category?, oneThing?, keywords?, reviewUrl?, startedAt?, finishedAt? | 동일 도메인 필드 |
 | `/api/time-blocks` | `startDate`, `endDate` 필수 | date, startMin, endMin, text, kind, categoryId, goalId?, todoId? | 동일 도메인 필드 |
 
 예를 들어 책 수정은 PATCH `/api/books/[id]`, 삭제는 DELETE `/api/books/[id]`입니다. `?`는 정상 생성 입력에서 선택 가능한 필드를 뜻합니다. null로 지울 수 있는 필드는 [공통 타입](../lib/types.ts)을 확인합니다.
@@ -67,6 +67,8 @@ annual-goals의 일반 POST는 빈 제목과 12개의 null 계획·실적 배열
 이월은 현재 사용자의 지정 날짜 day TODO 중 선택 ID의 pending·postponed만 다음 날 끝으로 이동합니다. ID·카테고리·목표·상태는 유지하고 시간블록은 옮기지 않습니다. IDs는 1~500개이며 재요청 시 이미 이동한 행은 0개 처리합니다. 삭제·복원 재요청도 중복 행을 만들지 않습니다. 복원 시 삭제된 카테고리·목표 연결은 null이 됩니다.
 
 ## 전체 검색
+
+수집함 TODO도 동일한 검색에 포함되며 결과는 `/inbox`로 이동합니다.
 
 `GET /api/search?q=검색어&type=todos&offset=0`은 인증 사용자 소유 데이터만 검색합니다. 검색어는 trim 후 1~100자, type은 생략하거나 todos·goals·annualGoals·habits·books·focusNotes·retrospectives·timeBlocks·categories, offset은 0~10000 정수입니다. 잘못된 값은 400입니다.
 
@@ -114,11 +116,11 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 ```json
 {
-  "version": 10,
+  "version": 11,
   "generatedAt": "ISO 시각",
   "goals": [], "categories": [], "timeBlocks": [],
   "retrospectives": [], "todos": [], "focusNotes": [],
-  "annualGoals": [], "habits": [], "habitLogs": [], "books": [],
+  "annualGoals": [], "habits": [], "habitLogs": [], "books": [], "weeklyTemplates": [],
   "settings": null
 }
 ```
@@ -135,7 +137,25 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 로그인과 설정의 import/export는 자체 fetch를 사용하므로 공통 wrapper의 오류 처리와 정확히 같지 않습니다. API에 없는 정렬·검색·집계 기능을 URL 쿼리만 붙여 사용할 수는 없습니다.
 
-## 입력 검증과 백업 호환성 (2026-09-09)
+## 계획·실행 연결 API (2026-11-06)
+
+모든 경로는 인증 사용자 소유 데이터만 처리합니다. 다른 사용자 소유의 템플릿 적용·책 상세는 404입니다. 잘못된 날짜·주차·본문은 400입니다.
+
+| 메서드·경로 | 요청 | 응답 |
+|---|---|---|
+| GET `/api/weekly-templates` | 없음 | WeeklyTemplate 배열 |
+| POST `/api/weekly-templates` | `{name, sourceWeek:"2026-W53"}` | 201, 현재 주 계획의 스냅샷; 계획 1~500개 필요 |
+| DELETE `/api/weekly-templates/[id]` | 없음 | `{ok:true}`; 적용한 시간블록은 유지 |
+| POST `/api/weekly-templates/[id]/apply` | `{week:"2027-W01"}` | `{added, skipped}`; 원자적 적용, 기존 항목은 수정하지 않음 |
+| GET `/api/books?all=true` | 없음 | 모든 연도의 본인 책 배열 |
+| GET `/api/books/[id]/history` | 없음 | `{bookId,title,totalPages,readingDays,entries:[{date,bookId,bookTitle,pages,memo}]}` |
+| GET `/api/goal-review?date=2026-12-31` | 기준 날짜 | `{start,end,goals:[{goal,descendantCount,pendingTodos,completedTodos,habits,actualMinutes,inactive}]}` |
+
+수집함 조회는 `/api/todos?scope=inbox&scopeKey=inbox`입니다. 회고 연결·반복 생성은 기존 TODO POST/PATCH와 상태 토글 경로를 사용합니다. 선택 필드 `sourceRetro={type,dateOrWeek}`와 `repeatRule={unit,interval,basis}`를 허용합니다. 두 필드의 null은 해제입니다. `completedAt`·`repeatGenerated`는 일반 POST/PATCH에서 거절하며 서버 응답·백업에는 포함합니다. 회고 생성 요청은 같은 원본·제목·기간의 기존 항목이 있으면 이를 반환합니다. 일반 TODO는 제목 중복을 허용합니다.
+
+반복은 done이 아닌 상태에서 done으로 바뀔 때만 다음 날짜 항목을 생성합니다. 전체 저장 규칙과 예시는 [연결 기능 안내](10-planning-workflow.md)를 확인하세요.
+
+## 기존 입력 검증과 백업 호환성
 
 잘못된 JSON과 허용되지 않는 변경 필드는 400 오류입니다. 선택 연결의 null 해제는 유지합니다. 가져오기는 삭제/병합 전에 전체 payload와 참조를 검증합니다. 다른 계정 ID와 충돌하거나 존재하지 않는 참조를 담은 백업은 거절하며, replace 검증 실패 시 기존 데이터를 삭제하지 않습니다. 과거에 삭제된 대상을 가리키는 백업은 해당 연결을 정리한 뒤 가져와야 합니다.
 

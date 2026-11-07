@@ -23,6 +23,7 @@ const fixture = () => ({
   habits: [{ id: 'habit', name: '루틴', color: '#123456', order: 0, schedule: { kind: 'daily' }, annualGoalId: 'annual', ...times }],
   habitLogs: [{ id: 'log', habitId: 'habit', date: '2026-10-29', createdAt: now }],
   books: [{ id: 'book', year: '2026', order: 0, title: '책', ...times }],
+  weeklyTemplates: [{ id: 'template', name: '기본 주간', blocks: [{ dayOffset: 0, startMin: 540, endMin: 600, text: '계획', categoryId: 'category', goalId: 'goal' }], ...times }],
   settings: { ...DEFAULT_SETTINGS, theme: 'dark' },
 });
 
@@ -33,11 +34,11 @@ beforeEach(() => {
 afterEach(() => connection.close());
 
 describe('backup service transactions and account boundaries', () => {
-  it('round-trips all ten collections and preserves annual baselines and settings', () => {
+  it('round-trips all eleven collections and preserves annual baselines and settings', () => {
     const imported = backups.importFor('a', { mode: 'replace', data: fixture() });
     for (const name of BACKUP_COLLECTIONS) expect(imported.counts[name]).toBe(1);
     const first = backups.exportFor('a');
-    expect(first.version).toBe(10);
+    expect(first.version).toBe(11);
     expect(first.generatedAt).toBe(now);
     expect(first.annualGoals[0].target).toBe(365);
     expect(first.annualGoals[0].monthlyActualAdjustments).toHaveLength(12);

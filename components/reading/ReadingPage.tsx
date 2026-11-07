@@ -4,10 +4,12 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, ExternalLink } from 'lucide-re
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { Book } from '@/lib/types';
 import { listByYear, createBook, updateBook, deleteBook } from '@/lib/repo/books';
+import { BookHistoryPanel } from './BookHistoryPanel';
 
 export const ReadingPage = ({ initialYear }: { initialYear?: string }) => {
   const [year, setYear] = useState(() => initialYear ?? String(new Date().getFullYear()));
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
 
   const { value: books, refresh: reload } = useAsyncResource(year, () => listByYear(year), [], ['books']);
 
@@ -54,6 +56,7 @@ export const ReadingPage = ({ initialYear }: { initialYear?: string }) => {
           <ChevronRight size={18} />
         </button>
       </header>
+      {historyId && <BookHistoryPanel key={historyId} bookId={historyId} onClose={() => setHistoryId(null)} />}
 
       <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
@@ -134,6 +137,7 @@ export const ReadingPage = ({ initialYear }: { initialYear?: string }) => {
                         placeholder="도서 제목"
                         className="w-full bg-transparent outline-none focus:bg-blue-50 dark:focus:bg-blue-950/30 px-1 rounded font-medium text-zinc-800 dark:text-zinc-50"
                       />
+                      <button onClick={() => setHistoryId(b.id)} aria-label={`${b.title || '제목 없음'} 독서 기록 보기`} className="mt-1 px-1 py-1.5 text-xs text-blue-600 hover:underline">독서 기록 보기</button>
                     </td>
                     <td className="p-1 border-r border-zinc-100 dark:border-zinc-900">
                       <input

@@ -2,6 +2,7 @@ import { NotificationCenter } from '@/components/providers/NotificationCenter';
 import { TopNav } from '@/components/nav/TopNav';
 import { BottomNav } from '@/components/nav/BottomNav';
 import { StoreProvider } from '@/components/providers/StoreProvider';
+import { QuickCapture } from '@/components/inbox/QuickCapture';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TopNav />
       <main className="pb-16 lg:pb-0">{children}</main>
       <BottomNav />
+      <QuickCapture />
       <NotificationCenter />
     </StoreProvider>
   );

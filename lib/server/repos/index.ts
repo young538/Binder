@@ -12,6 +12,8 @@ import { BookRepository } from './books';
 import { FocusNoteRepository } from './focusNotes';
 import { RetrospectiveRepository } from './retrospectives';
 import { SettingsRepository } from './settings';
+import { WeeklyTemplateRepository } from './weeklyTemplates';
+import { InsightsRepository } from './insights';
 
 /** Composes all domain repositories around the same database and authenticated owner. */
 export class UserRepositories {
@@ -26,6 +28,8 @@ export class UserRepositories {
   readonly focusNotes: FocusNoteRepository;
   readonly retrospectives: RetrospectiveRepository;
   readonly settings: SettingsRepository;
+  readonly weeklyTemplates: WeeklyTemplateRepository;
+  readonly insights: InsightsRepository;
 
   constructor(database: BinderDatabase, userId: string) {
     this.goals = new GoalRepository(database, userId);
@@ -39,6 +43,8 @@ export class UserRepositories {
     this.focusNotes = new FocusNoteRepository(database, userId);
     this.retrospectives = new RetrospectiveRepository(database, userId);
     this.settings = new SettingsRepository(database, userId);
+    this.weeklyTemplates = new WeeklyTemplateRepository(database, userId);
+    this.insights = new InsightsRepository(database, userId);
   }
 }
 

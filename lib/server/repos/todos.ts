@@ -5,7 +5,6 @@ import { todos } from '../db/schema';
 import { Todo, TodoScope, TodoStatus } from '@/lib/types';
 import { TodoActions } from '../todos/actions';
 import type { TodoDeleteResult, TodoRolloverResult } from '@/lib/todos/contracts';
-import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
 
 /** User-scoped todos operations; accepts an isolated database for tests. */
@@ -55,19 +54,7 @@ export class TodoRepository {
   }
 
   async update(id: string, patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>): Promise<Todo | null> {
-    const userId = this.userId;
-    const db = this.database;
-    await db
-      .update(todos)
-      .set({ ...stripUndefined(patch), updatedAt: new Date().toISOString() })
-      .where(and(eq(todos.userId, userId), eq(todos.id, id)))
-      .run();
-    const row = await db
-      .select()
-      .from(todos)
-      .where(and(eq(todos.userId, userId), eq(todos.id, id)))
-      .get();
-    return (row as Todo | undefined) ?? null;
+    return new TodoActions(this.database, this.userId).update(id, patch);
   }
 
   async delete(id: string): Promise<TodoDeleteResult> {
@@ -87,16 +74,7 @@ export class TodoRepository {
   }
 
   async toggleDone(id: string): Promise<Todo | null> {
-    const userId = this.userId;
-    const db = this.database;
-    const existing = await db
-      .select()
-      .from(todos)
-      .where(and(eq(todos.userId, userId), eq(todos.id, id)))
-      .get();
-    if (!existing) return null;
-    const nextStatus: TodoStatus = (existing as Todo).status === 'done' ? 'pending' : 'done';
-    return this.update(id, { status: nextStatus });
+    return new TodoActions(this.database, this.userId).update(id, {}, true);
   }
 }
 

@@ -11,6 +11,7 @@ import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
 import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
+import { TodoDetailsButton } from '@/components/common/TodoDetailsButton';
 
 interface Props {
   dateStr: string;
@@ -80,6 +81,7 @@ export const DayTodoDrawer = ({ dateStr, onClose }: Props) => {
                     onCommit={(todo, nextTitle) => updateField(todo, { title: nextTitle })}
                     textClassName="text-sm text-zinc-800 dark:text-zinc-50"
                   />
+                  <TodoDetailsButton todo={t} />
                   <button onClick={() => remove(t.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition">
                     <Trash2 size={14} />

@@ -50,6 +50,13 @@
       "when": 1793269793517,
       "tag": "0006_todo_operations",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793959484267,
+      "tag": "0007_short_shatterstar",
+      "breakpoints": true
     }
   ]
 }

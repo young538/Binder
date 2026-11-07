@@ -15,6 +15,7 @@ import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
 import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
+import { TodoDetailsButton } from '@/components/common/TodoDetailsButton';
 
 interface Props {
   dateStr: string;
@@ -90,6 +91,7 @@ export const DayTodoColumn = ({
                   <TodoTitleEditor todo={t} onCommit={editTitle} />
                 </div>
               </div>
+              <TodoDetailsButton todo={t} />
               <select
                 value={t.categoryId ?? ''}
                 onChange={(e) =>

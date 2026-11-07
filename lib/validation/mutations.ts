@@ -1,8 +1,11 @@
-import type { AnnualGoal, Book, Category, FocusNote, Goal, Habit, HabitLog, Retrospective, Settings, TimeBlock, Todo } from '@/lib/types';
+import type { AnnualGoal, Book, Category, FocusNote, Goal, Habit, HabitLog, Retrospective, Settings, TimeBlock, Todo, WeeklyTemplate } from '@/lib/types';
 
 type Writable<T> = Omit<T, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 export interface MutationPayloads {
-  todos: Writable<Todo>;
+  todos: Omit<Writable<Todo>, 'completedAt' | 'repeatGenerated'>;
+  weeklyTemplates: Writable<WeeklyTemplate>;
+  weeklyTemplateCreate: { name: string; sourceWeek: string };
+  weeklyTemplateApply: { week: string };
   todoRollover: { date: string; ids: string[] };
   timeBlocks: Writable<TimeBlock>;
   goals: Writable<Goal>;
@@ -34,13 +37,14 @@ export const isDate: Check = value => {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 };
 const month: Check = value => typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) && year(value.slice(0, 4));
-const week: Check = value => {
+export const isWeek: Check = value => {
   if (typeof value !== 'string' || !/^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/.test(value) || !year(value.slice(0, 4))) return false;
   const y = Number(value.slice(0, 4));
   const firstDay = new Date(`${y}-01-01T00:00:00Z`).getUTCDay();
   const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
   return !value.endsWith('53') || firstDay === 4 || (firstDay === 3 && leap);
 };
+const week = isWeek;
 const color: Check = value => typeof value === 'string' && /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(value);
 const url: Check = value => {
   if (value === '') return true;
@@ -57,9 +61,22 @@ const schedule: Check = value => {
 const template: Check = value => object(value) && Object.entries(value).every(([key, entry]) => ['good', 'bad', 'nextStep', 'reading'].includes(key) && str(entry));
 const optionalText = nullable(str);
 const optionalId = nullable(identifier);
+const repeatRule: Check = value => object(value) && Object.keys(value).length === 3
+  && oneOf('day', 'week', 'month')(value.unit) && integer(1, 365)(value.interval)
+  && oneOf('scheduled', 'completed')(value.basis);
+const sourceRetro: Check = value => object(value) && Object.keys(value).length === 2
+  && oneOf('daily', 'weekly')(value.type) && (value.type === 'daily' ? isDate : week)(value.dateOrWeek);
+const templateBlocks: Check = value => Array.isArray(value) && value.length > 0 && value.length <= 500 && value.every(block =>
+  object(block) && Object.keys(block).every(key => ['dayOffset', 'startMin', 'endMin', 'text', 'categoryId', 'goalId'].includes(key))
+  && integer(0, 6)(block.dayOffset) && integer(0, 1439)(block.startMin) && integer(1, 1440)(block.endMin)
+  && (block.startMin as number) < (block.endMin as number) && str(block.text) && identifier(block.categoryId)
+  && (block.goalId === undefined || optionalId(block.goalId)));
 const rules: Record<MutationKind, Rules> = {
+  weeklyTemplates: { fields: { name: identifier, blocks: templateBlocks }, required: ['name', 'blocks'] },
+  weeklyTemplateCreate: { fields: { name: identifier, sourceWeek: week }, required: ['name', 'sourceWeek'] },
+  weeklyTemplateApply: { fields: { week }, required: ['week'] },
   todoRollover: { fields: { date: isDate, ids: value => Array.isArray(value) && value.length > 0 && value.length <= 500 && value.every(identifier) }, required: ['date', 'ids'] },
-  todos: { fields: { title: str, scope: oneOf('day', 'week', 'month', 'year'), scopeKey: identifier, status: oneOf('pending', 'done', 'postponed', 'delegated', 'cancelled'), order: integer(0), parentGoalId: optionalId, priority: nullable(oneOf(1, 2, 3)), categoryId: optionalId, note: optionalText }, required: ['title', 'scope', 'scopeKey', 'status', 'order'] },
+  todos: { fields: { title: str, scope: oneOf('day', 'week', 'month', 'year', 'inbox'), scopeKey: identifier, status: oneOf('pending', 'done', 'postponed', 'delegated', 'cancelled'), order: integer(0), parentGoalId: optionalId, priority: nullable(oneOf(1, 2, 3)), categoryId: optionalId, note: optionalText, repeatRule: nullable(repeatRule), sourceRetro: nullable(sourceRetro) }, required: ['title', 'scope', 'scopeKey', 'status', 'order'] },
   timeBlocks: { fields: { date: isDate, startMin: integer(0, 1439), endMin: integer(1, 1440), text: str, kind: oneOf('plan', 'actual'), categoryId: identifier, goalId: optionalId, todoId: optionalId }, required: ['date', 'startMin', 'endMin', 'text', 'kind', 'categoryId'] },
   goals: { fields: { title: str, parentId: optionalId, level: oneOf('oneThing', 'mandalartCore', 'mandalartSub'), color: nullable(color), order: integer(0) }, required: ['title', 'level', 'order'] },
   categories: { fields: { name: str, color, order: integer(0) }, required: ['name', 'color', 'order'] },
@@ -96,10 +113,11 @@ export function validateRelationships(kind: MutationKind, value: Record<string, 
   if (kind === 'settings' && typeof value.dayStartHour === 'number' && typeof value.dayEndHour === 'number' && value.dayStartHour >= value.dayEndHour) invalid('dayStartHour must precede dayEndHour');
   if ((kind === 'todos' || kind === 'focusNotes') && typeof value.scope === 'string' && typeof value.scopeKey === 'string') {
     const key = kind === 'focusNotes' && value.scope !== 'day' && value.scope !== 'board' ? value.scopeKey.replace(new RegExp(`^${value.scope}:`), '') : value.scopeKey;
-    const checks: Record<string, Check> = { day: isDate, week, month, year, board: identifier };
+    const checks: Record<string, Check> = { day: isDate, week, month, year, board: identifier, inbox: oneOf('inbox') };
     if (!checks[value.scope]?.(key)) invalid('scopeKey does not match scope');
   }
   if (kind === 'retrospectives' && !(value.type === 'daily' ? isDate : week)(value.dateOrWeek)) invalid('Invalid dateOrWeek');
+  if (kind === 'todos' && value.repeatRule && value.scope !== 'day') invalid('반복 할 일은 날짜를 지정해 주세요.');
 }
 
 export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'todos' | 'annualGoals' | 'habits'>>> = {

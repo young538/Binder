@@ -42,7 +42,7 @@ export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
         habitStats={habitStats}
       />
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-5">
-        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} />}
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} beforeCreate={editor.flush} source={{ type: 'weekly', dateOrWeek: isoweek }} />}
         <AutosaveStatus {...editor} />
       </div>
     </div>

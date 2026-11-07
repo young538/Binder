@@ -62,7 +62,7 @@ if (cmd === 'add') {
   if (!username) usage();
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
   if (!user) { console.error(`User '${username}' not found`); process.exit(2); }
-  const tables = ['todo_create_requests', 'todo_trash', 'goals', 'categories', 'todos', 'focus_notes', 'annual_goals', 'habits', 'habit_logs', 'books', 'retrospectives', 'time_blocks', 'settings'];
+  const tables = ['todo_create_requests', 'todo_trash', 'weekly_templates', 'goals', 'categories', 'todos', 'focus_notes', 'annual_goals', 'habits', 'habit_logs', 'books', 'retrospectives', 'time_blocks', 'settings'];
   const tx = db.transaction(() => {
     for (const t of tables) {
       db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(user.id);

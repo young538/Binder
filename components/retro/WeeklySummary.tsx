@@ -1,6 +1,7 @@
 import { TimeBlock, Category, Goal, Todo } from '@/lib/types';
 import { aggregateByCategory, aggregateByGoal, aggregateByDay, aggregateByTodo } from '@/lib/aggregate';
 import { weekDates, toIsoDate } from '@/lib/utils/date';
+import { PlanActualComparison } from './PlanActualComparison';
 
 export interface HabitStats {
   total: number;
@@ -48,6 +49,7 @@ export const WeeklySummary = ({ isoweek, blocks, todos, categories, goals, habit
 
   return (
     <section className="mb-6 space-y-3">
+      <PlanActualComparison blocks={blocks} categories={categories} />
       <div className="text-[11px] text-zinc-500 dark:text-zinc-500">
         시간 통계는 ✅ 실제 기록 기준
       </div>

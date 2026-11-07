@@ -1,6 +1,6 @@
 // Simple pub-sub for cross-component refresh after any mutation.
 // Replaces the Dexie-era `onDirty` from lib/db.ts with the same signature.
-export type MutationResource = 'todos' | 'timeBlocks' | 'goals' | 'categories' | 'annualGoals' | 'habits' | 'habitLogs' | 'books' | 'focusNotes' | 'retrospectives' | 'settings';
+export type MutationResource = 'todos' | 'timeBlocks' | 'goals' | 'categories' | 'annualGoals' | 'habits' | 'habitLogs' | 'books' | 'focusNotes' | 'retrospectives' | 'settings' | 'weeklyTemplates';
 type Listener = (resource?: MutationResource) => void;
 
 const listeners = new Set<Listener>();

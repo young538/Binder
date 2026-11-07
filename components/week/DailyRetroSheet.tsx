@@ -44,7 +44,7 @@ export const DailyRetroSheet = ({ date, onClose }: Props) => {
             <X size={18} />
           </button>
         </div>
-        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} />}
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} beforeCreate={editor.flush} source={{ type: 'daily', dateOrWeek: date }} />}
         <AutosaveStatus {...editor} />
       </div>
     </div>

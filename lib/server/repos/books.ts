@@ -11,6 +11,10 @@ import type { BinderDatabase } from '../db/connection';
 export class BookRepository {
   constructor(private readonly database: BinderDatabase, private readonly userId: string) { }
 
+  listAll(): Book[] {
+    return this.database.select().from(books).where(eq(books.userId, this.userId)).orderBy(asc(books.year), asc(books.order)).all();
+  }
+
   async listByYear(year: string): Promise<Book[]> {
     const userId = this.userId;
     const db = this.database;

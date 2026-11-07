@@ -48,7 +48,7 @@ function destination(row: Row) {
   const period = encodeURIComponent(row.period.replace(/^(day|week|month|year):/, ''));
   if (row.kind === 'todos' || row.kind === 'focusNotes') {
     const paths: Record<string, string> = { day: 'daily', week: 'week', month: 'monthly', year: 'annual' };
-    return paths[row.scope] ? `/${paths[row.scope]}/${period}` : '/mandalart';
+    return row.scope === 'inbox' ? '/inbox' : paths[row.scope] ? `/${paths[row.scope]}/${period}` : '/mandalart';
   }
   if (row.kind === 'annualGoals') return `/annual/${period}`;
   if (row.kind === 'books') return `/reading?year=${period}`;

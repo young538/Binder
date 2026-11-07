@@ -1,7 +1,7 @@
 /** Shared collection names for backup validation, persistence and UI previews. */
 export const BACKUP_COLLECTIONS = [
   'goals', 'categories', 'timeBlocks', 'retrospectives', 'todos',
-  'focusNotes', 'annualGoals', 'habits', 'habitLogs', 'books',
+  'focusNotes', 'annualGoals', 'habits', 'habitLogs', 'books', 'weeklyTemplates',
 ] as const;
 
 export type BackupCollection = typeof BACKUP_COLLECTIONS[number];

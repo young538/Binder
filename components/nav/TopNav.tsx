@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut, Sun, Search } from 'lucide-react';
+import { Calendar, CalendarDays, CalendarRange, Target, NotebookPen, BookOpen, Settings as SettingsIcon, LogOut, Sun, Search, Inbox } from 'lucide-react';
 import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
 import { format } from 'date-fns';
 import { useBinder } from '@/store';
@@ -72,6 +72,7 @@ export const TopNav = () => {
         </span>
       )}
       <Link href="/search" aria-label="전체 검색" title="전체 검색 (Ctrl/Cmd+K)" className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"><Search size={18} /></Link>
+      <Link href="/inbox" aria-label="수집함" title="수집함" className="rounded-full p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"><Inbox size={18} /></Link>
       <Link href="/settings"
         className={`p-2 rounded-full transition-colors
           ${settingsActive

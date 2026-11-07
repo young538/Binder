@@ -178,7 +178,7 @@ if ($LASTEXITCODE -ne 0) { throw 'DB 백업 실패' }
 Copy-Item -LiteralPath 'data/backup-latest.sqlite' -Destination (Join-Path 'backups' $binderBackupName)
 ```
 
-이 예는 Compose의 기본 DB 경로·볼륨 기준입니다. 다른 DB_PATH를 사용하면 생성 파일 위치와 복사 경로를 맞춥니다. `backup-latest.sqlite`는 다음 실행에서 갱신되므로 날짜 이름으로 보관하는 단계까지 완료합니다. 운영 중인 정기 백업 스케줄이 저장소에 구현된 것은 아니며 자동화 등록 여부는 운영 환경에서 확인해야 합니다.
+이 예는 Compose의 기본 DB 경로·볼륨 기준입니다. 다른 DB_PATH를 사용하면 생성 파일 위치와 복사 경로를 맞춥니다. `backup-latest.sqlite`는 다음 실행에서 갱신되므로 날짜 이름으로 보관하는 단계까지 완료합니다. 이 수동 백업과 별도로 위 `backup` 서비스가 정기 백업을 수행하므로 서비스 상태와 최근 성공 시각도 확인합니다.
 
 ## 9. 복구 순서
 

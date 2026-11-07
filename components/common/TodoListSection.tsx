@@ -16,6 +16,7 @@ import { TodoStatusButton } from '@/components/common/TodoStatusButton';
 import { TodoTitleEditor } from '@/components/common/TodoTitleEditor';
 import { TodoRolloverButton } from '@/components/common/TodoRolloverButton';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
+import { TodoDetailsButton } from '@/components/common/TodoDetailsButton';
 
 interface Props {
   scope: TodoScope;
@@ -98,6 +99,8 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                   textClassName="text-sm text-zinc-800 dark:text-zinc-50"
                 />
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  {t.repeatRule && <span className="text-[11px] text-blue-600">↻ {t.repeatRule.interval}{({ day: '일', week: '주', month: '개월' })[t.repeatRule.unit]}마다</span>}
+                  {t.sourceRetro && <span className="text-[11px] text-zinc-500">회고에서 추가</span>}
                   {cat && (
                     <span
                       className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
@@ -119,6 +122,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                   )}
                 </div>
               </div>
+              <TodoDetailsButton todo={t} />
               <select
                 value={t.categoryId ?? ''}
                 onChange={(e) => setCategory(t.id, e.target.value || null)}

@@ -19,12 +19,13 @@ SQLite는 서버 파일에 저장하며 WAL 모드입니다. 식별자는 ULID �
 | users | id, username(고유), passwordHash, createdAt, updatedAt | 로그인, CLI |
 | goals | title, parentId, level, color, order, 시각 | 보드, 목표 선택, 요약 |
 | categories | name, color, order | 설정, TODO·습관·시간 색 |
-| todos | title, scope, scopeKey, status, order, parentGoalId, priority, categoryId, note, 시각 | 일·주·월 TODO |
+| todos | title, scope, scopeKey, status, order, parentGoalId, priority, categoryId, note, repeatRule, sourceRetro, completedAt, repeatGenerated, 시각 | 일·주·월 TODO·수집함·반복 |
 | focus_notes | scope, scopeKey, text, updatedAt | 한 문장, 자유노트, 일일 메모 |
 | annual_goals | year, order, title, deadline, action, metric, target, monthlyTargets, monthlyActuals, monthlyActualAdjustments(내부), parentGoalId, 시각 | 연간, 보드 연결 |
 | habits | name, color, order, schedule, categoryId, note, parentGoalId, annualGoalId, 시각 | 일일 관리, 일·주·월 체크 |
 | habit_logs | habitId, date, createdAt | 체크 여부와 달성 수 |
 | books | year, order, category, title, oneThing, keywords, reviewUrl, startedAt, finishedAt, 시각 | 독서, 일일 책 선택 |
+| weekly_templates | name, blocks(JSON), 시각 | 요일별 계획 시간표 스냅샷 |
 | retrospectives | type, dateOrWeek, rating, template, freeText, 시각 | 일·주 회고, 일일 독서 |
 | time_blocks | date, startMin, endMin, text, kind, categoryId, goalId, todoId, 시각 | 일일·주간 시간표, 회고 통계 |
 | settings | userId, firstDayOfWeek, gridMinutes, dayStartHour, dayEndHour, theme | 공통 표시 설정 |
@@ -55,6 +56,7 @@ SQLite는 서버 파일에 저장하며 WAL 모드입니다. 식별자는 ULID �
 | 주 TODO | week | `2026-W37` |
 | 월 TODO | month | `2026-09` |
 | 연 TODO(타입/API 지원) | year | `2026` |
+| 수집함 TODO | inbox | `inbox` |
 | 올해 한 문장 | year | `year:2026` |
 | 이번 달 한 문장 | month | `month:2026-09` |
 | 이번 주 한 문장 | week | `week:2026-W37` |
@@ -97,7 +99,8 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 | 계산 위치 | 범위와 기준 |
 |---|---|
 | 주간 GoalCoverageBar | 선택 주 actual만 |
-| 주간 회고 WeeklySummary | 선택 주 actual만, 일 TODO 완료율 |
+| 주간 회고 WeeklySummary의 실행 통계 | 선택 주 actual만, 일 TODO 완료율 |
+| PlanActualComparison | 선택 주 plan/actual을 카테고리별로 각각 합산, 실제−계획 차이 |
 | aggregate.ts | 전달받은 모든 블록; 종류 필터 없음 |
 | `/api/progress` | 선택 date 기준(생략 시 현재 날짜); actual 시간만 |
 
@@ -117,9 +120,13 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 기간 조회 인덱스와 사용자 인덱스는 있지만 `habitId+date`, `scope+scopeKey`, `type+dateOrWeek`의 논리상 단일 레코드를 모두 UNIQUE로 강제하지 않습니다. 습관 토글, 회고·한 문장 upsert는 즉시 트랜잭션으로 read/write를 직렬화합니다. 연간 기본 7행 확보도 조회와 부족분 삽입을 같은 즉시 트랜잭션에서 수행합니다. 다른 경로와 외부 직접 DB 쓰기까지 UNIQUE 제약으로 강제하는 것은 아닙니다.
 
-내보내기는 version 10의 10개 배열과 settings를 사용합니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupDocument`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
+내보내기는 version 11의 11개 배열과 settings를 사용합니다. 주간 템플릿과 새 TODO 필드도 포함하며 이전 필드만 있는 백업은 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupDocument`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
 
 ## TODO 작업 기록
+
+`sourceRetro`는 `{type:'daily'|'weekly', dateOrWeek}` 형태의 원본 회고 위치이며 ID 외래키가 아닙니다. `repeatRule`은 `{unit:'day'|'week'|'month', interval:1..365, basis:'scheduled'|'completed'}`이고 day TODO에만 허용합니다. 두 필드는 null로 해제할 수 있습니다. `completedAt`과 `repeatGenerated`는 서버가 관리하는 완료 시각·다음 항목 생성 여부이며 JSON 백업에서도 보존합니다.
+
+주간 템플릿의 `blocks`는 `dayOffset`(월=0~일=6), `startMin`, `endMin`, `text`, `categoryId`, `goalId?` 배열입니다. TODO 연결은 포함하지 않습니다. 상세 규칙은 [연결 기능 안내](10-planning-workflow.md)를 확인하세요. 기존 목표 진행률은 직접 연결 기준을 유지하며 `/goal-review`만 자손을 포함합니다.
 
 0006 마이그레이션은 `todo_create_requests`(user_id+request_key 복합 PK, 본문 해시·최초 응답·생성 시각)와 `todo_trash`(TODO ID PK, 소유자·스냅샷·만료 시각)를 추가합니다. 요청 기록은 삭제 이후의 지연 재요청도 새 항목을 만들지 않도록 유지합니다. 휴지통은 30초 후 복원이 차단되고 다음 TODO 삭제 시 만료 행을 정리합니다.
 

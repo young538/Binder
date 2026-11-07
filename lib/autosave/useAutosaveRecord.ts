@@ -99,5 +99,11 @@ export function useAutosaveRecord<T>(options: Options<T>) {
       if (loaded) void controller.current?.queue.flush();
       else setAttempt(previous => previous + 1);
     },
+    flush: async () => {
+      if (!loaded || controller.current?.key !== key) throw new Error('기록을 먼저 불러와 주세요.');
+      const queue = controller.current.queue;
+      await queue.flush();
+      if (queue.status === 'error') throw new Error('회고를 저장하지 못했습니다.');
+    },
   };
 }

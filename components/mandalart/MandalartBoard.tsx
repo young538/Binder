@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useLatest } from '@/lib/hooks/useLatest';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { X, Trash2 } from 'lucide-react';
@@ -141,6 +142,7 @@ export const MandalartBoard = () => {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-50">🎯 One-Thing 보드</h1>
+      <Link href="/goal-review" className="mb-3 inline-block rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-700 dark:border-blue-800 dark:text-blue-300">목표 실행 점검 →</Link>
       <p className="text-sm text-zinc-500 mb-6">인생 한 문장 → 8개 핵심 목표 → 각 목표의 세부 8개</p>
 
       {/* 데스크톱(lg+)에서는 격자 좌측 / 자유노트 우측, 그 외에는 격자 위 / 노트 아래 */}

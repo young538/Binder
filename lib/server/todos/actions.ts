@@ -1,11 +1,13 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { and, asc, eq, inArray, lte, max } from 'drizzle-orm';
+import { and, asc, eq, inArray, lte, max, sql } from 'drizzle-orm';
 import { addDays, format, parseISO } from 'date-fns';
 import type { Todo } from '@/lib/types';
 import { TODO_UNDO_MS, type TodoDeleteResult, type TodoRolloverResult } from '@/lib/todos/contracts';
 import { isDate } from '@/lib/validation/mutations';
 import { newId } from '@/lib/utils/id';
+import { nextRepeatDate } from '@/lib/todos/planning';
+import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
 import { categories, goals, todos, todoCreateRequests, todoTrash } from '../db/schema';
 import { DomainError } from '../errors';
@@ -33,11 +35,47 @@ export class TodoActions {
         }
       }
       const timestamp = this.now().toISOString();
-      const row: Todo = { ...data, id: newId(), userId: this.userId, createdAt: timestamp, updatedAt: timestamp };
-      tx.insert(todos).values(row).run();
+      // A reflection action has an explicit origin; ordinary same-title TODOs remain independent.
+      const linked = data.sourceRetro ? tx.select().from(todos).where(and(
+        eq(todos.userId, this.userId), eq(todos.title, data.title), eq(todos.scope, data.scope), eq(todos.scopeKey, data.scopeKey),
+        sql`json_extract(${todos.sourceRetro}, '$.type') = ${data.sourceRetro.type}`,
+        sql`json_extract(${todos.sourceRetro}, '$.dateOrWeek') = ${data.sourceRetro.dateOrWeek}`,
+      )).get() as Todo | undefined : undefined;
+      const row: Todo = linked ?? { ...data, id: newId(), userId: this.userId, createdAt: timestamp, updatedAt: timestamp,
+        completedAt: data.status === 'done' ? timestamp : null, repeatGenerated: false };
+      if (!linked) tx.insert(todos).values(row).run();
       if (requestKey) tx.insert(todoCreateRequests).values({
         userId: this.userId, requestKey, payloadHash, response: row, createdAt: timestamp,
       }).run();
+      return row;
+    }, { behavior: 'immediate' });
+  }
+
+  update(id: string, patch: Partial<NewTodo>, toggle = false): Todo | null {
+    return this.db.transaction(tx => {
+      const predicate = and(eq(todos.userId, this.userId), eq(todos.id, id));
+      const existing = tx.select().from(todos).where(predicate).get() as Todo | undefined;
+      if (!existing) return null;
+      const timestamp = this.now().toISOString();
+      const row = { ...existing, ...stripUndefined(patch), updatedAt: timestamp };
+      if (toggle) row.status = existing.status === 'done' ? 'pending' : 'done';
+      if (row.status !== existing.status) row.completedAt = row.status === 'done' ? timestamp : null;
+      if (row.status === 'done' && existing.status !== 'done' && row.repeatRule && !existing.repeatGenerated) {
+        const completedDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(this.now());
+        const date = nextRepeatDate(row.scopeKey, row.repeatRule, completedDate);
+        if (!isDate(date)) throw new DomainError('다음 반복 날짜를 만들 수 없습니다.', 400);
+        const last = tx.select({ order: max(todos.order) }).from(todos).where(and(
+          eq(todos.userId, this.userId), eq(todos.scope, 'day'), eq(todos.scopeKey, date),
+        )).get()?.order ?? -1;
+        const next: Todo = { ...row, id: newId(), scope: 'day', scopeKey: date, status: 'pending', order: last + 1,
+          repeatGenerated: false, completedAt: null, createdAt: timestamp };
+        // Deleting a linked goal/category must not copy a dangling reference forward.
+        if (next.categoryId && !tx.select().from(categories).where(and(eq(categories.id, next.categoryId), eq(categories.userId, this.userId))).get()) next.categoryId = null;
+        if (next.parentGoalId && !tx.select().from(goals).where(and(eq(goals.id, next.parentGoalId), eq(goals.userId, this.userId))).get()) next.parentGoalId = null;
+        tx.insert(todos).values(next).run();
+        row.repeatGenerated = true;
+      }
+      tx.update(todos).set(row).where(predicate).run();
       return row;
     }, { behavior: 'immediate' });
   }

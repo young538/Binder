@@ -14,7 +14,18 @@ export interface Goal {
 
 export type TodoPriority = 1 | 2 | 3;
 
-export type TodoScope = 'day' | 'week' | 'month' | 'year';
+export type TodoScope = 'day' | 'week' | 'month' | 'year' | 'inbox';
+
+export interface TodoRepeatRule {
+  unit: 'day' | 'week' | 'month';
+  interval: number;
+  basis: 'scheduled' | 'completed';
+}
+
+export interface RetroSource {
+  type: 'daily' | 'weekly';
+  dateOrWeek: string;
+}
 
 export type TodoStatus = 'pending' | 'done' | 'postponed' | 'delegated' | 'cancelled';
 
@@ -48,6 +59,10 @@ export interface Todo {
   priority?: TodoPriority | null;
   categoryId?: string | null;
   note?: string | null;
+  repeatRule?: TodoRepeatRule | null;
+  sourceRetro?: RetroSource | null;
+  completedAt?: string | null;
+  repeatGenerated?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +101,24 @@ export interface Category {
   name: string;
   color: string;
   order: number;
+}
+
+export interface WeeklyTemplateBlock {
+  dayOffset: number;
+  startMin: number;
+  endMin: number;
+  text: string;
+  categoryId: string;
+  goalId?: string | null;
+}
+
+export interface WeeklyTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  blocks: WeeklyTemplateBlock[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type RetroRating = 1 | 2 | 3 | 4 | 5;

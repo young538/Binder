@@ -7,6 +7,7 @@ import { authenticated } from '@/lib/server/http';
 
 export const GET = authenticated(async (session, req: NextRequest) => {
   const repositories = getUserRepositories(session.userId);
+  if (req.nextUrl.searchParams.get('all') === 'true') return NextResponse.json(repositories.books.listAll());
   const year = req.nextUrl.searchParams.get('year');
   if (!year) return NextResponse.json({ error: 'year required' }, { status: 400 });
   const rows = await repositories.books.listByYear(year);

@@ -1,6 +1,7 @@
 import { Book } from '../types';
 import { http } from './http';
 import { notifyMutation } from './events';
+export const listAllBooks = (): Promise<Book[]> => http.get<Book[]>('/api/books?all=true');
 
 export const listByYear = (year: string): Promise<Book[]> =>
   http.get<Book[]>(`/api/books?year=${encodeURIComponent(year)}`);

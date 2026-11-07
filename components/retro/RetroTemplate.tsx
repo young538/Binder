@@ -1,11 +1,14 @@
 'use client';
-import { Retrospective, RetroRating } from '@/lib/types';
+import { Retrospective, RetroRating, RetroSource } from '@/lib/types';
+import { RetroTodoAction } from './RetroTodoAction';
 import { GrowingTextarea } from '@/components/common/GrowingTextarea';
 
 interface Props {
   value: Partial<Retrospective>;
   onChange: (patch: Partial<Retrospective>) => void;
   layout?: 'stacked' | 'wide';
+  source?: RetroSource;
+  beforeCreate?: () => Promise<void>;
 }
 
 const RATINGS: { value: RetroRating; emoji: string }[] = [
@@ -16,7 +19,7 @@ const RATINGS: { value: RetroRating; emoji: string }[] = [
   { value: 5, emoji: '😊' },
 ];
 
-export const RetroTemplate = ({ value, onChange, layout = 'stacked' }: Props) => {
+export const RetroTemplate = ({ value, onChange, layout = 'stacked', source, beforeCreate }: Props) => {
   const tpl = value.template ?? {};
   const wide = layout === 'wide';
   const Textarea = wide ? GrowingTextarea : 'textarea';
@@ -69,7 +72,8 @@ export const RetroTemplate = ({ value, onChange, layout = 'stacked' }: Props) =>
           className={textareaCls}
         />
       </label>
-      <label className="block">
+      <div>
+        <label className="block">
         <div className={`${fieldLabel} text-blue-700 dark:text-blue-400`}>→ 내일/다음주 1가지</div>
         <Textarea
           rows={2}
@@ -78,7 +82,9 @@ export const RetroTemplate = ({ value, onChange, layout = 'stacked' }: Props) =>
           onChange={(e) => onChange({ template: { nextStep: e.target.value } })}
           className={textareaCls}
         />
-      </label>
+        </label>
+        {source && <RetroTodoAction key={`${source.type}:${source.dateOrWeek}`} source={source} text={tpl.nextStep ?? ''} beforeCreate={beforeCreate} />}
+      </div>
       <label className={layout === 'wide' ? 'block lg:col-span-3' : 'block'}>
         <div className={`${fieldLabel} text-zinc-700 dark:text-zinc-300`}>✍️ 자유 메모</div>
         <Textarea
