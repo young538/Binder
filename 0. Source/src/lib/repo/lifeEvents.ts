@@ -2,7 +2,10 @@ import type { LifeEvent } from '../types';
 import { notifyMutation } from './events';
 import { http } from './http';
 
-type NewLifeEvent = Omit<LifeEvent, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
+type NewLifeEvent = Omit<
+  LifeEvent,
+  'id' | 'userId' | 'createdAt' | 'updatedAt' | 'googleCalendarId' | 'googleEventId' | 'googleUpdatedAt'
+>;
 
 export const listLifeEvents = (filters?: {
   startDate?: string;

@@ -3,7 +3,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { NotebookPen, Pencil, Plus } from 'lucide-react';
 import { useBinder } from '@/store';
 import { toIsoDate, minutesToTimeStr, WEEKDAYS_KO } from '@/lib/utils/date';
-import { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
+import { LifeEvent, TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { BlockEditor } from '@/components/week/BlockEditor';
 import { DailyRetroSheet } from '@/components/week/DailyRetroSheet';
@@ -15,6 +15,7 @@ import { useTimeGridInteraction } from './useTimeGridInteraction';
 interface Props {
   dates: Date[];
   blocks: TimeBlock[];
+  calendarEvents?: LifeEvent[];
   beforeGrid?: (onMakeBlock: (todo: Todo) => void) => ReactNode;
 }
 
@@ -38,7 +39,7 @@ const addDaysToIsoDate = (date: string, amount: number) => {
   return toIsoDate(addDays(new Date(year, month - 1, day), amount));
 };
 
-export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
+export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Props) => {
   const { categories, settings } = useBinder();
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroDate, setRetroDate] = useState<string | null>(null);
@@ -211,6 +212,13 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
         {dates.map((d, i) => {
           const dateStr = toIsoDate(d);
           const isToday = dateStr === today;
+          const allDayEvents = calendarEvents.filter(
+            ev =>
+              ev.allDay &&
+              (ev.kind === 'event'
+                ? ev.date <= dateStr && (ev.endDate ?? ev.date) >= dateStr
+                : ev.kind === 'dday' && ev.date === dateStr),
+          );
           return (
             <div
               key={`h1-${i}`}
@@ -225,6 +233,22 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                 <span className="text-zinc-500 dark:text-zinc-400 mr-1">{WEEKDAYS_KO[(d.getDay() + 6) % 7]}</span>
                 {d.getMonth() + 1}/{d.getDate()}
               </div>
+              {allDayEvents.length > 0 && (
+                <div className="mt-1 flex flex-wrap justify-center gap-1">
+                  {allDayEvents.slice(0, 3).map(ev => (
+                    <span
+                      key={ev.id}
+                      title={ev.title}
+                      className="max-w-[120px] truncate rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200"
+                    >
+                      {ev.title}
+                    </span>
+                  ))}
+                  {allDayEvents.length > 3 && (
+                    <span className="text-[10px] text-zinc-400">+{allDayEvents.length - 3}</span>
+                  )}
+                </div>
+              )}
               <button
                 onClick={() => setRetroDate(dateStr)}
                 title="회고"
@@ -282,6 +306,15 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
           ];
           return subCols.map(({ kind, gridColumn }) => {
             const subBlocks = blocks.filter(b => b.date === dateStr && (b.kind ?? 'plan') === kind);
+            const timedCalendarEvents = kind === 'plan'
+              ? calendarEvents.filter(
+                  ev =>
+                    !ev.allDay &&
+                    ev.startMin != null &&
+                    ev.endMin != null &&
+                    ev.date === dateStr,
+                )
+              : [];
             return (
               <div
                 key={`col-${col}-${kind}`}
@@ -387,6 +420,61 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                   );
                 })()}
 
+                {timedCalendarEvents.map(ev => {
+                  if (ev.endMin! <= geometry.startMin || ev.startMin! >= geometry.endMin) return null;
+                  const visStart = Math.max(geometry.startMin, ev.startMin!);
+                  const visEnd = Math.min(geometry.endMin, ev.endMin!);
+                  if (visEnd <= visStart) return null;
+                  const pos = geometry.blockPosition({ startMin: visStart, endMin: visEnd });
+                  const height = Math.max(18, pos.height);
+                  const alreadyPlanned = subBlocks.some(
+                    b => b.startMin === ev.startMin && b.endMin === ev.endMin && b.text === ev.title,
+                  );
+                  return (
+                    <button
+                      key={`gcal-${ev.id}`}
+                      type="button"
+                      data-calendar-event="true"
+                      data-testid="calendar-event-overlay"
+                      aria-label={`${ev.title} (${minutesToTimeStr(ev.startMin!)}–${minutesToTimeStr(ev.endMin!)}) 계획 블록으로 가져오기`}
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedSlot(null);
+                        setSelectedBlockId(null);
+                        setEditor({
+                          date: dateStr,
+                          startMin: ev.startMin!,
+                          endMin: ev.endMin!,
+                          kind: 'plan',
+                          prefilledText: ev.title,
+                          goalId: ev.goalId ?? null,
+                          projectId: ev.projectId ?? null,
+                        });
+                      }}
+                      className={`absolute left-0.5 right-0.5 z-[5] overflow-hidden rounded-md border border-dashed text-left transition ${
+                        alreadyPlanned
+                          ? 'border-indigo-300/60 bg-indigo-50/35 opacity-60 dark:border-indigo-800/60 dark:bg-indigo-950/20'
+                          : 'border-indigo-400 bg-indigo-50/80 hover:bg-indigo-100/90 dark:border-indigo-600 dark:bg-indigo-950/45 dark:hover:bg-indigo-900/60'
+                      }`}
+                      style={{ top: pos.top, height }}
+                      title={`${ev.title} · 클릭해 계획 블록으로 가져오기`}
+                    >
+                      <div className="px-1.5 py-0.5">
+                        <div className="truncate text-[11px] font-semibold text-indigo-800 dark:text-indigo-200">
+                          {alreadyPlanned ? '✓ ' : '📅 '}
+                          {ev.title}
+                        </div>
+                        {height >= 34 && (
+                          <div className="truncate text-[10px] text-indigo-600/80 dark:text-indigo-300/80">
+                            {minutesToTimeStr(ev.startMin!)}–{minutesToTimeStr(ev.endMin!)}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+
                 {subBlocks.map((b) => {
                   const spanRows = (b.endMin - b.startMin) / gridMinutes;
                   const color = catColor(b.categoryId);
@@ -420,7 +508,7 @@ export const TimeGrid = ({ dates, blocks, beforeGrid }: Props) => {
                       onPointerMove={e => interaction.handleBlockPointerMove(e, b)}
                       onPointerUp={e => interaction.handleBlockPointerUp(e, b)}
                       onPointerCancel={e => interaction.handleBlockPointerCancel(e, b)}
-                      className={`absolute left-0.5 right-0.5 rounded-md text-left overflow-hidden transition
+                      className={`absolute left-0.5 right-0.5 z-10 rounded-md text-left overflow-hidden transition
                         cursor-grab active:cursor-grabbing touch-manipulation focus-visible:outline-2 focus-visible:outline-blue-500
                         ${isDraggingThis ? 'opacity-45' : ''}
                         ${

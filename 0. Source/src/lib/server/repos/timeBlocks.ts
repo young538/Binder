@@ -27,7 +27,16 @@ export class TimeBlockRepository {
     const userId = this.userId;
     const db = this.database;
     const now = new Date().toISOString();
-    const row: TimeBlock = { ...data, id: newId(), userId, createdAt: now, updatedAt: now };
+    const row: TimeBlock = {
+      ...data,
+      goalId: data.goalId ?? null,
+      projectId: data.projectId ?? null,
+      todoId: data.todoId ?? null,
+      id: newId(),
+      userId,
+      createdAt: now,
+      updatedAt: now,
+    };
     await db.insert(timeBlocks).values(row).run();
     return row;
   }

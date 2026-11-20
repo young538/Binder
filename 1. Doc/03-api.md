@@ -168,6 +168,14 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | POST `/api/metrics/[id]/entries` | `{metricId, date, value, note?}` | 201, `(metricId, date)` 기준 upsert된 LifeMetricEntry |
 | DELETE `/api/metrics/[id]/entries?entryId=...` | 쿼리 `entryId` 필수 | `{ok:true}` |
 | POST `/api/events/import-ics` | `{icsText?, url?}` | `{imported, updated, total}`; RFC 5545 `VEVENT` 파싱 및 `externalUid` 기준 idempotent upsert(원격 URL은 HTTPS·공개 IP만 허용, 2MB 제한) |
+| GET `/api/integrations/google/status` | 없음 | `{configured, connected, redirectUri, connection}` (토큰 제외) |
+| GET `/api/integrations/google/connect` | 쿼리 `returnTo?` | 서명된 state 쿠키 발급 후 Google OAuth 동의 화면으로 302 리다이렉트(미설정 시 400) |
+| GET `/api/integrations/google/callback` | Google OAuth `code`, `state` | 토큰 암호화 저장·초기 동기화 후 `returnTo?google=connected\|error` 리다이렉트 |
+| PATCH `/api/integrations/google/settings` | `selectedCalendarIds?`, `pushCalendarId?`, `syncEnabled?`, `autoPushEvents?` | 갱신된 `GoogleCalendarConnectionSummary`; 읽기 전용 캘린더 푸시 지정은 400 |
+| POST `/api/integrations/google/sync` | 없음 | `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt}`; 양방향 수동 동기화 |
+| DELETE `/api/integrations/google/disconnect` | 쿼리 `purgeEvents=true\|false` | `{ok:true, deletedEvents}`; best-effort 토큰 폐기 및 연결 해제(옵션 시 Google 동기화 일정 삭제) |
+
+Google 캘린더가 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화되면 `POST /api/events`, `PATCH /api/events/[id]`, `DELETE /api/events/[id]` 시 일반 일정(`kind='event'`) 변경을 Google 캘린더에도 실시간 반영합니다(외부 일시 오류는 `lastSyncError`에 기록하고 로컬 저장은 유지합니다). `googleCalendarId`·`googleEventId`·`googleUpdatedAt`는 서버 관리 필드이므로 클라이언트 직접 수정은 400으로 거절합니다.
 
 수집함 조회는 `/api/todos?scope=inbox&scopeKey=inbox`입니다. 회고 연결·반복 생성은 기존 TODO POST/PATCH와 상태 토글 경로를 사용합니다. 선택 필드 `sourceRetro={type,dateOrWeek}`와 `repeatRule={unit,interval,basis}`를 허용합니다. 두 필드의 null은 해제입니다. `completedAt`·`repeatGenerated`는 일반 POST/PATCH에서 거절하며 서버 응답·백업에는 포함합니다. 회고 생성 요청은 같은 원본·제목·기간의 기존 항목이 있으면 이를 반환합니다. 일반 TODO는 제목 중복을 허용합니다.
 

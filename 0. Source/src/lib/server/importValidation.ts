@@ -55,6 +55,14 @@ export function validateImport(
         delete fields.completedAt;
         delete fields.repeatGenerated;
       }
+      if (name === 'lifeEvents') {
+        if (fields.googleCalendarId !== undefined && fields.googleCalendarId !== null && typeof fields.googleCalendarId !== 'string') fail('Invalid googleCalendarId');
+        if (fields.googleEventId !== undefined && fields.googleEventId !== null && typeof fields.googleEventId !== 'string') fail('Invalid googleEventId');
+        if (fields.googleUpdatedAt !== undefined && fields.googleUpdatedAt !== null && !timestamp(fields.googleUpdatedAt)) fail('Invalid googleUpdatedAt');
+        delete fields.googleCalendarId;
+        delete fields.googleEventId;
+        delete fields.googleUpdatedAt;
+      }
       validateFields(name, fields);
       validateRelationships(name, fields);
       const owner = lookup.ownerOf(name, id);

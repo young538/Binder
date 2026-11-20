@@ -14,6 +14,8 @@ import { PATCH as patchSettingsRoute } from '@/app/api/settings/route';
 import { PUT as retroRoute } from '@/app/api/retrospectives/route';
 import { POST as createSubscriptionRoute } from '@/app/api/subscriptions/route';
 import { PATCH as patchSubscriptionRoute } from '@/app/api/subscriptions/[id]/route';
+import { POST as createEventRoute } from '@/app/api/events/route';
+import { PATCH as patchGoogleSettingsRoute } from '@/app/api/integrations/google/settings/route';
 import { POST as importRoute } from '@/app/api/import/route';
 import { GET as exportRoute } from '@/app/api/export/route';
 
@@ -167,6 +169,61 @@ describe('mutation request boundary', () => {
       paymentMethod: null,
       url: null,
       note: null,
+    });
+  });
+
+  it('rejects spoofed Google fields on events and validates Google settings patch payloads', async () => {
+    const validEvent = {
+      title: '미팅',
+      date: '2026-11-20',
+      kind: 'event',
+      allDay: false,
+      startMin: 600,
+      endMin: 660,
+    };
+    expect((await createEventRoute(request({ ...validEvent, googleEventId: 'spoof' }))).status).toBe(400);
+    expect((await createEventRoute(request({ ...validEvent, googleCalendarId: 'primary' }))).status).toBe(400);
+    expect((await createEventRoute(request({ ...validEvent, googleUpdatedAt: now }))).status).toBe(400);
+    expect((await createEventRoute(request(validEvent))).status).toBe(201);
+
+    // Not connected yet -> 400
+    expect((await patchGoogleSettingsRoute(request({ autoPushEvents: false }))).status).toBe(400);
+
+    getDb().insert(schema.googleCalendarConnections).values({
+      userId: auth.userId,
+      googleEmail: 'user@gmail.com',
+      accessTokenEnc: 'enc-a',
+      refreshTokenEnc: 'enc-r',
+      tokenExpiresAt: now,
+      selectedCalendarIds: ['primary'],
+      pushCalendarId: 'primary',
+      calendarMeta: [
+        { id: 'primary', summary: '내 일정', backgroundColor: null, primary: true, accessRole: 'owner' },
+        { id: 'ro', summary: '공유 일정', backgroundColor: null, primary: false, accessRole: 'reader' },
+      ],
+      syncEnabled: true,
+      autoPushEvents: true,
+      createdAt: now,
+      updatedAt: now,
+    }).run();
+
+    for (const badPatch of [
+      {},
+      { extraField: 1 },
+      { pushCalendarId: 'unknown-cal' },
+      { pushCalendarId: 'ro' }, // reader calendar cannot be push target
+      { selectedCalendarIds: ['not-in-meta'] },
+    ]) {
+      expect((await patchGoogleSettingsRoute(request(badPatch))).status).toBe(400);
+    }
+
+    const okRes = await patchGoogleSettingsRoute(
+      request({ selectedCalendarIds: ['primary', 'ro'], autoPushEvents: false }),
+    );
+    expect(okRes.status).toBe(200);
+    expect(await okRes.json()).toMatchObject({
+      selectedCalendarIds: ['primary', 'ro'],
+      autoPushEvents: false,
     });
   });
 });

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { GoogleCalendarApiClient } from '@/lib/server/googleCalendar/client';
+import { getGoogleOAuthConfig } from '@/lib/server/googleCalendar/config';
+import { GoogleCalendarSyncService } from '@/lib/server/googleCalendar/syncService';
 import { authenticated } from '@/lib/server/http';
 import { getUserRepositories } from '@/lib/server/repos';
 import { isDate, readMutation } from '@/lib/server/validation';
@@ -24,5 +27,11 @@ export const POST = authenticated(async (session, req: Request) => {
   if (body instanceof Response) return body;
   const repositories = getUserRepositories(session.userId);
   const row = repositories.lifeEvents.create(body);
-  return NextResponse.json(row, { status: 201 });
+  const syncService = new GoogleCalendarSyncService(
+    repositories,
+    new GoogleCalendarApiClient(),
+    getGoogleOAuthConfig(req),
+  );
+  const synced = await syncService.pushCreatedEvent(row);
+  return NextResponse.json(synced, { status: 201 });
 });

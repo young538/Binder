@@ -55,6 +55,10 @@ npm run dev -- --port 3101
 | DB_PATH | SQLite 파일 경로, 기본 `./data/binder.sqlite` |
 | NODE_ENV | production이면 secure 쿠키 |
 | PORT | 서버 포트; Docker 기본 3000, E2E 3100 |
+| GOOGLE_CLIENT_ID | (선택) Google OAuth 2.0 클라이언트 ID — 설정 시 Google 캘린더 양방향 연동 활성화 |
+| GOOGLE_CLIENT_SECRET | (선택) Google OAuth 2.0 클라이언트 보안 비밀번호 |
+| APP_PUBLIC_ORIGIN | (선택) 리버스 프록시 뒤에서 OAuth 콜백 origin 고정 (예: `https://young538.synology.me`) |
+| GOOGLE_REDIRECT_URI | (선택) OAuth 리디렉션 전체 URI 직접 지정 |
 
 APP_PASSWORD_HASH를 바꿔도 이미 존재하는 사용자 비밀번호는 갱신되지 않습니다. 초기 사용자가 없을 때만 생성에 사용합니다. 이후 변경은 users CLI의 passwd입니다.
 
@@ -143,6 +147,21 @@ $binderEnvLines.Replace('\$', '$$').Replace('DB_PATH=./data/binder.sqlite', 'DB_
 ```
 
 실제 해시·세션키를 문서나 Git에 넣지 않습니다. Compose가 읽는 파일명은 app.env입니다. `.dockerignore`는 app.env·환경 파일·로컬 백업·작업 사본을 빌드 컨텍스트에서 제외합니다. 새 해시 출력은 세션키도 매번 생성하므로 기존 app.env 전체를 교체하면 기존 로그인 쿠키도 영향을 받습니다.
+
+### Google 캘린더 OAuth 설정 (선택)
+
+Google 캘린더 양방향 연동을 사용하려면 Google Cloud Console에서 무료 웹 애플리케이션용 OAuth 클라이언트를 1회 발급받아 `app.env`(로컬은 `.env.local`)에 추가합니다.
+
+1. Google Cloud Console에서 프로젝트를 만들고 **API 및 서비스 → 라이브러리**에서 `Google Calendar API`를 사용 설정합니다.
+2. **OAuth 동의 화면**을 External로 설정하고 본인 Google 이메일을 테스트 사용자로 등록합니다.
+3. **사용자 인증 정보 → OAuth 클라이언트 ID (웹 애플리케이션)** 생성 시 **승인된 리디렉션 URI**에 운영 주소(`https://young538.synology.me/api/integrations/google/callback`) 또는 로컬 주소(`http://localhost:3101/api/integrations/google/callback`)를 입력합니다.
+4. 발급된 값을 환경변수 파일에 넣고 `docker compose -p binder up -d app`(또는 개발 서버 재시작)를 실행한 뒤 `/settings#google-calendar`에서 연결합니다.
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+APP_PUBLIC_ORIGIN=https://young538.synology.me
+```
 
 ## 8. 백업
 

@@ -1,6 +1,7 @@
 import { AccountPanel } from '@/components/settings/AccountPanel';
 import { CategoryEditor } from '@/components/settings/CategoryEditor';
 import { SettingsForm } from '@/components/settings/SettingsForm';
+import { GoogleCalendarPanel } from '@/components/settings/GoogleCalendarPanel';
 import { DataImportPanel } from '@/components/settings/DataImportPanel';
 import { DataExportPanel } from '@/components/settings/DataExportPanel';
 
@@ -11,6 +12,7 @@ export default function SettingsPage() {
       <AccountPanel />
       <CategoryEditor />
       <SettingsForm />
+      <GoogleCalendarPanel />
       <DataExportPanel />
       <DataImportPanel />
     </div>

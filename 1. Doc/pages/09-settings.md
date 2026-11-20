@@ -4,7 +4,7 @@
 
 ## 화면 구성
 
-`/settings`는 계정, 카테고리, 환경 설정, 데이터 내보내기, 데이터 가져오기 순서입니다. 최대 폭을 제한한 세로 카드 화면이며 모바일에서도 같은 구성을 사용합니다. 습관 편집은 현재 일일 페이지의 루틴 관리에 있습니다.
+`/settings`는 계정, 카테고리, 환경 설정, Google 캘린더 양방향 연동(`#google-calendar`), 데이터 내보내기, 데이터 가져오기 순서입니다. 최대 폭을 제한한 세로 카드 화면이며 모바일에서도 같은 구성을 사용합니다. 습관 편집은 현재 일일 페이지의 루틴 관리에 있습니다.
 
 ## 계정과 카테고리
 
@@ -25,6 +25,10 @@
 | 테마 | light | html data-theme, dark 스타일 |
 
 선택·입력 변경 즉시 PATCH하고 공통 데이터를 다시 읽습니다. 설정 행이 없으면 GET은 기본값만 반환하며 첫 PATCH에서 행을 생성합니다. 서버는 허용 필드·enum·시간 범위를 검증하고, SettingsRepository가 기존 설정과 합친 시작·종료 순서를 저장 트랜잭션 안에서 다시 검사합니다.
+
+## Google 캘린더 양방향 연동
+
+`#google-calendar` 패널([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx))에서 OAuth 연결 상태·리디렉션 URI를 확인하고, 가져올 캘린더 목록·바인더 일정을 보낼 쓰기 캘린더·실시간 푸시(`autoPushEvents`)·즉시 동기화·연결 해제를 관리합니다. OAuth 토큰은 `SESSION_SECRET` 기반 AES-256-GCM으로 암호화되어 SQLite에만 보관되며 JSON 백업에는 포함되지 않습니다.
 
 ## JSON 내보내기
 
@@ -55,6 +59,7 @@
 | [AccountPanel](../../0.%20Source/src/components/settings/AccountPanel.tsx) | 계정·로그아웃 |
 | [CategoryEditor](../../0.%20Source/src/components/settings/CategoryEditor.tsx) | 카테고리 CRUD |
 | [SettingsForm](../../0.%20Source/src/components/settings/SettingsForm.tsx) | 표시 설정 즉시 저장 |
+| [GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) / [syncService](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts) | Google OAuth 상태·캘린더 선택·양방향 동기화 |
 | [DataExportPanel](../../0.%20Source/src/components/settings/DataExportPanel.tsx) | JSON 다운로드 |
 | [DataImportPanel](../../0.%20Source/src/components/settings/DataImportPanel.tsx) | 파일 파싱·미리보기·실행 결과·공통 데이터 갱신 |
 | [백업 클라이언트](../../0.%20Source/src/lib/repo/backup.ts) | 가져오기 전송과 리소스 변경 알림 |

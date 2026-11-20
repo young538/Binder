@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 import { PENDING_ADMIN_USER_ID } from './constants';
-import type { Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
+import type { GoogleCalendarInfo, Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
 
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
@@ -406,6 +406,9 @@ export const lifeEvents = sqliteTable('life_events', {
   projectId: text('project_id'),
   goalId: text('goal_id'),
   externalUid: text('external_uid'),
+  googleCalendarId: text('google_calendar_id'),
+  googleEventId: text('google_event_id'),
+  googleUpdatedAt: text('google_updated_at'),
   note: text('note'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -413,6 +416,7 @@ export const lifeEvents = sqliteTable('life_events', {
   index('life_events_user_date_idx').on(t.userId, t.date),
   index('life_events_person_idx').on(t.personId),
   index('life_events_user_uid_idx').on(t.userId, t.externalUid),
+  index('life_events_user_google_idx').on(t.userId, t.googleCalendarId, t.googleEventId),
 ]);
 
 // Subscriptions — recurring fixed expenses / memberships
@@ -438,3 +442,21 @@ export const subscriptions = sqliteTable('subscriptions', {
   index('subscriptions_user_idx').on(t.userId),
   index('subscriptions_user_status_idx').on(t.userId, t.status),
 ]);
+
+// GoogleCalendarConnections — per-user encrypted OAuth tokens and sync preferences (excluded from JSON backups)
+export const googleCalendarConnections = sqliteTable('google_calendar_connections', {
+  userId: text('user_id').primaryKey(),
+  googleEmail: text('google_email').notNull(),
+  accessTokenEnc: text('access_token_enc').notNull(),
+  refreshTokenEnc: text('refresh_token_enc').notNull(),
+  tokenExpiresAt: text('token_expires_at').notNull(),
+  selectedCalendarIds: text('selected_calendar_ids', { mode: 'json' }).$type<string[]>().notNull(),
+  pushCalendarId: text('push_calendar_id').notNull(),
+  calendarMeta: text('calendar_meta', { mode: 'json' }).$type<GoogleCalendarInfo[]>().notNull(),
+  syncEnabled: integer('sync_enabled', { mode: 'boolean' }).notNull().default(true),
+  autoPushEvents: integer('auto_push_events', { mode: 'boolean' }).notNull().default(true),
+  lastSyncedAt: text('last_synced_at'),
+  lastSyncError: text('last_sync_error'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

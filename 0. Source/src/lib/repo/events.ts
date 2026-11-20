@@ -20,7 +20,8 @@ export type MutationResource =
   | 'notes'
   | 'people'
   | 'lifeEvents'
-  | 'subscriptions';
+  | 'subscriptions'
+  | 'googleCalendar';
 type Listener = (resource?: MutationResource) => void;
 
 const listeners = new Set<Listener>();

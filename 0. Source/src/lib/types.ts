@@ -351,6 +351,9 @@ export interface LifeEvent {
   projectId?: string | null;
   goalId?: string | null;
   externalUid?: string | null;
+  googleCalendarId?: string | null;
+  googleEventId?: string | null;
+  googleUpdatedAt?: string | null;
   note?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -411,4 +414,39 @@ export interface Subscription {
   order: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GoogleCalendarInfo {
+  id: string;
+  summary: string;
+  backgroundColor: string | null;
+  primary: boolean;
+  accessRole: string;
+}
+
+export interface GoogleCalendarConnectionSummary {
+  googleEmail: string;
+  selectedCalendarIds: string[];
+  pushCalendarId: string;
+  calendarMeta: GoogleCalendarInfo[];
+  syncEnabled: boolean;
+  autoPushEvents: boolean;
+  lastSyncedAt: string | null;
+  lastSyncError: string | null;
+}
+
+export interface GoogleCalendarStatus {
+  configured: boolean;
+  connected: boolean;
+  redirectUri: string;
+  connection: GoogleCalendarConnectionSummary | null;
+}
+
+export interface GoogleCalendarSyncResult {
+  pulledCreated: number;
+  pulledUpdated: number;
+  pulledDeleted: number;
+  pushedCreated: number;
+  calendarsSynced: number;
+  syncedAt: string;
 }

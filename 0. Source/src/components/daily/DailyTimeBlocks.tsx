@@ -5,9 +5,10 @@ import { CheckCheck, Plus, RotateCcw } from 'lucide-react';
 import { BlockEditor } from '@/components/week/BlockEditor';
 import { TimeGrid } from '@/components/common/TimeGrid';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { confirmPlansAsActual, getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { minutesToTimeStr } from '@/lib/utils/date';
-import type { TimeBlock, TimeBlockKind } from '@/lib/types';
+import type { LifeEvent, TimeBlock, TimeBlockKind } from '@/lib/types';
 import { useBinder } from '@/store';
 
 interface Props {
@@ -19,6 +20,7 @@ interface EditorState {
   startMin: number;
   endMin: number;
   kind: TimeBlockKind;
+  prefilledText?: string;
   categoryId?: string | null;
   goalId?: string | null;
   projectId?: string | null;
@@ -54,11 +56,35 @@ export const DailyTimeBlocks = ({ date }: Props) => {
     () => getTimeBlocksInRange(date, date).then(rows => rows.filter(block => block.date === date).sort(sortBlocks)),
     [], ['timeBlocks'],
   );
+  const { value: dayEvents } = useAsyncResource(
+    `day-events:${date}`,
+    () => listLifeEvents({ startDate: date, endDate: date }),
+    [], ['lifeEvents'],
+  );
   const error = loadError ? '하루 계획과 실제 기록을 불러오지 못했어요. 다시 시도해 주세요.' : '';
 
   // Older imported rows may not have kind; retain the historical plan default.
   const plans = useMemo(() => blocks.filter((block) => (block.kind ?? 'plan') === 'plan'), [blocks]);
   const actuals = useMemo(() => blocks.filter((block) => block.kind === 'actual'), [blocks]);
+  const timedDayEvents = useMemo(
+    () => dayEvents.filter(ev => !ev.allDay && ev.startMin != null && ev.endMin != null && ev.date === date),
+    [dayEvents, date],
+  );
+  const openEventAsPlan = (ev: LifeEvent) => {
+    const startMin = ev.startMin ?? (settings?.dayStartHour ?? 9) * 60;
+    const grid = settings?.gridMinutes ?? 30;
+    const endMin = ev.endMin ?? Math.min(1440, startMin + grid);
+    setEditor({
+      date,
+      startMin,
+      endMin,
+      kind: 'plan',
+      prefilledText: ev.title,
+      categoryId: categories[0]?.id ?? null,
+      goalId: ev.goalId ?? null,
+      projectId: ev.projectId ?? null,
+    });
+  };
   const unconfirmedPlans = useMemo(() => {
     const actualKeys = new Set(actuals.map(blockSig));
     return plans.filter(plan => !actualKeys.has(blockSig(plan)));
@@ -231,20 +257,51 @@ export const DailyTimeBlocks = ({ date }: Props) => {
       ) : (
         view === 'timeline' ? (
           <div className="max-h-[520px] overflow-y-auto overscroll-contain" data-daily-timeline>
-            <TimeGrid key={date} dates={dates} blocks={blocks} />
+            <TimeGrid key={date} dates={dates} blocks={blocks} calendarEvents={dayEvents} />
           </div>
         ) : (
-          <div className="grid divide-y divide-zinc-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-zinc-800">
-            {renderColumn('plan', '계획', plans)}
-            {renderColumn('actual', '실제 진행', actuals)}
+          <div>
+            {timedDayEvents.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-indigo-50/40 px-4 py-2.5 dark:border-zinc-800 dark:bg-indigo-950/20">
+                <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">캘린더 일정</span>
+                {timedDayEvents.map(ev => (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => openEventAsPlan(ev)}
+                    className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:bg-zinc-900 dark:text-indigo-300"
+                  >
+                    <span>
+                      {minutesToTimeStr(ev.startMin!)}–{minutesToTimeStr(ev.endMin!)} {ev.title}
+                    </span>
+                    <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">+ 계획</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="grid divide-y divide-zinc-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-zinc-800">
+              {renderColumn('plan', '계획', plans)}
+              {renderColumn('actual', '실제 진행', actuals)}
+            </div>
           </div>
         )
       )}
       {editor && (
         <BlockEditor
-          key={editor.existing?.id ?? `${editor.date}-${editor.kind}`}
-          initial={editor}
+          key={editor.existing?.id ?? `${editor.date}-${editor.kind}-${editor.startMin}-${editor.prefilledText ?? ''}`}
+          initial={{
+            date: editor.date,
+            startMin: editor.startMin,
+            endMin: editor.endMin,
+            kind: editor.kind,
+            text: editor.prefilledText,
+            categoryId: editor.categoryId,
+            goalId: editor.goalId,
+            projectId: editor.projectId,
+            todoId: editor.todoId,
+          }}
           existing={editor.existing}
+          prefilledText={editor.prefilledText}
           onClose={() => setEditor(null)}
           onSaved={() => undefined}
         />

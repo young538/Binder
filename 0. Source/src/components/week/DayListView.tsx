@@ -11,9 +11,11 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useBinder } from '@/store';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { useWeeklyData } from './WeeklyDataProvider';
-import { TimeBlock, Todo } from '@/lib/types';
+import { LifeEvent, TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
 import { BlockEditor } from './BlockEditor';
 import { DailyRetroSheet } from './DailyRetroSheet';
 import { DayTodoColumn } from './DayTodoColumn';
@@ -29,6 +31,9 @@ interface EditorState {
   date: string;
   startMin: number;
   endMin: number;
+  kind?: TimeBlockKind;
+  goalId?: string | null;
+  projectId?: string | null;
   prefilledTodoId?: string;
   prefilledText?: string;
 }
@@ -47,6 +52,14 @@ const DayListSession = ({ isoweek }: Props) => {
   const lastTap = useRef<{ id: string; time: number } | null>(null);
 
   const dates = weekDates(isoweek);
+  const weekStart = toIsoDate(dates[0]);
+  const weekEnd = toIsoDate(dates[6]);
+  const { value: weekEvents } = useAsyncResource(
+    `week-events:${weekStart}:${weekEnd}`,
+    () => listLifeEvents({ startDate: weekStart, endDate: weekEnd }),
+    [],
+    ['lifeEvents'],
+  );
   const today = toIsoDate(new Date());
   const todayIdx = dates.findIndex((d) => toIsoDate(d) === today);
 
@@ -54,6 +67,14 @@ const DayListSession = ({ isoweek }: Props) => {
 
   const current = dates[dayIdx];
   const dateStr = toIsoDate(current);
+
+  const dayEvents = weekEvents.filter(ev =>
+    !ev.allDay
+      ? ev.date === dateStr
+      : ev.kind === 'event'
+        ? ev.date <= dateStr && (ev.endDate ?? ev.date) >= dateStr
+        : ev.kind === 'dday' && ev.date === dateStr,
+  );
 
   const dayTodoCount = todos.filter((todo) => todo.scopeKey === dateStr).length;
 
@@ -96,6 +117,22 @@ const DayListSession = ({ isoweek }: Props) => {
       endMin: start + grid,
       prefilledTodoId: todo.id,
       prefilledText: todo.title,
+    });
+  };
+
+  const openFromEvent = (ev: LifeEvent) => {
+    const start = ev.startMin ?? (settings?.dayStartHour ?? 9) * 60;
+    const grid = settings?.gridMinutes ?? 30;
+    const end = ev.endMin ?? Math.min(1440, start + grid);
+    setSelectedBlockId(null);
+    setEditor({
+      date: dateStr,
+      startMin: start,
+      endMin: end,
+      kind: 'plan',
+      goalId: ev.goalId ?? null,
+      projectId: ev.projectId ?? null,
+      prefilledText: ev.title,
     });
   };
 
@@ -168,6 +205,32 @@ const DayListSession = ({ isoweek }: Props) => {
           </div>
         )}
       </div>
+
+      {dayEvents.length > 0 && (
+        <div className="border-b border-zinc-200 bg-indigo-50/40 px-4 py-2.5 dark:border-zinc-800 dark:bg-indigo-950/20">
+          <div className="mb-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+            캘린더 일정 ({dayEvents.length})
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {dayEvents.map(ev => (
+              <button
+                key={ev.id}
+                type="button"
+                onClick={() => openFromEvent(ev)}
+                className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-50 dark:border-indigo-900 dark:bg-zinc-900 dark:text-indigo-200"
+              >
+                <span>
+                  {!ev.allDay && ev.startMin != null && ev.endMin != null
+                    ? `${minutesToTimeStr(ev.startMin)}–${minutesToTimeStr(ev.endMin)} `
+                    : '종일 '}
+                  {ev.title}
+                </span>
+                <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">+ 계획</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ul className="p-4 space-y-2">
         {dayBlocks.length === 0 && (
@@ -270,10 +333,15 @@ const DayListSession = ({ isoweek }: Props) => {
 
       {editor && (
         <BlockEditor
+          key={editor.existing?.id ?? `${editor.date}-${editor.startMin}-${editor.prefilledText ?? ''}`}
           initial={{
             date: editor.date,
             startMin: editor.startMin,
             endMin: editor.endMin,
+            kind: editor.kind,
+            text: editor.prefilledText,
+            goalId: editor.goalId,
+            projectId: editor.projectId,
           }}
           existing={editor.existing}
           prefilledTodoId={editor.prefilledTodoId}

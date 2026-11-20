@@ -61,10 +61,14 @@
 1. **일정 · D-Day · 기념일 (`LifeEventsSection`)**:
    - `event`(단발/기간 일정), `dday`(D-Day), `anniversary`(매년 반복 기념일; `02-29`는 비윤년 `02-28`로 보정)를 관리합니다.
    - 다가오는 일정은 모닝 부팅(3일 이내 `upcomingEvents`), 일일 트래커 상단 스트립, 월간 달력 셀과 날짜 서랍에 자동 표시됩니다.
-2. **`.ics` 가져오기 (`IcsImportDialog` · `lib/ics.ts`)**:
+   - 일일(`/daily/[date]`)·주간(`/week/[isoweek]`) 시간표의 `계획` 컬럼에는 시간 지정 일정이 오버레이로 겹쳐 표시되며, 클릭 한 번으로 `BlockEditor`를 열어 계획 시간블록으로 가져올 수 있습니다(종일 일정은 날짜 헤더에 배지 표시).
+2. **Google 캘린더 양방향 연동 ([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) · [syncService.ts](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts))**:
+   - Google OAuth 2.0(`calendar`, `userinfo.email`)으로 인증해 선택한 Google 캘린더 일정을 `-30일 ~ +180일` 범위로 가져오고, 구글 측 삭제 일정도 바인더 동기화 일정에 반영합니다.
+   - 바인더에서 일반 일정을 생성·수정·삭제하면 연결된 Google 캘린더에 실시간 반영되며(단, `dday`·`anniversary` 및 기존 `.ics` 외부 일정은 로컬 유지), Google API 일시 오류 시 로컬 저장을 막지 않고 최근 오류만 기록합니다.
+3. **`.ics` 가져오기 (`IcsImportDialog` · `lib/ics.ts`)**:
    - `.ics` 파일 업로드, 원문 붙여넣기, 또는 직접 `https://` 구독 URL(2MB 제한, 사설/루프백 IP 및 리다이렉트 차단)을 통해 RFC 5545 `VEVENT`를 파싱합니다.
    - 줄 바꿈 접기(line unfolding), `VALUE=DATE` 배타적 `DTEND` -1일 보정, UTC `Z` 시각의 `Asia/Seoul` 변환을 지원하며, `externalUid` 기준으로 중복 생성 대신 기존 일정을 갱신합니다.
-3. **소중한 사람 CRM (`PeopleSection`)**:
+4. **소중한 사람 CRM (`PeopleSection`)**:
    - 이름, 관계, 안부 주기(`cadenceDays`), 최근 연락일(`lastContactAt`), 생일, 선물 아이디어를 관리합니다.
    - 안부 주기가 지난 인물은 목록 상단에 강조 표시되며 모닝 부팅(`duePeople`)에 노출됩니다. **오늘 안부 완료** 버튼으로 최근 연락일을 오늘로 갱신하거나 **오늘 할 일에 연락 추가** 버튼으로 `day` 할 일을 생성할 수 있습니다.
 

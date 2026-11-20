@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from 'date-fns';
 import { weekDates, toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import { weekKeyFromString } from '@/lib/utils/period';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { TimeGrid } from '@/components/common/TimeGrid';
@@ -20,12 +22,20 @@ interface Props {
 export const WeekGrid = ({ isoweek }: Props) => {
   const { blocks } = useWeeklyData();
   const dates = weekDates(isoweek);
+  const startDate = toIsoDate(dates[0]);
+  const endDate = toIsoDate(dates[6]);
+  const { value: weekEvents } = useAsyncResource(
+    `week-events:${startDate}:${endDate}`,
+    () => listLifeEvents({ startDate, endDate }),
+    [],
+    ['lifeEvents'],
+  );
   const prevWeek = toIsoWeek(addDays(dates[0], -7));
   const nextWeek = toIsoWeek(addDays(dates[0], 7));
 
   return (
     <div className="hidden md:block">
-      <TimeGrid dates={dates} blocks={blocks} beforeGrid={(openFromTodo) => (
+      <TimeGrid dates={dates} blocks={blocks} calendarEvents={weekEvents} beforeGrid={(openFromTodo) => (
         <>
           <header className="flex items-center gap-3 px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
             <Link

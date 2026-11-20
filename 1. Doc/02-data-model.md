@@ -35,8 +35,9 @@ SQLite는 서버 파일에 저장하며 WAL 모드입니다. 식별자는 ULID �
 | metric_entries | metricId, date, value, note, 시각 | 상태 지표 스파크라인·델타 |
 | binder_notes | kind, title, body, pinned, reviewDate, decisionOutcome, goalId, projectId, sourceRetro, 시각 | 원칙·의사결정 노트, 프로젝트 카드, 모닝 부팅 |
 | people | name, relationship, cadenceDays, lastContactAt, birthday, giftIdeas, note, order, 시각 | 소중한 사람 CRM, 모닝 부팅 |
-| life_events | title, date, endDate, kind, allDay, startMin, endMin, color, personId, projectId, goalId, externalUid, note, 시각 | 일정·D-Day·기념일(`.ics`), 달력·모닝 부팅 |
+| life_events | title, date, endDate, kind, allDay, startMin, endMin, color, personId, projectId, goalId, externalUid, googleCalendarId, googleEventId, googleUpdatedAt, note, 시각 | 일정·D-Day·기념일(`.ics`·Google 캘린더), 달력·모닝 부팅 |
 | subscriptions | name, amount, currency, billingCycle, status, billingDay, nextBillingDate, category, paymentMethod, autoRenew, url, note, order, 시각 | 구독·월정액 고정비 관리, 달력·모닝 부팅 |
+| google_calendar_connections | userId, googleEmail, 암호화 OAuth 토큰(access·refresh·만료), selectedCalendarIds, pushCalendarId, calendarMeta, syncEnabled, autoPushEvents, lastSyncedAt, lastSyncError, 시각 | Google 캘린더 양방향 OAuth 연동(내부 전용) |
 
 배열·객체인 monthlyTargets, monthlyActuals, monthlyActualAdjustments, schedule, template은 SQLite TEXT의 JSON으로 저장합니다. 월별 배열은 12개 요소를 전제로 하며 1월 인덱스가 0입니다. 배열 길이를 DB 제약으로 강제하지는 않습니다.
 
@@ -147,4 +148,4 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 0006 마이그레이션은 `todo_create_requests`(user_id+request_key 복합 PK, 본문 해시·최초 응답·생성 시각)와 `todo_trash`(TODO ID PK, 소유자·스냅샷·만료 시각)를 추가합니다. 요청 기록은 삭제 이후의 지연 재요청도 새 항목을 만들지 않도록 유지합니다. 휴지통은 30초 후 복원이 차단되고 다음 TODO 삭제 시 만료 행을 정리합니다.
 
-운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다.
+운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections` 역시 `SESSION_SECRET` 기반 AES-256-GCM 암호화 토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않으며, CLI 계정 삭제 시 함께 제거합니다.

@@ -1,7 +1,10 @@
 'use client';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { CalendarPlus, Download, Pencil, Trash2 } from 'lucide-react';
+import { CalendarPlus, Download, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { describeEventDday } from '@/lib/lifeEvents';
+import { getGoogleCalendarStatus, syncGoogleCalendar } from '@/lib/repo/googleCalendar';
 import { createLifeEvent, deleteLifeEvent, updateLifeEvent } from '@/lib/repo/lifeEvents';
 import { LIFE_EVENT_KIND_LABEL, type LifeEvent, type LifeEventKind, type Person } from '@/lib/types';
 import { minutesToTimeStr, timeStrToMinutes } from '@/lib/utils/date';
@@ -22,6 +25,13 @@ export function LifeEventsSection({ events, people, today }: Props) {
   const [editor, setEditor] = useState<{ open: boolean; editing?: LifeEvent }>({ open: false });
   const [icsOpen, setIcsOpen] = useState(false);
   const [importStatus, setImportStatus] = useState('');
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const { value: googleStatus } = useAsyncResource(
+    'google-calendar:status-brief',
+    getGoogleCalendarStatus,
+    null,
+    ['googleCalendar'],
+  );
 
   const sorted = useMemo(() => {
     return [...events]
@@ -37,13 +47,45 @@ export function LifeEventsSection({ events, people, today }: Props) {
     await deleteLifeEvent(ev.id);
   };
 
+  const handleGoogleSync = async () => {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    try {
+      const res = await syncGoogleCalendar();
+      setImportStatus(
+        `Google 캘린더 동기화: 새로 ${res.pulledCreated}건 · 갱신 ${res.pulledUpdated}건 · 삭제 반영 ${res.pulledDeleted}건 · 구글 전송 ${res.pushedCreated}건`,
+      );
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : 'Google 캘린더 동기화에 실패했습니다.');
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
   return (
     <section className="space-y-4" aria-label="일정 및 기념일 목록">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          약속, D-Day, 매년 반복되는 기념일과 외부 `.ics` 일정을 한곳에서 관리하세요.
+          약속, D-Day, 매년 반복되는 기념일과 외부 `.ics`·Google 캘린더 일정을 한곳에서 관리하세요.
         </p>
         <div className="flex flex-wrap gap-2">
+          {googleStatus?.connected ? (
+            <button
+              type="button"
+              disabled={googleBusy}
+              onClick={() => void handleGoogleSync()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
+            >
+              <RefreshCw size={14} className={googleBusy ? 'animate-spin' : ''} /> Google 동기화
+            </button>
+          ) : (
+            <Link
+              href="/settings#google-calendar"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Google 캘린더 연결
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setIcsOpen(true)}
@@ -100,6 +142,11 @@ export function LifeEventsSection({ events, people, today }: Props) {
                     <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                       {LIFE_EVENT_KIND_LABEL[ev.kind]}
                     </span>
+                    {ev.googleEventId && (
+                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                        Google
+                      </span>
+                    )}
                     <h3 className="break-words text-sm font-bold text-zinc-900 dark:text-zinc-50">{ev.title}</h3>
                   </div>
 

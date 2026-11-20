@@ -137,6 +137,15 @@ for (const width of [1280, 390]) {
     await page.getByRole('button', { name: '일정 가져오기' }).click();
     await expect(page.getByRole('heading', { name: '정기 건강검진' })).toBeVisible();
 
+    await page.getByRole('button', { name: '새 일정 · D-Day' }).click();
+    await page.getByLabel('일정 제목').fill('구글연동미팅');
+    await page.getByLabel('일정 날짜').fill(today);
+    await page.getByLabel('종일 일정').uncheck();
+    await page.getByLabel('일정 시작 시각').fill('10:00');
+    await page.getByLabel('일정 종료 시각').fill('11:00');
+    await page.getByRole('dialog').getByRole('button', { name: '일정 추가' }).click();
+    await expect(page.getByRole('heading', { name: '구글연동미팅' })).toBeVisible();
+
     await page.getByRole('tab', { name: /소중한 사람/ }).click();
     await page.getByRole('button', { name: '사람 추가' }).click();
     await page.getByLabel('이름', { exact: true }).fill('어머니');
@@ -195,6 +204,24 @@ for (const width of [1280, 390]) {
     await expect(kpi.getByText('₩39,000')).toBeVisible();
     await expect(kpi.getByText('₩468,000')).toBeVisible();
     await checkNoHorizontalOverflow(page);
+
+    // 8) Calendar overlay in /daily time grid -> 1-click import to plan block + /settings Google panel
+    await page.goto(`/daily/${today}`);
+    const eventOverlay = page.getByTestId('calendar-event-overlay').filter({ hasText: '구글연동미팅' });
+    await expect(eventOverlay).toBeVisible();
+    await eventOverlay.click();
+    const blockDialog = page.getByRole('dialog');
+    await expect(blockDialog.getByPlaceholder('내용')).toHaveValue('구글연동미팅');
+    await blockDialog.getByRole('button', { name: '저장' }).click();
+    await expect(page.getByTestId('time-block').filter({ hasText: '구글연동미팅' })).toBeVisible();
+    await page.reload();
+    await expect(page.getByTestId('time-block').filter({ hasText: '구글연동미팅' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    await page.goto('/settings');
+    await expect(page.getByRole('heading', { name: 'Google 캘린더 양방향 연동' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '복사' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
   });
 }
 
@@ -211,9 +238,13 @@ test('top nav fits 1024px desktop without horizontal overflow and rejects anonym
     '/api/people',
     '/api/events',
     '/api/subscriptions',
+    '/api/integrations/google/status',
   ]) {
     expect((await request.get(url)).status()).toBe(401);
   }
   expect((await request.post('/api/time-blocks/confirm-actuals', { data: { date: '2026-11-20' } })).status()).toBe(401);
   expect((await request.post('/api/events/import-ics', { data: { icsText: 'x' } })).status()).toBe(401);
+  expect((await request.post('/api/integrations/google/sync', { data: {} })).status()).toBe(401);
+  expect((await request.patch('/api/integrations/google/settings', { data: { syncEnabled: false } })).status()).toBe(401);
+  expect((await request.delete('/api/integrations/google/disconnect')).status()).toBe(401);
 });
