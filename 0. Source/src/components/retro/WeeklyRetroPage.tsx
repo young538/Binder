@@ -1,0 +1,55 @@
+'use client';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { useBinder } from '@/store';
+import { weekDates, toIsoDate } from '@/lib/utils/date';
+import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
+import { useRetrospectiveEditor } from '@/lib/autosave/editors';
+import { AutosaveStatus } from '@/components/common/AutosaveStatus';
+import { computeHabitStatsForRange } from '@/lib/utils/habitSchedule';
+import { listDayTodosInRange } from '@/lib/repo/todos';
+import { listHabits } from '@/lib/repo/habits';
+import { listLogsForRange } from '@/lib/repo/habitLogs';
+import { listDailyCheckinsInRange } from '@/lib/repo/dailyCheckins';
+import { RetroPeriodHeader } from './RetroPeriodHeader';
+import { WeeklySummary } from './WeeklySummary';
+import { RetroTemplate } from './RetroTemplate';
+
+export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
+  const { categories, goals, projects } = useBinder();
+  const editor = useRetrospectiveEditor('weekly', isoweek);
+
+  const { value: { blocks, todos, checkins, habitStats } } = useAsyncResource(isoweek, async () => {
+    const dates = weekDates(isoweek);
+    const start = toIsoDate(dates[0]);
+    const end = toIsoDate(dates[6]);
+    const [blocks, todos, habits, logs, checkins] = await Promise.all([
+      getTimeBlocksInRange(start, end),
+      listDayTodosInRange(start, end),
+      listHabits(),
+      listLogsForRange(start, end),
+      listDailyCheckinsInRange(start, end),
+    ]);
+    return { blocks, todos, checkins, habitStats: computeHabitStatsForRange(habits, logs, dates[0], dates[6]) };
+  }, { blocks: [], todos: [], checkins: [], habitStats: { total: 0, logs: 0, expected: 0, percent: 0 } },
+  ['timeBlocks', 'todos', 'habits', 'habitLogs', 'dailyCheckins']);
+
+  return (
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <RetroPeriodHeader mode="weekly" period={isoweek} />
+      <WeeklySummary
+        isoweek={isoweek}
+        blocks={blocks}
+        todos={todos}
+        categories={categories}
+        goals={goals}
+        projects={projects}
+        checkins={checkins}
+        habitStats={habitStats}
+      />
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-5">
+        {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} beforeCreate={editor.flush} source={{ type: 'weekly', dateOrWeek: isoweek }} />}
+        <AutosaveStatus {...editor} />
+      </div>
+    </div>
+  );
+};

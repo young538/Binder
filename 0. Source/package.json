@@ -1,0 +1,58 @@
+{
+  "name": "3p-binder",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "docs:check": "node scripts/check-doc-links.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "better-sqlite3": "^12.9.0",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.2",
+    "iron-session": "^8.0.4",
+    "lucide-react": "^1.8.0",
+    "motion": "^13.2.0",
+    "next": "16.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "ulid": "^3.0.2",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/ui": "4.1.12",
+    "cheerio": "^1.2.0",
+    "drizzle-kit": "0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "jsdom": "^29.0.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
+  },
+  "engines": {
+    "node": ">=22.22.0 <23"
+  }
+}

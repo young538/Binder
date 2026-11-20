@@ -1,0 +1,92 @@
+# 인생 OS 확장 기능 (컨디션 · 이브닝 셧다운 · 월/연 회고 · 지표 · 원칙 노트 · 일정/인맥 · 런처)
+
+[전체 목차](../README.md) · [데이터 모델](../02-data-model.md) · [API](../03-api.md)
+
+## 목적과 URL
+
+바인더의 목표–프로젝트–실행 루프를 생활 전반으로 확장하는 기능 묶음입니다.
+
+- `/daily/[date]`: 10초 컨디션 체크인, 계획 → 실제 시간블록 확정, 이브닝 셧다운 마감 루틴, 오늘의 일정·기념일 스트립
+- `/retrospective/month/[yyyymm]`, `/retrospective/year/[year]`: 월간·연간 실행 집계 및 회고
+- `/metrics`: 상태·추세 지표 트래커 (체중, 순자산, 수면 평균 등)
+- `/notes`: 영구 지식·내 원칙·의사결정 복기·프로젝트 레퍼런스 노트
+- `/life`: 약속·D-Day·기념일(`.ics` 가져오기 포함) 및 소중한 사람 안부 CRM
+
+---
+
+## 1. 일일 컨디션 체크인 · 계획→실제 확정 · 이브닝 셧다운
+
+1. **10초 컨디션 체크인 (`DailyCheckinBar`)**:
+   - `/daily/[date]` 상단에 수면 시간(`0~24`h), 에너지(`1~5`), 스트레스(`1~5`), 컨디션 메모를 입력합니다.
+   - `GET/PUT /api/daily-checkins`를 통해 날짜별로 즉시 upsert 되며, 같은 버튼을 다시 누르면 해당 평점을 `null`로 해제합니다.
+2. **계획 → 실제 확정 (`DailyTimeBlocks`)**:
+   - 일일 시간표에 `plan` 블록이 남아 있고 동일 시간·제목의 `actual` 블록이 아직 없으면 **계획 → 실제 확정** 버튼을 표시합니다.
+   - `POST /api/time-blocks/confirm-actuals`가 계획 블록의 카테고리·목표·프로젝트·할 일 연결(`projectId`·`goalId`·`todoId`)을 유지한 채 `actual` 블록으로 일괄 복사하며, 동일 `(startMin, endMin, text)` 블록은 중복 생성하지 않습니다.
+3. **이브닝 셧다운 (`EveningShutdownBanner` · `EveningShutdownDialog`)**:
+   - `GET /api/evening-shutdown?date=YYYY-MM-DD`로 미확정 계획, 미완료 오늘 할 일, 당일 컨디션·일일 회고 현황을 불러옵니다.
+   - 3단계 마감 대화상자에서 ① 계획 블록 실제 확정, ② 미완료 할 일 내일로 이월 또는 수집함 이동(`repeatRule` 자동 해제), ③ 수면·에너지·일일 회고 작성을 순서대로 마무리합니다.
+   - 완료 상태는 `localStorage` 키 `binder:evening-shutdown:<userId>:<date>`로 표시하며, 필요 시 **마감 다시 열기**로 재진입할 수 있습니다.
+
+---
+
+## 2. 회고 내비게이션 · 월/연 회고 · 원칙 승격
+
+1. **기간 이동 및 단위 전환 (`RetroPeriodHeader`)**:
+   - 주간(`/retrospective/week/[isoweek]`), 월간(`/retrospective/month/[yyyymm]`), 연간(`/retrospective/year/[year]`) 회고 상단에 이전/다음 기간 이동 화살표와 `주간` · `월간` · `연간` 전환 탭을 제공합니다.
+2. **월간·연간 실행 요약 (`MonthlyRetroPage` · `YearlyRetroPage`)**:
+   - 해당 기간의 `actual` 시간 합계, 할 일 완료 수, 완료된 프로젝트(`completedAt` 기준), 완독 책 수, 일일 체크인 평균 수면·에너지를 집계합니다. 월간 회고에는 카테고리별 계획 대비 실제 비교와 습관 달성률도 포함됩니다.
+3. **내 원칙으로 남기기 (`RetroPrincipleAction`)**:
+   - `RetroTemplate`의 **내일/다음주 1가지** 아래 **내 원칙으로 남기기** 버튼으로 회고 내용(`nextStep` · `good` · `bad` · `freeText`)을 `binder_notes`의 `principle` · `insight` · `decision` 노트로 승격할 수 있습니다. 원본 회고 좌표(`sourceRetro`)를 함께 저장해 노트 카드에서 원래 회고 URL로 되돌아갈 수 있습니다.
+
+---
+
+## 3. 상태 지표 트래커 (`/metrics`)
+
+- 목표 방향(`up`: 증가 목표, `down`: 감소 목표, `target`: 목표치 유지)과 단위, 선택 목표(`goalId`), 목표 수치(`targetValue`), 색상을 지정해 지표를 만듭니다.
+- 카드 내 인라인 폼으로 특정 날짜(`YYYY-MM-DD`)의 측정 수치를 기록(`POST /api/metrics/[id]/entries`)하면 SVG 스파크라인(`MetricSparkline`), 직전 기록 대비 변화량(Delta), 목표 대비 진행률을 즉시 계산해 표시합니다. 동일 날짜 재입력 시 기존 엔트리를 갱신(upsert)하며 지표 삭제 시 엔트리도 트랜잭션으로 함께 삭제됩니다.
+
+---
+
+## 4. 지식 · 원칙 · 의사결정 노트 (`/notes`)
+
+- **유형**: `principle`(내 원칙), `decision`(의사결정), `insight`(인사이트), `reference`(레퍼런스).
+- **의사결정 복기**: `decision` 노트에 복기 예정일(`reviewDate`)을 두면 해당 날짜 이후 복기 결과(`decisionOutcome`)가 비어 있을 때 `/notes` 상단과 오늘 모닝 부팅(`dueDecisions`)에서 복기 알림을 표시합니다.
+- **고정·연결·빠른 입력**: `pinned` 설정으로 목록 상단에 고정하며 상위 목표(`goalId`)와 프로젝트(`projectId`)를 연결할 수 있습니다. 프로젝트 카드(`/projects`)에서도 해당 프로젝트에 연결된 노트를 확인하고 **노트 추가** 링크로 바로 이동할 수 있습니다. `QuickCapture`(`Alt+N`)의 **빠른 노트** 탭에서도 즉시 저장합니다.
+
+---
+
+## 5. 일정 · 기념일 · 소중한 사람 (`/life`)
+
+1. **일정 · D-Day · 기념일 (`LifeEventsSection`)**:
+   - `event`(단발/기간 일정), `dday`(D-Day), `anniversary`(매년 반복 기념일; `02-29`는 비윤년 `02-28`로 보정)를 관리합니다.
+   - 다가오는 일정은 모닝 부팅(3일 이내 `upcomingEvents`), 일일 트래커 상단 스트립, 월간 달력 셀과 날짜 서랍에 자동 표시됩니다.
+2. **`.ics` 가져오기 (`IcsImportDialog` · `lib/ics.ts`)**:
+   - `.ics` 파일 업로드, 원문 붙여넣기, 또는 직접 `https://` 구독 URL(2MB 제한, 사설/루프백 IP 및 리다이렉트 차단)을 통해 RFC 5545 `VEVENT`를 파싱합니다.
+   - 줄 바꿈 접기(line unfolding), `VALUE=DATE` 배타적 `DTEND` -1일 보정, UTC `Z` 시각의 `Asia/Seoul` 변환을 지원하며, `externalUid` 기준으로 중복 생성 대신 기존 일정을 갱신합니다.
+3. **소중한 사람 CRM (`PeopleSection`)**:
+   - 이름, 관계, 안부 주기(`cadenceDays`), 최근 연락일(`lastContactAt`), 생일, 선물 아이디어를 관리합니다.
+   - 안부 주기가 지난 인물은 목록 상단에 강조 표시되며 모닝 부팅(`duePeople`)에 노출됩니다. **오늘 안부 완료** 버튼으로 최근 연락일을 오늘로 갱신하거나 **오늘 할 일에 연락 추가** 버튼으로 `day` 할 일을 생성할 수 있습니다.
+
+---
+
+## 6. 커맨드 팔레트 (`Ctrl/Cmd+K`)
+
+- 로그인 이후 모든 화면에서 `Ctrl+K`(macOS `Cmd+K`) 또는 상단/더보기 **⌘K 런처** 버튼으로 전역 커맨드 팔레트(`CommandPalette`)를 엽니다.
+- 화면 빠른 이동, 입력 문구 그대로 **수집함에 할 일 추가** 또는 **인사이트 노트 저장**, `/api/search` 14종 통합 검색 결과 즉시 점프를 지원합니다.
+
+---
+
+## 구현 파일
+
+| 파일 | 역할 |
+|---|---|
+| [MonthlyRetroPage](../../0.%20Source/src/components/retro/MonthlyRetroPage.tsx) / [YearlyRetroPage](../../0.%20Source/src/components/retro/YearlyRetroPage.tsx) | 월·연 회고 집계 및 자동 저장 |
+| [RetroPeriodHeader](../../0.%20Source/src/components/retro/RetroPeriodHeader.tsx) / [RetroPrincipleAction](../../0.%20Source/src/components/retro/RetroPrincipleAction.tsx) | 회고 기간 이동·전환과 원칙 승격 |
+| [DailyCheckinBar](../../0.%20Source/src/components/daily/DailyCheckinBar.tsx) / [DailyTimeBlocks](../../0.%20Source/src/components/daily/DailyTimeBlocks.tsx) | 10초 컨디션 입력 및 계획→실제 확정 |
+| [EveningShutdownBanner](../../0.%20Source/src/components/daily/EveningShutdownBanner.tsx) / [EveningShutdownDialog](../../0.%20Source/src/components/daily/EveningShutdownDialog.tsx) | 3단계 이브닝 셧다운 루틴 |
+| [MetricsPage](../../0.%20Source/src/components/metrics/MetricsPage.tsx) / [MetricCard](../../0.%20Source/src/components/metrics/MetricCard.tsx) / [MetricSparkline](../../0.%20Source/src/components/metrics/MetricSparkline.tsx) | 상태 지표 CRUD, 기록 입력, SVG 스파크라인 |
+| [NotesPage](../../0.%20Source/src/components/notes/NotesPage.tsx) / [NoteEditorDialog](../../0.%20Source/src/components/notes/NoteEditorDialog.tsx) | 원칙·의사결정·인사이트·레퍼런스 관리 |
+| [LifePage](../../0.%20Source/src/components/life/LifePage.tsx) / [LifeEventsSection](../../0.%20Source/src/components/life/LifeEventsSection.tsx) / [IcsImportDialog](../../0.%20Source/src/components/life/IcsImportDialog.tsx) / [PeopleSection](../../0.%20Source/src/components/life/PeopleSection.tsx) | 일정·기념일·`.ics` 가져오기·소중한 사람 CRM |
+| [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) | `Ctrl/Cmd+K` 런처 및 빠른 노트·할 일 입력 |
+| [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·마감 유틸리티 |
+| [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) | App Router 페이지 진입점 |

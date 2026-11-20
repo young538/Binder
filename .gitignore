@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,14 +11,14 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -47,15 +47,15 @@ next-env.d.ts
 .superpowers/
 .worktrees/
 .codex-spreadsheet-audit/
-/backups/
-/tmp-test/
+/0. Source/backups/
+tmp-test/
 
 # e2e
 test-results/
 playwright-report/
 
 # SQLite data + WAL files
-/data/
+/0. Source/data/
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal

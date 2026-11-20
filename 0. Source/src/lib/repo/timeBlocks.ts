@@ -1,0 +1,44 @@
+import { TimeBlock } from '../types';
+import { http } from './http';
+import { notifyMutation } from './events';
+
+export const createTimeBlock = async (
+  data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+): Promise<TimeBlock> => {
+  const row = await http.post<TimeBlock>('/api/time-blocks', data);
+  notifyMutation('timeBlocks');
+  return row;
+};
+
+export const updateTimeBlock = async (
+  id: string,
+  patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>
+): Promise<void> => {
+  await http.patch<TimeBlock>(`/api/time-blocks/${id}`, patch);
+  notifyMutation('timeBlocks');
+};
+
+export const deleteTimeBlock = async (id: string): Promise<void> => {
+  await http.del(`/api/time-blocks/${id}`);
+  notifyMutation('timeBlocks');
+};
+
+export const getTimeBlocksInRange = (
+  startDate: string,
+  endDate: string
+): Promise<TimeBlock[]> =>
+  http.get<TimeBlock[]>(
+    `/api/time-blocks?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+  );
+
+export const confirmPlansAsActual = async (
+  date: string,
+  blockIds?: string[],
+): Promise<{ created: number }> => {
+  const result = await http.post<{ created: number }>('/api/time-blocks/confirm-actuals', {
+    date,
+    ...(blockIds ? { blockIds } : {}),
+  });
+  if (result.created > 0) notifyMutation('timeBlocks');
+  return result;
+};
