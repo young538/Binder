@@ -1,7 +1,7 @@
 /** Shared collection names for backup validation, persistence and UI previews. */
 export const BACKUP_COLLECTIONS = [
   'goals', 'categories', 'projects', 'people', 'metrics', 'metricEntries',
-  'dailyCheckins', 'notes', 'lifeEvents', 'timeBlocks', 'retrospectives', 'todos',
+  'dailyCheckins', 'notes', 'lifeEvents', 'subscriptions', 'timeBlocks', 'retrospectives', 'todos',
   'focusNotes', 'annualGoals', 'habits', 'habitLogs', 'books', 'weeklyTemplates',
 ] as const;
 

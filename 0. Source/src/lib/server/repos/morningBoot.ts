@@ -11,10 +11,11 @@ import type {
   MorningBootUpcomingEvent,
 } from '@/lib/morningBoot';
 import { sortProjectTodos } from '@/lib/projects';
-import type { BinderNote, LifeEvent, Person, Project, Todo } from '@/lib/types';
+import { describeBillingDday, formatCurrency } from '@/lib/subscriptions';
+import type { BinderNote, LifeEvent, Person, Project, Subscription, Todo } from '@/lib/types';
 import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import type { BinderDatabase } from '../db/connection';
-import { binderNotes, focusNotes, lifeEvents, people, projects, todos } from '../db/schema';
+import { binderNotes, focusNotes, lifeEvents, people, projects, subscriptions, todos } from '../db/schema';
 
 const ACTIVE_STATUSES = ['pending', 'postponed'] as const;
 
@@ -141,6 +142,13 @@ export class MorningBootRepository {
         .orderBy(asc(people.order), asc(people.id))
         .all() as Person[];
 
+      const subscriptionRows = tx
+        .select()
+        .from(subscriptions)
+        .where(and(eq(subscriptions.userId, this.userId), eq(subscriptions.status, 'active')))
+        .orderBy(asc(subscriptions.order), asc(subscriptions.id))
+        .all() as Subscription[];
+
       const upcomingEvents: MorningBootUpcomingEvent[] = [];
       for (const ev of eventRows) {
         const dday = describeEventDday(ev, date);
@@ -166,6 +174,20 @@ export class MorningBootRepository {
             kind: 'birthday',
             daysLeft: next.daysLeft,
             personId: person.id,
+          });
+        }
+      }
+      for (const sub of subscriptionRows) {
+        if (!sub.nextBillingDate) continue;
+        const billing = describeBillingDday(sub.nextBillingDate, date);
+        if (billing.daysLeft >= 0 && billing.daysLeft <= 3) {
+          upcomingEvents.push({
+            id: `sub:${sub.id}`,
+            title: `💳 ${sub.name} 결제 (${formatCurrency(sub.amount, sub.currency)})`,
+            date: sub.nextBillingDate,
+            kind: 'subscription',
+            daysLeft: billing.daysLeft,
+            subscriptionId: sub.id,
           });
         }
       }

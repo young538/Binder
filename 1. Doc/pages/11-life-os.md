@@ -1,4 +1,4 @@
-# 인생 OS 확장 기능 (컨디션 · 이브닝 셧다운 · 월/연 회고 · 지표 · 원칙 노트 · 일정/인맥 · 런처)
+# 인생 OS 확장 기능 (컨디션 · 이브닝 셧다운 · 월/연 회고 · 지표 · 원칙 노트 · 일정/인맥 · 구독/월정액 · 런처)
 
 [전체 목차](../README.md) · [데이터 모델](../02-data-model.md) · [API](../03-api.md)
 
@@ -6,11 +6,12 @@
 
 바인더의 목표–프로젝트–실행 루프를 생활 전반으로 확장하는 기능 묶음입니다.
 
-- `/daily/[date]`: 10초 컨디션 체크인, 계획 → 실제 시간블록 확정, 이브닝 셧다운 마감 루틴, 오늘의 일정·기념일 스트립
+- `/daily/[date]`: 10초 컨디션 체크인, 계획 → 실제 시간블록 확정, 이브닝 셧다운 마감 루틴, 오늘의 일정·기념일·구독 결제 스트립
 - `/retrospective/month/[yyyymm]`, `/retrospective/year/[year]`: 월간·연간 실행 집계 및 회고
 - `/metrics`: 상태·추세 지표 트래커 (체중, 순자산, 수면 평균 등)
 - `/notes`: 영구 지식·내 원칙·의사결정 복기·프로젝트 레퍼런스 노트
 - `/life`: 약속·D-Day·기념일(`.ics` 가져오기 포함) 및 소중한 사람 안부 CRM
+- `/subscriptions`: 구독·월정액 고정비 관리, 월/연 환산 요약, 결제일 갱신 및 예정 알림
 
 ---
 
@@ -69,10 +70,18 @@
 
 ---
 
-## 6. 커맨드 팔레트 (`Ctrl/Cmd+K`)
+## 6. 구독 · 월정액 고정비 관리 (`/subscriptions`)
+
+- **결제 정보·통화·주기**: 서비스명, 금액(`amount`), 통화(`KRW`·`USD`·`JPY`·`EUR`), 결제 주기(`monthly`·`yearly`·`weekly`·`quarterly`), 상태(`active`·`paused`·`cancelled`), 매월 결제 기준일(`billingDay` `1~31`), 다음 결제일(`nextBillingDate`), 분류(`category`), 결제 수단(`paymentMethod`), 관리 링크(`url`), 메모(`note`)를 관리합니다.
+- **월/연 고정비 요약**: 활성(`active`) 구독을 통화별로 합산해 월 예상 고정비(연간 ÷12, 분기 ÷3, 주간 ×52÷12)와 연간 예상 지출, 7일 내 결제 예정 건수를 KPI 카드로 표시합니다.
+- **결제일 갱신·일시정지·알림**: **다음 결제일로 갱신** 버튼 한 번으로 주기와 `billingDay`(말일 보정 포함)에 맞춰 다음 결제일을 전진시키며, 일시정지/재개/해지 전환도 즉시 반영합니다. 활성 구독의 3일 이내 결제 예정은 모닝 부팅(`upcomingEvents`의 `subscription`)에, 반복 결제 날짜는 일일 스트립·월간 달력 마커에 자동 노출되며 `/subscriptions?subscription=<id>` 딥링크 하이라이트를 지원합니다.
+
+---
+
+## 7. 커맨드 팔레트 (`Ctrl/Cmd+K`)
 
 - 로그인 이후 모든 화면에서 `Ctrl+K`(macOS `Cmd+K`) 또는 상단/더보기 **⌘K 런처** 버튼으로 전역 커맨드 팔레트(`CommandPalette`)를 엽니다.
-- 화면 빠른 이동, 입력 문구 그대로 **수집함에 할 일 추가** 또는 **인사이트 노트 저장**, `/api/search` 14종 통합 검색 결과 즉시 점프를 지원합니다.
+- 화면 빠른 이동, 입력 문구 그대로 **수집함에 할 일 추가** 또는 **인사이트 노트 저장**, `/api/search` 15종 통합 검색 결과 즉시 점프를 지원합니다.
 
 ---
 
@@ -87,6 +96,7 @@
 | [MetricsPage](../../0.%20Source/src/components/metrics/MetricsPage.tsx) / [MetricCard](../../0.%20Source/src/components/metrics/MetricCard.tsx) / [MetricSparkline](../../0.%20Source/src/components/metrics/MetricSparkline.tsx) | 상태 지표 CRUD, 기록 입력, SVG 스파크라인 |
 | [NotesPage](../../0.%20Source/src/components/notes/NotesPage.tsx) / [NoteEditorDialog](../../0.%20Source/src/components/notes/NoteEditorDialog.tsx) | 원칙·의사결정·인사이트·레퍼런스 관리 |
 | [LifePage](../../0.%20Source/src/components/life/LifePage.tsx) / [LifeEventsSection](../../0.%20Source/src/components/life/LifeEventsSection.tsx) / [IcsImportDialog](../../0.%20Source/src/components/life/IcsImportDialog.tsx) / [PeopleSection](../../0.%20Source/src/components/life/PeopleSection.tsx) | 일정·기념일·`.ics` 가져오기·소중한 사람 CRM |
+| [SubscriptionsPage](../../0.%20Source/src/components/subscriptions/SubscriptionsPage.tsx) / [SubscriptionEditorDialog](../../0.%20Source/src/components/subscriptions/SubscriptionEditorDialog.tsx) | 구독·월정액 CRUD, 요약 카드, 결제일 갱신 |
 | [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) | `Ctrl/Cmd+K` 런처 및 빠른 노트·할 일 입력 |
-| [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·마감 유틸리티 |
-| [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) | App Router 페이지 진입점 |
+| [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [subscriptions.ts](../../0.%20Source/src/lib/subscriptions.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·구독 환산·마감 유틸리티 |
+| [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) / [subscriptions](../../0.%20Source/src/app/(app)/subscriptions/page.tsx) | App Router 페이지 진입점 |

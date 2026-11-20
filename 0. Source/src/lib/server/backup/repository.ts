@@ -9,7 +9,7 @@ const tables = {
   goals: schema.goals, categories: schema.categories, projects: schema.projects,
   people: schema.people, metrics: schema.metrics, metricEntries: schema.metricEntries,
   dailyCheckins: schema.dailyCheckins, notes: schema.binderNotes, lifeEvents: schema.lifeEvents,
-  timeBlocks: schema.timeBlocks, retrospectives: schema.retrospectives, todos: schema.todos,
+  subscriptions: schema.subscriptions, timeBlocks: schema.timeBlocks, retrospectives: schema.retrospectives, todos: schema.todos,
   focusNotes: schema.focusNotes, annualGoals: schema.annualGoals, habits: schema.habits,
   habitLogs: schema.habitLogs, books: schema.books, weeklyTemplates: schema.weeklyTemplates,
 } satisfies Record<BackupCollection, unknown>;
@@ -43,7 +43,7 @@ export class UserBackupRepository implements BackupLookup {
       goals: this.list('goals'), categories: this.list('categories'), projects: this.list('projects'),
       people: this.list('people'), metrics: this.list('metrics'), metricEntries: this.list('metricEntries'),
       dailyCheckins: this.list('dailyCheckins'), notes: this.list('notes'), lifeEvents: this.list('lifeEvents'),
-      timeBlocks: this.list('timeBlocks'), retrospectives: this.list('retrospectives'),
+      subscriptions: this.list('subscriptions'), timeBlocks: this.list('timeBlocks'), retrospectives: this.list('retrospectives'),
       todos: this.list('todos'), focusNotes: this.list('focusNotes'),
       annualGoals: this.list('annualGoals').map(goal => ({
         ...projectAnnualGoal(this.db, goal),
@@ -59,7 +59,7 @@ export class UserBackupRepository implements BackupLookup {
     // Do not let undo restore rows removed by a later full replacement.
     this.db.delete(schema.todoTrash).where(eq(schema.todoTrash.userId, this.userId)).run();
     const order: BackupCollection[] = [
-      'metricEntries', 'metrics', 'lifeEvents', 'people', 'notes', 'dailyCheckins',
+      'metricEntries', 'metrics', 'lifeEvents', 'subscriptions', 'people', 'notes', 'dailyCheckins',
       'habitLogs', 'habits', 'annualGoals', 'todos', 'projects', 'focusNotes',
       'retrospectives', 'timeBlocks', 'books', 'weeklyTemplates', 'categories', 'goals',
     ];

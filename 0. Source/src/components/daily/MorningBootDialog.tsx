@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CalendarHeart, Check, FolderKanban, Inbox, Plus, Scale, Sparkles, Star, Target, Users, X } from 'lucide-react';
+import { AlertTriangle, CalendarHeart, Check, CreditCard, FolderKanban, Inbox, Plus, Scale, Sparkles, Star, Target, Users, X } from 'lucide-react';
 import type { MorningBootSnapshot } from '@/lib/morningBoot';
 import { describeDeadline } from '@/lib/projects';
 import { upsertFocus } from '@/lib/repo/focusNotes';
@@ -419,11 +419,25 @@ export function MorningBootDialog({ date, snapshot, onClose, onComplete }: Props
                   <ul className="space-y-1">
                     {snapshot.upcomingEvents.map(ev => (
                       <li key={ev.id} className="flex items-center gap-2 text-xs text-zinc-800 dark:text-zinc-100">
-                        <CalendarHeart size={12} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+                        {ev.kind === 'subscription' ? (
+                          <CreditCard size={12} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+                        ) : (
+                          <CalendarHeart size={12} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+                        )}
                         <span className="font-semibold text-indigo-700 dark:text-indigo-300">
                           {ev.daysLeft === 0 ? '오늘' : `D-${ev.daysLeft}`}
                         </span>
-                        <span className="truncate">{ev.title}</span>
+                        {ev.kind === 'subscription' && ev.subscriptionId ? (
+                          <Link
+                            href={`/subscriptions?subscription=${encodeURIComponent(ev.subscriptionId)}`}
+                            onClick={onClose}
+                            className="truncate hover:underline"
+                          >
+                            {ev.title}
+                          </Link>
+                        ) : (
+                          <span className="truncate">{ev.title}</span>
+                        )}
                       </li>
                     ))}
                   </ul>

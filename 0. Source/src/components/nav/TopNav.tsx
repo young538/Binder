@@ -12,6 +12,7 @@ import {
   CalendarRange,
   ChevronDown,
   Command,
+  CreditCard,
   FolderKanban,
   Inbox,
   LogOut,
@@ -39,6 +40,7 @@ const primaryLinks = [
 const lifeHubLinks = [
   { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: '/notes' },
   { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: '/metrics' },
+  { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: '/subscriptions' },
   { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: '/life' },
   { label: '독서', Icon: BookOpen, basePath: '/reading', href: '/reading' },
   { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: '/goal-review' },

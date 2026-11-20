@@ -28,7 +28,7 @@
 
 ## 3. ID별 CRUD 도메인
 
-아래 12개 도메인은 공통으로 목록/생성 경로와 ID별 PATCH·DELETE를 제공합니다. **GET `/도메인/[id]`는 구현하지 않습니다.**
+아래 13개 도메인은 공통으로 목록/생성 경로와 ID별 PATCH·DELETE를 제공합니다. **GET `/도메인/[id]`는 구현하지 않습니다.**
 
 | 도메인 | GET 목록 쿼리 | POST 정상 입력 | PATCH 수정 필드 |
 |---|---|---|---|
@@ -44,6 +44,7 @@
 | `/api/notes` | `kind?`, `goalId?`, `projectId?`, `dueDecisionsDate?` | kind(`principle`·`decision`·`insight`·`reference`), title, body, pinned, reviewDate?, decisionOutcome?, goalId?, projectId?, sourceRetro? | 동일 도메인 필드 |
 | `/api/people` | 없음 | name, relationship?, cadenceDays?, lastContactAt?, birthday?, giftIdeas?, note?, order | 동일 도메인 필드 |
 | `/api/events` | `startDate?`, `endDate?` | title, date, endDate?, kind(`event`·`dday`·`anniversary`), allDay, startMin?, endMin?, color?, personId?, projectId?, goalId?, externalUid?, note? | 동일 도메인 필드 |
+| `/api/subscriptions` | 없음 | name, amount, currency(`KRW`·`USD`·`JPY`·`EUR`), billingCycle(`monthly`·`yearly`·`weekly`·`quarterly`), status(`active`·`paused`·`cancelled`), billingDay?, nextBillingDate?, category?, paymentMethod?, autoRenew, url?, note?, order | 동일 도메인 필드 |
 
 예를 들어 책 수정은 PATCH `/api/books/[id]`, 삭제는 DELETE `/api/books/[id]`입니다. `?`는 정상 생성 입력에서 선택 가능한 필드를 뜻합니다. null로 지울 수 있는 필드는 [공통 타입](../0.%20Source/src/lib/types.ts)을 확인합니다.
 
@@ -75,9 +76,9 @@ annual-goals의 일반 POST는 빈 제목과 12개의 null 계획·실적 배열
 
 수집함 TODO도 동일한 검색에 포함되며 결과는 `/inbox`로 이동합니다.
 
-`GET /api/search?q=검색어&type=todos&offset=0`은 인증 사용자 소유 데이터만 검색합니다. 검색어는 trim 후 1~100자, type은 생략하거나 todos·projects·goals·annualGoals·habits·books·focusNotes·retrospectives·timeBlocks·categories·notes·metrics·people·lifeEvents(총 14종), offset은 0~10000 정수입니다. 잘못된 값은 400입니다.
+`GET /api/search?q=검색어&type=todos&offset=0`은 인증 사용자 소유 데이터만 검색합니다. 검색어는 trim 후 1~100자, type은 생략하거나 todos·projects·goals·annualGoals·habits·books·focusNotes·retrospectives·timeBlocks·categories·notes·metrics·people·lifeEvents·subscriptions(총 15종), offset은 0~10000 정수입니다. 잘못된 값은 400입니다.
 
-응답은 `{items:[{kind,id,title,excerpt,period,href}], offset, hasMore}`이고 한 페이지는 20개입니다. 최근 수정 순(동률은 kind·id)으로 정렬하며 `%`, `_`, 따옴표도 일반 문자로 검색합니다. 반환 링크는 관련 화면(`/retrospective/month/...`, `/retrospective/year/...`, `/notes?note=...`, `/life?tab=people&person=...`, `/life?tab=events`, `/metrics` 포함)이며 직접 편집은 제공하지 않습니다.
+응답은 `{items:[{kind,id,title,excerpt,period,href}], offset, hasMore}`이고 한 페이지는 20개입니다. 최근 수정 순(동률은 kind·id)으로 정렬하며 `%`, `_`, 따옴표도 일반 문자로 검색합니다. 반환 링크는 관련 화면(`/retrospective/month/...`, `/retrospective/year/...`, `/notes?note=...`, `/life?tab=people&person=...`, `/life?tab=events`, `/metrics`, `/subscriptions?subscription=...` 포함)이며 직접 편집은 제공하지 않습니다.
 
 ## 5. 기간별 메모·회고·습관 로그
 
@@ -123,10 +124,10 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 ```json
 {
-  "version": 13,
+  "version": 14,
   "generatedAt": "ISO 시각",
   "goals": [], "categories": [], "projects": [], "people": [], "metrics": [], "metricEntries": [],
-  "dailyCheckins": [], "notes": [], "lifeEvents": [], "timeBlocks": [],
+  "dailyCheckins": [], "notes": [], "lifeEvents": [], "subscriptions": [], "timeBlocks": [],
   "retrospectives": [], "todos": [], "focusNotes": [],
   "annualGoals": [], "habits": [], "habitLogs": [], "books": [], "weeklyTemplates": [],
   "settings": null

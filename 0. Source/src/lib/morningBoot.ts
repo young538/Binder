@@ -11,9 +11,10 @@ export interface MorningBootUpcomingEvent {
   id: string;
   title: string;
   date: string;
-  kind: 'event' | 'dday' | 'anniversary' | 'birthday';
+  kind: 'event' | 'dday' | 'anniversary' | 'birthday' | 'subscription';
   daysLeft: number;
   personId?: string;
+  subscriptionId?: string;
 }
 
 export interface MorningBootDuePerson {

@@ -1,12 +1,13 @@
 import { addDays, parseISO } from 'date-fns';
 import { annualOccurrenceForYear } from './lifeEvents';
-import type { AnnualGoal, LifeEvent, Person, Project } from './types';
+import { expandSubscriptionBillingDates, formatCurrency } from './subscriptions';
+import type { AnnualGoal, LifeEvent, Person, Project, Subscription } from './types';
 import { toIsoDate } from './utils/date';
 
 export interface CalendarMarker {
   id: string;
   date: string;
-  kind: 'project' | 'annualGoal' | 'event' | 'dday' | 'anniversary' | 'birthday';
+  kind: 'project' | 'annualGoal' | 'event' | 'dday' | 'anniversary' | 'birthday' | 'subscription';
   label: string;
   href: string;
   color?: string | null;
@@ -20,6 +21,7 @@ export function buildCalendarMarkers(
     annualGoals?: AnnualGoal[];
     lifeEvents?: LifeEvent[];
     people?: Person[];
+    subscriptions?: Subscription[];
   },
 ): Map<string, CalendarMarker[]> {
   const map = new Map<string, CalendarMarker[]>();
@@ -103,6 +105,19 @@ export function buildCalendarMarkers(
         kind: 'birthday',
         label: `🎂 ${person.name} 생일`,
         href: `/life?tab=people&person=${encodeURIComponent(person.id)}`,
+      });
+    }
+  }
+
+  for (const sub of sources.subscriptions ?? []) {
+    const dates = expandSubscriptionBillingDates(sub, startDate, endDate);
+    for (const d of dates) {
+      push({
+        id: `sub:${sub.id}:${d}`,
+        date: d,
+        kind: 'subscription',
+        label: `💳 ${sub.name} ${formatCurrency(sub.amount, sub.currency)}`,
+        href: `/subscriptions?subscription=${encodeURIComponent(sub.id)}`,
       });
     }
   }

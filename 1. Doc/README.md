@@ -37,6 +37,7 @@ Super 플래너는 큰 목표와 매일의 실행 기록을 함께 관리합니�
 | `/metrics` | 상태·추세 지표 트래커 | [인생 OS 확장](pages/11-life-os.md#3-상태-지표-트래커-metrics) |
 | `/notes` | 원칙·의사결정·인사이트·레퍼런스 노트 | [인생 OS 확장](pages/11-life-os.md#4-지식--원칙--의사결정-노트-notes) |
 | `/life` | 일정·D-Day·기념일(`.ics`)·소중한 사람 CRM | [인생 OS 확장](pages/11-life-os.md#5-일정--기념일--소중한-사람-life) |
+| `/subscriptions` | 구독·월정액 고정비 및 다음 결제일 관리 | [인생 OS 확장](pages/11-life-os.md#6-구독--월정액-고정비-관리-subscriptions) |
 | `/reading` | 연도별 책 목록, 완독일, 서평 | [독서](pages/08-reading.md) |
 | `/search` | 전체 검색, 범위 선택, 관련 화면 이동 | [후속 개선](09-follow-up-improvements.md) |
 | `/settings` | 계정, 카테고리, 표시 설정, JSON 백업 | [설정](pages/09-settings.md) |

@@ -162,6 +162,39 @@ for (const width of [1280, 390]) {
     await page.getByLabel('커맨드 또는 검색어 입력').fill('체중트래킹');
     await page.getByRole('option', { name: /^체중트래킹/ }).click();
     await expect(page).toHaveURL(/\/metrics$/);
+
+    await page.goto('/subscriptions');
+    await page.getByRole('button', { name: '새 구독' }).click();
+    await page.getByLabel('서비스명').fill('ChatGPT Plus');
+    await page.getByLabel('결제 금액').fill('29000');
+    await page.getByLabel('결제 통화').selectOption('KRW');
+    await page.getByLabel('결제 주기').selectOption('monthly');
+    await page.getByLabel('다음 결제일').fill('2026-12-01');
+    await page.getByLabel('결제일 (매월 일자)').fill('1');
+    await page.getByRole('button', { name: '구독 등록', exact: true }).click();
+    await expect(page.getByText('ChatGPT Plus')).toBeVisible();
+
+    await page.getByRole('button', { name: '새 구독' }).click();
+    await page.getByLabel('서비스명').fill('Notion 연간');
+    await page.getByLabel('결제 금액').fill('120000');
+    await page.getByLabel('결제 통화').selectOption('KRW');
+    await page.getByLabel('결제 주기').selectOption('yearly');
+    await page.getByRole('button', { name: '구독 등록', exact: true }).click();
+    await expect(page.getByText('Notion 연간')).toBeVisible();
+
+    const kpi = page.getByLabel('구독 요약 지표');
+    await expect(kpi.getByText('₩39,000')).toBeVisible();
+    await expect(kpi.getByText('₩468,000')).toBeVisible();
+
+    await page.getByRole('button', { name: '다음 결제일로 갱신' }).first().click();
+    await expect(page.getByRole('status')).toContainText('2027-01-01');
+    await expect(page.getByText('다음 결제 2027-01-01')).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByText('다음 결제 2027-01-01')).toBeVisible();
+    await expect(kpi.getByText('₩39,000')).toBeVisible();
+    await expect(kpi.getByText('₩468,000')).toBeVisible();
+    await checkNoHorizontalOverflow(page);
   });
 }
 
@@ -177,6 +210,7 @@ test('top nav fits 1024px desktop without horizontal overflow and rejects anonym
     '/api/notes',
     '/api/people',
     '/api/events',
+    '/api/subscriptions',
   ]) {
     expect((await request.get(url)).status()).toBe(401);
   }

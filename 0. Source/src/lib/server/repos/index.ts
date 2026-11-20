@@ -22,6 +22,7 @@ import { MetricRepository } from './metrics';
 import { NoteRepository } from './notes';
 import { PersonRepository } from './people';
 import { LifeEventRepository } from './lifeEvents';
+import { SubscriptionRepository } from './subscriptions';
 
 /** Composes all domain repositories around the same database and authenticated owner. */
 export class UserRepositories {
@@ -46,6 +47,7 @@ export class UserRepositories {
   readonly notes: NoteRepository;
   readonly people: PersonRepository;
   readonly lifeEvents: LifeEventRepository;
+  readonly subscriptions: SubscriptionRepository;
 
   constructor(database: BinderDatabase, userId: string) {
     this.goals = new GoalRepository(database, userId);
@@ -69,6 +71,7 @@ export class UserRepositories {
     this.notes = new NoteRepository(database, userId);
     this.people = new PersonRepository(database, userId);
     this.lifeEvents = new LifeEventRepository(database, userId);
+    this.subscriptions = new SubscriptionRepository(database, userId);
   }
 }
 

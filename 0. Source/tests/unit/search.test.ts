@@ -24,6 +24,7 @@ it('searches all text domains with ownership, literal wildcard characters, and v
     repo.people.create({ name: '검색 %_ 사람', relationship: '동료', order: 0 });
     repo.lifeEvents.create({ title: '검색 %_ 일정', date: '2026-11-25', kind: 'dday', allDay: true });
     repo.metrics.create({ name: '검색 %_ 지표', unit: 'kg', direction: 'down', color: '#2563eb', order: 0 });
+    repo.subscriptions.create({ name: '검색 %_ 구독', amount: 15000, currency: 'KRW', billingCycle: 'monthly', status: 'active', category: 'AI/생산성', paymentMethod: '카드', autoRenew: true, note: '메모', order: 0 });
     const common = { userId, createdAt: timestamp, updatedAt: timestamp, order: 0 };
     db.insert(s.annualGoals).values({ ...common, id: `annual-${userId}`, title: '검색 %_', year: '2026', monthlyTargets: Array(12).fill(null), monthlyActuals: Array(12).fill(null) }).run();
     db.insert(s.habits).values({ ...common, id: `habit-${userId}`, name: '검색 %_', color: '#fff' }).run();
@@ -32,13 +33,14 @@ it('searches all text domains with ownership, literal wildcard characters, and v
   }
   const search = new SearchRepository(db, 'a');
   const result = search.search('%_');
-  expect(result.items).toHaveLength(14);
-  expect(new Set(result.items.map(item => item.kind)).size).toBe(14);
+  expect(result.items).toHaveLength(15);
+  expect(new Set(result.items.map(item => item.kind)).size).toBe(15);
   expect(result.items.find(item => item.kind === 'projects')?.href).toMatch(/^\/projects\?project=/);
   expect(result.items.find(item => item.kind === 'notes')?.href).toMatch(/^\/notes\?note=/);
   expect(result.items.find(item => item.kind === 'people')?.href).toMatch(/^\/life\?tab=people&person=/);
   expect(result.items.find(item => item.kind === 'lifeEvents')?.href).toBe('/life?tab=events');
   expect(result.items.find(item => item.kind === 'metrics')?.href).toBe('/metrics');
+  expect(result.items.find(item => item.kind === 'subscriptions')?.href).toMatch(/^\/subscriptions\?subscription=/);
   expect(result.items.find(item => item.kind === 'focusNotes')?.href).toBe('/week/2026-W44');
   expect(result.items.find(item => item.kind === 'retrospectives')?.href).toBe('/daily/2026-10-29');
   expect(search.search('%_', 'books').items).toHaveLength(1);

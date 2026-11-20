@@ -414,3 +414,27 @@ export const lifeEvents = sqliteTable('life_events', {
   index('life_events_person_idx').on(t.personId),
   index('life_events_user_uid_idx').on(t.userId, t.externalUid),
 ]);
+
+// Subscriptions — recurring fixed expenses / memberships
+export const subscriptions = sqliteTable('subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull(), // 'KRW' | 'USD' | 'JPY' | 'EUR'
+  billingCycle: text('billing_cycle').notNull(), // 'monthly' | 'yearly' | 'weekly' | 'quarterly'
+  billingDay: integer('billing_day'),
+  nextBillingDate: text('next_billing_date'),
+  status: text('status').notNull(), // 'active' | 'paused' | 'cancelled'
+  category: text('category'),
+  paymentMethod: text('payment_method'),
+  autoRenew: integer('auto_renew', { mode: 'boolean' }).notNull().default(true),
+  url: text('url'),
+  note: text('note'),
+  order: integer('order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [
+  index('subscriptions_user_idx').on(t.userId),
+  index('subscriptions_user_status_idx').on(t.userId, t.status),
+]);

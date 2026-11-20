@@ -355,3 +355,60 @@ export interface LifeEvent {
   createdAt: string;
   updatedAt: string;
 }
+
+export type BillingCycle = 'monthly' | 'yearly' | 'weekly' | 'quarterly';
+
+export const BILLING_CYCLE_LABEL: Record<BillingCycle, string> = {
+  monthly: '월간',
+  yearly: '연간',
+  quarterly: '분기',
+  weekly: '주간',
+};
+
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
+
+export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  active: '구독 중',
+  paused: '일시정지',
+  cancelled: '해지됨',
+};
+
+export type SubscriptionCurrency = 'KRW' | 'USD' | 'JPY' | 'EUR';
+
+export const SUBSCRIPTION_CURRENCY_SYMBOL: Record<SubscriptionCurrency, string> = {
+  KRW: '₩',
+  USD: '$',
+  JPY: '¥',
+  EUR: '€',
+};
+
+export const SUBSCRIPTION_CATEGORY_PRESETS = [
+  'AI·생산성',
+  'OTT·콘텐츠',
+  '클라우드·저장소',
+  '멤버십·쇼핑',
+  '음악',
+  '운동·건강',
+  '뉴스·독서',
+  '기타',
+] as const;
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  name: string;
+  amount: number;
+  currency: SubscriptionCurrency;
+  billingCycle: BillingCycle;
+  billingDay?: number | null;
+  nextBillingDate?: string | null;
+  status: SubscriptionStatus;
+  category?: string | null;
+  paymentMethod?: string | null;
+  autoRenew: boolean;
+  url?: string | null;
+  note?: string | null;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -19,7 +19,8 @@ export type MutationResource =
   | 'metricEntries'
   | 'notes'
   | 'people'
-  | 'lifeEvents';
+  | 'lifeEvents'
+  | 'subscriptions';
 type Listener = (resource?: MutationResource) => void;
 
 const listeners = new Set<Listener>();

@@ -5,6 +5,15 @@ import { buildCalendarMarkers } from '@/lib/calendarMarkers';
 import { parseIcsEvents } from '@/lib/ics';
 import { describeEventDday, isContactDue } from '@/lib/lifeEvents';
 import { summarizeMetric } from '@/lib/metrics';
+import {
+  advanceBillingDate,
+  describeBillingDday,
+  expandSubscriptionBillingDates,
+  formatCurrency,
+  summarizeSubscriptions,
+  toMonthlyAmount,
+  toYearlyAmount,
+} from '@/lib/subscriptions';
 import { nextRetroTarget, retroHref } from '@/lib/todos/planning';
 import { DatabaseConnection } from '@/lib/server/db/connection';
 import { UserRepositories } from '@/lib/server/repos';
@@ -243,9 +252,131 @@ describe('life OS phase 1-4 domains', () => {
       },
     });
     const out = backups.exportFor('legacy-v12');
-    expect(out.version).toBe(13);
+    expect(out.version).toBe(14);
     expect(out.projects).toHaveLength(1);
     expect(out.notes).toEqual([]);
     expect(out.metrics).toEqual([]);
+    expect(out.subscriptions).toEqual([]);
+  });
+
+  it('calculates recurring subscriptions, advances billing dates, isolates users, and surfaces 3-day morning boot alerts', () => {
+    expect(toMonthlyAmount(120000, 'yearly')).toBe(10000);
+    expect(toMonthlyAmount(90000, 'quarterly')).toBe(30000);
+    expect(Math.round(toMonthlyAmount(1000, 'weekly'))).toBe(4333);
+    expect(toYearlyAmount(29000, 'monthly')).toBe(348000);
+    expect(formatCurrency(29000, 'KRW')).toBe('₩29,000');
+    expect(formatCurrency(20, 'USD')).toBe('$20');
+    expect(formatCurrency(19.99, 'USD')).toBe('$19.99');
+
+    expect(describeBillingDday('2026-11-23', '2026-11-20')).toMatchObject({ daysLeft: 3, isOverdue: false });
+    expect(describeBillingDday('2026-11-19', '2026-11-20')).toMatchObject({ daysLeft: -1, isOverdue: true });
+
+    expect(advanceBillingDate('2026-01-31', 'monthly', 31)).toBe('2026-02-28');
+    expect(advanceBillingDate('2026-02-28', 'monthly', 31)).toBe('2026-03-31');
+    expect(advanceBillingDate('2024-01-31', 'monthly', 31)).toBe('2024-02-29');
+    expect(advanceBillingDate('2026-11-20', 'weekly', null)).toBe('2026-11-27');
+    expect(advanceBillingDate('2026-11-20', 'quarterly', 20)).toBe('2027-02-20');
+    expect(advanceBillingDate('2026-11-20', 'yearly', 20)).toBe('2027-11-20');
+
+    const a = repos('a');
+    const b = repos('b');
+
+    const soon = a.subscriptions.create({
+      name: 'ChatGPT Plus',
+      amount: 20,
+      currency: 'USD',
+      billingCycle: 'monthly',
+      status: 'active',
+      billingDay: 22,
+      nextBillingDate: '2026-11-22',
+      category: 'AI/생산성',
+      paymentMethod: '신한카드',
+      autoRenew: true,
+      url: 'https://chatgpt.com',
+      note: '팀 공유 전 개인용',
+      order: 0,
+    });
+    const annual = a.subscriptions.create({
+      name: 'Notion 연간',
+      amount: 120000,
+      currency: 'KRW',
+      billingCycle: 'yearly',
+      status: 'active',
+      billingDay: 20,
+      nextBillingDate: '2026-11-25',
+      category: 'AI/생산성',
+      paymentMethod: null,
+      autoRenew: true,
+      url: null,
+      note: null,
+      order: 1,
+    });
+    const paused = a.subscriptions.create({
+      name: 'Netflix',
+      amount: 17000,
+      currency: 'KRW',
+      billingCycle: 'monthly',
+      status: 'paused',
+      billingDay: 21,
+      nextBillingDate: '2026-11-21',
+      category: '영상/OTT',
+      paymentMethod: null,
+      autoRenew: false,
+      url: null,
+      note: null,
+      order: 2,
+    });
+    b.subscriptions.create({
+      name: '타인 구독',
+      amount: 9900,
+      currency: 'KRW',
+      billingCycle: 'monthly',
+      status: 'active',
+      billingDay: 21,
+      nextBillingDate: '2026-11-21',
+      category: null,
+      paymentMethod: null,
+      autoRenew: true,
+      url: null,
+      note: null,
+      order: 0,
+    });
+
+    expect(a.subscriptions.list()).toHaveLength(3);
+    expect(b.subscriptions.list()).toHaveLength(1);
+
+    expect(expandSubscriptionBillingDates(soon, '2026-11-01', '2026-12-31')).toEqual(['2026-11-22', '2026-12-22']);
+    expect(expandSubscriptionBillingDates(paused, '2026-11-01', '2026-12-31')).toEqual([]);
+
+    const summary = summarizeSubscriptions(a.subscriptions.list(), '2026-11-20');
+    expect(summary.activeCount).toBe(2);
+    expect(summary.pausedCount).toBe(1);
+    expect(summary.monthlyByCurrency).toEqual([
+      { currency: 'KRW', amount: 10000 },
+      { currency: 'USD', amount: 20 },
+    ]);
+    expect(summary.yearlyByCurrency).toEqual([
+      { currency: 'KRW', amount: 120000 },
+      { currency: 'USD', amount: 240 },
+    ]);
+    expect(summary.upcomingWithin7Days.map(s => s.subscription.id)).toEqual([soon.id, annual.id]);
+
+    const boot = a.morningBoot.snapshot('2026-11-20');
+    expect(boot.upcomingEvents.some(e => e.kind === 'subscription' && e.subscriptionId === soon.id && e.daysLeft === 2)).toBe(true);
+    expect(boot.upcomingEvents.some(e => e.subscriptionId === annual.id)).toBe(false);
+    expect(boot.upcomingEvents.some(e => e.subscriptionId === paused.id)).toBe(false);
+
+    const markers = buildCalendarMarkers('2026-11-20', '2026-12-25', {
+      subscriptions: a.subscriptions.list(),
+    });
+    expect(markers.get('2026-11-22')?.some(m => m.kind === 'subscription' && m.label.includes('ChatGPT Plus'))).toBe(true);
+    expect(markers.get('2026-12-22')?.some(m => m.kind === 'subscription')).toBe(true);
+
+    const updated = a.subscriptions.update(soon.id, { nextBillingDate: '2026-12-22', amount: 22 });
+    expect(updated?.nextBillingDate).toBe('2026-12-22');
+    expect(updated?.amount).toBe(22);
+
+    a.subscriptions.delete(paused.id);
+    expect(a.subscriptions.list()).toHaveLength(2);
   });
 });

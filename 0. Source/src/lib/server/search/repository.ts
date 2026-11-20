@@ -36,6 +36,7 @@ export class SearchRepository {
     add('people', sql`${s.people}`, sql`${s.people.id}`, sql`${s.people.userId}`, sql`${s.people.name}`, joinText(sql`${s.people.relationship}`, sql`${s.people.giftIdeas}`, sql`${s.people.note}`), sql`coalesce(${s.people.birthday}, '')`, empty, sql`${s.people.updatedAt}`);
     add('lifeEvents', sql`${s.lifeEvents}`, sql`${s.lifeEvents.id}`, sql`${s.lifeEvents.userId}`, sql`${s.lifeEvents.title}`, sql`${s.lifeEvents.note}`, sql`${s.lifeEvents.date}`, sql`${s.lifeEvents.kind}`, sql`${s.lifeEvents.updatedAt}`);
     add('metrics', sql`${s.metrics}`, sql`${s.metrics.id}`, sql`${s.metrics.userId}`, sql`${s.metrics.name}`, sql`${s.metrics.unit}`, empty, sql`${s.metrics.direction}`, sql`${s.metrics.updatedAt}`);
+    add('subscriptions', sql`${s.subscriptions}`, sql`${s.subscriptions.id}`, sql`${s.subscriptions.userId}`, sql`${s.subscriptions.name}`, joinText(sql`${s.subscriptions.category}`, sql`${s.subscriptions.paymentMethod}`, sql`${s.subscriptions.note}`), sql`coalesce(${s.subscriptions.nextBillingDate}, '')`, sql`${s.subscriptions.status}`, sql`${s.subscriptions.updatedAt}`);
     const rows = this.db.all<Row>(sql`${sql.join(branches, sql` union all `)} order by updated desc, kind, id limit ${SEARCH_PAGE_SIZE + 1} offset ${offset}`);
     return { offset, hasMore: rows.length > SEARCH_PAGE_SIZE, items: rows.slice(0, SEARCH_PAGE_SIZE).map(row => ({
       id: row.id, kind: row.kind, title: row.title.slice(0, 150) || SEARCH_KINDS[row.kind],
@@ -60,6 +61,7 @@ function destination(row: Row) {
   if (row.kind === 'people') return `/life?tab=people&person=${encodeURIComponent(row.id)}`;
   if (row.kind === 'lifeEvents') return '/life?tab=events';
   if (row.kind === 'metrics') return '/metrics';
+  if (row.kind === 'subscriptions') return `/subscriptions?subscription=${encodeURIComponent(row.id)}`;
   if (row.kind === 'annualGoals') return `/annual/${period}`;
   if (row.kind === 'books') return `/reading?year=${period}`;
   if (row.kind === 'timeBlocks') return `/daily/${period}`;

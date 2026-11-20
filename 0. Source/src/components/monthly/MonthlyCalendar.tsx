@@ -5,6 +5,7 @@ import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { listByYear as listAnnualGoalsByYear } from '@/lib/repo/annualGoals';
 import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { listPeople } from '@/lib/repo/people';
+import { listSubscriptions } from '@/lib/repo/subscriptions';
 import { Todo } from '@/lib/types';
 import { listDayTodosInRange } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
@@ -47,19 +48,21 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
     `calendar-extras:${yyyymm}`,
     async () => {
       const years = [...new Set([startStr.slice(0, 4), endStr.slice(0, 4)])];
-      const [annualLists, lifeEvents, people] = await Promise.all([
+      const [annualLists, lifeEvents, people, subscriptions] = await Promise.all([
         Promise.all(years.map(y => listAnnualGoalsByYear(y))),
         listLifeEvents({ startDate: startStr, endDate: endStr }),
         listPeople(),
+        listSubscriptions(),
       ]);
       return {
         annualGoals: annualLists.flat(),
         lifeEvents,
         people,
+        subscriptions,
       };
     },
-    { annualGoals: [], lifeEvents: [], people: [] },
-    ['annualGoals', 'lifeEvents', 'people'],
+    { annualGoals: [], lifeEvents: [], people: [], subscriptions: [] },
+    ['annualGoals', 'lifeEvents', 'people', 'subscriptions'],
   );
 
   const markersByDate = useMemo(
@@ -69,6 +72,7 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
         annualGoals: calendarExtras.annualGoals,
         lifeEvents: calendarExtras.lifeEvents,
         people: calendarExtras.people,
+        subscriptions: calendarExtras.subscriptions,
       }),
     [startStr, endStr, projects, calendarExtras],
   );

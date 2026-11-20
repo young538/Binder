@@ -14,7 +14,7 @@ export function MorningBootBanner({ date }: { date: string }) {
     `morningBoot:${date}`,
     () => getMorningBoot(date),
     null,
-    ['todos', 'projects', 'focusNotes', 'lifeEvents', 'people', 'notes'],
+    ['todos', 'projects', 'focusNotes', 'lifeEvents', 'people', 'notes', 'subscriptions'],
   );
   const [open, setOpen] = useState(false);
 

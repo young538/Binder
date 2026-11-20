@@ -16,6 +16,7 @@ import type {
   Retrospective,
   RetroType,
   Settings,
+  Subscription,
   TimeBlock,
   Todo,
   WeeklyTemplate,
@@ -53,6 +54,7 @@ export interface MutationPayloads {
   notes: Writable<BinderNote>;
   people: Writable<Person>;
   lifeEvents: Writable<LifeEvent>;
+  subscriptions: Writable<Subscription>;
   icsImport: { icsText?: string | null; url?: string | null };
   settings: Settings;
   login: { username: string; password: string };
@@ -112,6 +114,7 @@ const sourceRetro: Check = value => object(value) && Object.keys(value).length =
 const idList: Check = value => Array.isArray(value) && value.length <= 500 && value.every(identifier);
 const ratingValue: Check = oneOf(1, 2, 3, 4, 5);
 const sleepHoursValue: Check = value => number(value) && (value as number) >= 0 && (value as number) <= 24;
+const nonNegativeNumber: Check = value => number(value) && (value as number) >= 0;
 const bool: Check = oneOf(true, false);
 const templateBlocks: Check = value => Array.isArray(value) && value.length > 0 && value.length <= 500 && value.every(block =>
   object(block) && Object.keys(block).every(key => ['dayOffset', 'startMin', 'endMin', 'text', 'categoryId', 'goalId'].includes(key))
@@ -144,6 +147,7 @@ const rules: Record<MutationKind, Rules> = {
   notes: { fields: { kind: oneOf('principle', 'decision', 'insight', 'reference'), title: identifier, body: str, pinned: bool, reviewDate: nullable(isDate), decisionOutcome: optionalText, goalId: optionalId, projectId: optionalId, sourceRetro: nullable(sourceRetro) }, required: ['kind', 'title', 'body', 'pinned'] },
   people: { fields: { name: identifier, relationship: optionalText, cadenceDays: nullable(integer(1, 365)), lastContactAt: nullable(isDate), birthday: nullable(isDate), giftIdeas: optionalText, note: optionalText, order: integer(0) }, required: ['name', 'order'] },
   lifeEvents: { fields: { title: identifier, date: isDate, endDate: nullable(isDate), kind: oneOf('event', 'dday', 'anniversary'), allDay: bool, startMin: nullable(integer(0, 1439)), endMin: nullable(integer(1, 1440)), color: nullable(color), personId: optionalId, projectId: optionalId, goalId: optionalId, externalUid: optionalText, note: optionalText }, required: ['title', 'date', 'kind', 'allDay'] },
+  subscriptions: { fields: { name: identifier, amount: nonNegativeNumber, currency: oneOf('KRW', 'USD', 'JPY', 'EUR'), billingCycle: oneOf('monthly', 'yearly', 'weekly', 'quarterly'), billingDay: nullable(integer(1, 31)), nextBillingDate: nullable(isDate), status: oneOf('active', 'paused', 'cancelled'), category: optionalText, paymentMethod: optionalText, autoRenew: bool, url: nullable(url), note: optionalText, order: integer(0) }, required: ['name', 'amount', 'currency', 'billingCycle', 'status', 'autoRenew', 'order'] },
   icsImport: { fields: { icsText: optionalText, url: nullable(url) }, required: [] },
   settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark') }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },

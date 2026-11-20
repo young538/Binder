@@ -20,6 +20,7 @@ import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { listByYear as listAnnualGoalsByYear } from '@/lib/repo/annualGoals';
 import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { listPeople } from '@/lib/repo/people';
+import { listSubscriptions } from '@/lib/repo/subscriptions';
 import { toIsoDate } from '@/lib/utils/date';
 import {
   habitScheduleLabel,
@@ -66,15 +67,16 @@ const DailyPageSession = ({ date }: Props) => {
   const { value: dayExtras } = useAsyncResource(
     `daily-markers:${date}`,
     async () => {
-      const [annualGoals, lifeEvents, people] = await Promise.all([
+      const [annualGoals, lifeEvents, people, subscriptions] = await Promise.all([
         listAnnualGoalsByYear(date.slice(0, 4)),
         listLifeEvents({ startDate: date, endDate: date }),
         listPeople(),
+        listSubscriptions(),
       ]);
-      return { annualGoals, lifeEvents, people };
+      return { annualGoals, lifeEvents, people, subscriptions };
     },
-    { annualGoals: [], lifeEvents: [], people: [] },
-    ['annualGoals', 'lifeEvents', 'people'],
+    { annualGoals: [], lifeEvents: [], people: [], subscriptions: [] },
+    ['annualGoals', 'lifeEvents', 'people', 'subscriptions'],
   );
 
   const dayMarkers = useMemo(
@@ -84,6 +86,7 @@ const DailyPageSession = ({ date }: Props) => {
         annualGoals: dayExtras.annualGoals,
         lifeEvents: dayExtras.lifeEvents,
         people: dayExtras.people,
+        subscriptions: dayExtras.subscriptions,
       }).get(date) ?? [],
     [date, projects, dayExtras],
   );

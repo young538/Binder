@@ -12,6 +12,8 @@ import { PATCH as patchBlockRoute } from '@/app/api/time-blocks/[id]/route';
 import { POST as logHabitRoute } from '@/app/api/habit-logs/route';
 import { PATCH as patchSettingsRoute } from '@/app/api/settings/route';
 import { PUT as retroRoute } from '@/app/api/retrospectives/route';
+import { POST as createSubscriptionRoute } from '@/app/api/subscriptions/route';
+import { PATCH as patchSubscriptionRoute } from '@/app/api/subscriptions/[id]/route';
 import { POST as importRoute } from '@/app/api/import/route';
 import { GET as exportRoute } from '@/app/api/export/route';
 
@@ -116,6 +118,56 @@ describe('mutation request boundary', () => {
     expect(() => validateFields('books', { reviewUrl: 'javascript:alert(1)' }, true)).toThrow();
     expect(() => validateFields('books', { reviewUrl: null, startedAt: null }, true)).not.toThrow();
     expect(() => validateRelationships('focusNotes', { scope: 'week', scopeKey: 'week:2026-W18' })).not.toThrow();
+  });
+
+  it('validates recurring subscriptions, currency/cycle enums, and nullable clears', async () => {
+    const baseSub = {
+      name: 'ChatGPT Plus',
+      amount: 29000,
+      currency: 'KRW',
+      billingCycle: 'monthly',
+      status: 'active',
+      billingDay: 1,
+      nextBillingDate: '2026-12-01',
+      category: 'AI/생산성',
+      paymentMethod: '신한카드',
+      autoRenew: true,
+      url: 'https://chatgpt.com',
+      note: '메모',
+      order: 0,
+    };
+
+    for (const bad of [
+      { ...baseSub, name: '' },
+      { ...baseSub, amount: -100 },
+      { ...baseSub, currency: 'BTC' },
+      { ...baseSub, billingCycle: 'daily' },
+      { ...baseSub, status: 'deleted' },
+      { ...baseSub, billingDay: 0 },
+      { ...baseSub, billingDay: 32 },
+      { ...baseSub, nextBillingDate: '2026-02-30' },
+      { ...baseSub, url: 'javascript:alert(1)' },
+    ]) {
+      expect((await createSubscriptionRoute(request(bad))).status).toBe(400);
+    }
+
+    const createdRes = await createSubscriptionRoute(request(baseSub));
+    expect(createdRes.status).toBe(201);
+    const created = await createdRes.json();
+
+    const clearedRes = await patchSubscriptionRoute(
+      request({ nextBillingDate: null, billingDay: null, category: null, paymentMethod: null, url: null, note: null }),
+      ctx(created.id),
+    );
+    expect(clearedRes.status).toBe(200);
+    expect(await clearedRes.json()).toMatchObject({
+      nextBillingDate: null,
+      billingDay: null,
+      category: null,
+      paymentMethod: null,
+      url: null,
+      note: null,
+    });
   });
 });
 
