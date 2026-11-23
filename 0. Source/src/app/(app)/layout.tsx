@@ -1,4 +1,5 @@
 import { NotificationCenter } from '@/components/providers/NotificationCenter';
+import { GoogleCalendarAutoSync } from '@/components/providers/GoogleCalendarAutoSync';
 import { CommandPalette } from '@/components/nav/CommandPalette';
 import { TopNav } from '@/components/nav/TopNav';
 import { BottomNav } from '@/components/nav/BottomNav';
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <QuickCapture />
       <CommandPalette />
       <NotificationCenter />
+      <GoogleCalendarAutoSync />
     </StoreProvider>
   );
 }

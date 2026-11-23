@@ -173,7 +173,7 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | GET `/api/integrations/google/connect` | 쿼리 `returnTo?` | 서명된 state 쿠키 발급 후 Google OAuth 동의 화면으로 302 리다이렉트(미설정 시 400) |
 | GET `/api/integrations/google/callback` | Google OAuth `code`, `state` | 토큰 암호화 저장·초기 동기화 후 `returnTo?google=connected\|error` 리다이렉트 |
 | PATCH `/api/integrations/google/settings` | `selectedCalendarIds?`, `pushCalendarId?`, `syncEnabled?`, `autoPushEvents?` | 갱신된 `GoogleCalendarConnectionSummary`; 읽기 전용 캘린더 푸시 지정은 400 |
-| POST `/api/integrations/google/sync` | 없음 | `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt}`; 양방향 수동 동기화 |
+| POST `/api/integrations/google/sync` | `{mode?:"manual"\|"auto"}` (생략 시 `manual`) | `manual`: `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt}`; `auto`: 쿨다운 내 스킵 시 `{skipped:true, reason}`, 실행 시 `{skipped:false, ...결과}` |
 | GET `/api/dashboard?date=2026-11-20` | 기준 날짜(선택, 기본 오늘) | `DashboardSnapshot` (오늘 일정·7일 예정·오늘 할 일·프로젝트 진행·구독 요약·지표 스파크라인·주의 항목) |
 | GET `/api/retrospectives/coach` | 없음 | `{configuredProviders, defaultProvider, models}` (OpenAI/Gemini 설정 여부; API 키 미노출) |
 | POST `/api/retrospectives/coach` | `{mode:"weekly"\|"monthly", period, provider?}` | `RetroCoachResponse` (카테고리별 계획/실제, 인사이트, 초안 `good/bad/nextStep`, AI 프롬프트; `provider`: `auto`\|`openai`\|`gemini`\|`local`, 미설정/장애 시 로컬 자동 폴백) |

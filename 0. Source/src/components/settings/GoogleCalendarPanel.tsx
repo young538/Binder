@@ -261,6 +261,11 @@ export function GoogleCalendarPanel() {
                       ? new Date(conn.lastSyncedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
                       : '아직 동기화 기록 없음'}
                   </div>
+                  {conn.syncEnabled && (
+                    <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                      자동 동기화 켜짐 · 앱 열기(10분 쿨다운)와 서버 백그라운드(15분 주기)로 Google 일정을 자동 반영합니다.
+                    </div>
+                  )}
                   {conn.lastSyncError && (
                     <div className="text-red-600 dark:text-red-400">최근 오류: {conn.lastSyncError}</div>
                   )}
@@ -355,7 +360,7 @@ export function GoogleCalendarPanel() {
                       onChange={e => void patchSettings({ syncEnabled: e.target.checked })}
                       className="rounded border-zinc-300 text-blue-600"
                     />
-                    <span>실시간 양방향 동기화 활성화</span>
+                    <span>자동 양방향 동기화 활성화 (앱 접속 10분 · 서버 15분 주기)</span>
                   </label>
                 </div>
               </div>

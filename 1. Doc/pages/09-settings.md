@@ -28,7 +28,7 @@
 
 ## Google 캘린더 양방향 연동
 
-`#google-calendar` 패널([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx))에서 OAuth 연결 상태·리디렉션 URI를 확인하고, 가져올 캘린더 목록·바인더 일정을 보낼 쓰기 캘린더·실시간 푸시(`autoPushEvents`)·즉시 동기화·연결 해제를 관리합니다. OAuth 토큰은 `SESSION_SECRET` 기반 AES-256-GCM으로 암호화되어 SQLite에만 보관되며 JSON 백업에는 포함되지 않습니다.
+`#google-calendar` 패널([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx))에서 OAuth 연결 상태·리디렉션 URI를 확인하고, 가져올 캘린더 목록·바인더 일정을 보낼 쓰기 캘린더·실시간 푸시(`autoPushEvents`)·자동 양방향 동기화(앱 접속 시 10분 쿨다운 + 서버 15분 백그라운드 주기)·수동 지금 동기화·연결 해제를 관리합니다. OAuth 토큰은 `SESSION_SECRET` 기반 AES-256-GCM으로 암호화되어 SQLite에만 보관되며 JSON 백업에는 포함되지 않습니다.
 
 ## JSON 내보내기
 

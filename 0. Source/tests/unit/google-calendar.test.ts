@@ -18,6 +18,10 @@ import {
   verifyOAuthState,
 } from '@/lib/server/googleCalendar/crypto';
 import { GoogleCalendarSyncService } from '@/lib/server/googleCalendar/syncService';
+import {
+  GoogleSyncCoordinator,
+  parseSyncIntervalMinutes,
+} from '@/lib/server/googleCalendar/autoSync';
 import { UserRepositories } from '@/lib/server/repos';
 import type { GoogleCalendarInfo } from '@/lib/types';
 
@@ -344,5 +348,165 @@ describe('google calendar integration', () => {
     vi.mocked(api.deleteEvent).mockRejectedValueOnce(new Error('Google unavailable'));
     await expect(syncService.pushDeletedEvent(edited)).resolves.toBeUndefined();
     expect(reposA.googleCalendar.get()?.lastSyncError).toContain('Google unavailable');
+  });
+});
+
+describe('GoogleSyncCoordinator auto-sync & coalescing', () => {
+  const oauthConfig: GoogleOAuthConfig = {
+    configured: true,
+    clientId: 'cid',
+    clientSecret: 'csec',
+    redirectUri: 'https://example.com/callback',
+  };
+
+  const seedConnectedUser = (db: ReturnType<DatabaseConnection['get']>, userId: string, syncEnabled = true) => {
+    const repos = new UserRepositories(db, userId);
+    repos.googleCalendar.upsert({
+      googleEmail: `${userId}@gmail.com`,
+      accessTokenEnc: encryptSecret('valid-access'),
+      refreshTokenEnc: encryptSecret('valid-refresh'),
+      tokenExpiresAt: '2026-11-20T12:00:00.000Z',
+      calendarMeta: [
+        { id: 'primary-cal', summary: '내 일정', backgroundColor: '#2563eb', primary: true, accessRole: 'owner' },
+      ],
+      selectedCalendarIds: ['primary-cal'],
+      pushCalendarId: 'primary-cal',
+    });
+    if (!syncEnabled) {
+      repos.googleCalendar.updateSettings({ syncEnabled: false });
+    }
+    return repos;
+  };
+
+  it('coalesces concurrent syncs, skips recent/disabled syncs, backs off on error, and allows force sync', async () => {
+    const db = connection.get();
+    seedConnectedUser(db, 'user-auto-1', true);
+
+    const coordinator = new GoogleSyncCoordinator();
+    let currentMs = fixedNow.getTime();
+    const now = () => new Date(currentMs);
+
+    const api = createMockApiClient();
+    let resolveEvents!: (rows: GoogleCalendarEventResource[]) => void;
+    vi.mocked(api.listEvents).mockImplementationOnce(
+      () => new Promise<GoogleCalendarEventResource[]>(resolve => { resolveEvents = resolve; }),
+    );
+
+    const p1 = coordinator.syncUserIfDue('user-auto-1', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now,
+    });
+    const p2 = coordinator.syncUserIfDue('user-auto-1', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now,
+    });
+
+    await new Promise(r => setTimeout(r, 15));
+    expect(api.listEvents).toHaveBeenCalledTimes(1);
+    resolveEvents([
+      {
+        id: 'ev-coalesced',
+        summary: '자동 가져온 일정',
+        start: { dateTime: '2026-11-20T03:00:00Z' },
+        end: { dateTime: '2026-11-20T04:00:00Z' },
+      },
+    ]);
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toMatchObject({ skipped: false, pulledCreated: 1 });
+    expect(r2).toMatchObject({ skipped: false, pulledCreated: 1 });
+
+    // Inside cooldown -> skipped as recent without API calls
+    currentMs += 120_000;
+    const recentSkip = await coordinator.syncUserIfDue('user-auto-1', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now,
+    });
+    expect(recentSkip).toMatchObject({ skipped: true, reason: 'recent' });
+    expect(api.listEvents).toHaveBeenCalledTimes(1);
+
+    // Past cooldown + upstream failure -> returns reason:'error' and activates backoff
+    currentMs += 600_000;
+    vi.mocked(api.listEvents).mockRejectedValueOnce(new Error('Upstream timeout'));
+    const failedOutcome = await coordinator.syncUserIfDue('user-auto-1', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now,
+    });
+    expect(failedOutcome).toMatchObject({ skipped: true, reason: 'error' });
+
+    const backoffSkip = await coordinator.syncUserIfDue('user-auto-1', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now,
+    });
+    expect(backoffSkip).toMatchObject({ skipped: true, reason: 'recent' });
+
+    // Force sync bypasses cooldown & backoff
+    const forced = await coordinator.syncUserIfDue('user-auto-1', {
+      force: true,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      now,
+    });
+    expect(forced).toMatchObject({ skipped: false });
+
+    // Disabled user is skipped in auto mode
+    const reposDisabled = seedConnectedUser(db, 'user-auto-disabled', false);
+    expect(reposDisabled.googleCalendar.get()?.syncEnabled).toBe(false);
+    const disabledSkip = await coordinator.syncUserIfDue('user-auto-disabled', {
+      force: false,
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      now,
+    });
+    expect(disabledSkip).toMatchObject({ skipped: true, reason: 'disabled' });
+  });
+
+  it('syncAllDueUsers processes only syncEnabled due users and parses interval env values safely', async () => {
+    const db = connection.get();
+    seedConnectedUser(db, 'user-due', true);
+    const reposRecent = seedConnectedUser(db, 'user-recent', true);
+    reposRecent.googleCalendar.recordSyncStatus({ lastSyncedAt: fixedNow.toISOString(), lastSyncError: null });
+    seedConnectedUser(db, 'user-off', false);
+
+    const coordinator = new GoogleSyncCoordinator();
+    const api = createMockApiClient();
+
+    const summary = await coordinator.syncAllDueUsers({
+      database: db,
+      apiClient: api,
+      config: oauthConfig,
+      minIntervalMs: 600_000,
+      now: () => fixedNow,
+    });
+    expect(summary).toEqual({ checked: 2, synced: 1, skipped: 1, failed: 0 });
+    expect(api.listEvents).toHaveBeenCalledTimes(1);
+
+    expect(parseSyncIntervalMinutes(undefined)).toBe(15);
+    expect(parseSyncIntervalMinutes('0')).toBe(0);
+    expect(parseSyncIntervalMinutes('-5')).toBe(0);
+    expect(parseSyncIntervalMinutes('30')).toBe(30);
+    expect(parseSyncIntervalMinutes('9999')).toBe(1440);
   });
 });

@@ -450,3 +450,14 @@ export interface GoogleCalendarSyncResult {
   calendarsSynced: number;
   syncedAt: string;
 }
+
+export type GoogleAutoSyncSkipReason =
+  | 'not_connected'
+  | 'disabled'
+  | 'not_configured'
+  | 'recent'
+  | 'error';
+
+export type GoogleCalendarAutoSyncOutcome =
+  | { skipped: true; reason: GoogleAutoSyncSkipReason; lastSyncedAt?: string | null }
+  | ({ skipped: false } & GoogleCalendarSyncResult);

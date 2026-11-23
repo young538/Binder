@@ -63,8 +63,9 @@
    - `event`(단발/기간 일정), `dday`(D-Day), `anniversary`(매년 반복 기념일; `02-29`는 비윤년 `02-28`로 보정)를 관리합니다.
    - 다가오는 일정은 모닝 부팅(3일 이내 `upcomingEvents`), 일일 트래커 상단 스트립, 월간 달력 셀과 날짜 서랍에 자동 표시됩니다.
    - 일일(`/daily/[date]`)·주간(`/week/[isoweek]`) 시간표의 `계획` 컬럼에는 시간 지정 일정이 오버레이로 겹쳐 표시되며, 클릭 한 번으로 `BlockEditor`를 열어 계획 시간블록으로 가져올 수 있습니다(종일 일정은 날짜 헤더에 배지 표시).
-2. **Google 캘린더 양방향 연동 ([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) · [syncService.ts](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts))**:
+2. **Google 캘린더 양방향 연동 ([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) · [syncService.ts](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts) · [autoSync.ts](../../0.%20Source/src/lib/server/googleCalendar/autoSync.ts))**:
    - Google OAuth 2.0(`calendar`, `userinfo.email`)으로 인증해 선택한 Google 캘린더 일정을 `-30일 ~ +180일` 범위로 가져오고, 구글 측 삭제 일정도 바인더 동기화 일정에 반영합니다.
+   - 앱 열기/탭 복귀/10분 간격 접속 체크([GoogleCalendarAutoSync](../../0.%20Source/src/components/providers/GoogleCalendarAutoSync.tsx))와 서버 시작 hook([instrumentation.ts](../../0.%20Source/src/instrumentation.ts)) 기반 15분 백그라운드 스케줄러로 Google 캘린더 변경분도 자동 가져옵니다(`syncEnabled` 켜짐 기준).
    - 바인더에서 일반 일정을 생성·수정·삭제하면 연결된 Google 캘린더에 실시간 반영되며(단, `dday`·`anniversary` 및 기존 `.ics` 외부 일정은 로컬 유지), Google API 일시 오류 시 로컬 저장을 막지 않고 최근 오류만 기록합니다.
 3. **`.ics` 가져오기 (`IcsImportDialog` · `lib/ics.ts`)**:
    - `.ics` 파일 업로드, 원문 붙여넣기, 또는 직접 `https://` 구독 URL(2MB 제한, 사설/루프백 IP 및 리다이렉트 차단)을 통해 RFC 5545 `VEVENT`를 파싱합니다.

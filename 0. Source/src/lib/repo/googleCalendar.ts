@@ -1,4 +1,5 @@
 import type {
+  GoogleCalendarAutoSyncOutcome,
   GoogleCalendarConnectionSummary,
   GoogleCalendarStatus,
   GoogleCalendarSyncResult,
@@ -27,6 +28,24 @@ export const syncGoogleCalendar = async (): Promise<GoogleCalendarSyncResult> =>
   const result = await http.post<GoogleCalendarSyncResult>('/api/integrations/google/sync', {});
   notifyMutation('lifeEvents');
   notifyMutation('googleCalendar');
+  return result;
+};
+
+export const syncGoogleCalendarIfDue = async (): Promise<GoogleCalendarAutoSyncOutcome> => {
+  const result = await http.post<GoogleCalendarAutoSyncOutcome>('/api/integrations/google/sync', {
+    mode: 'auto',
+  });
+  if (!result.skipped) {
+    if (
+      result.pulledCreated > 0 ||
+      result.pulledUpdated > 0 ||
+      result.pulledDeleted > 0 ||
+      result.pushedCreated > 0
+    ) {
+      notifyMutation('lifeEvents');
+    }
+    notifyMutation('googleCalendar');
+  }
   return result;
 };
 
