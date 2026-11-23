@@ -24,6 +24,8 @@ Super 플래너는 큰 목표와 매일의 실행 기록을 함께 관리합니�
 |---|---|---|
 | `/` | 오늘 일자 `/daily/...`로 이동 | [로그인·공통 이동](pages/01-login-and-navigation.md) |
 | `/login` | 아이디·비밀번호 로그인 | [로그인·공통 이동](pages/01-login-and-navigation.md) |
+| `/privacy` | 공개 개인정보처리방침(OAuth 브랜딩 포함) | [로그인·공통 이동](pages/01-login-and-navigation.md) |
+| `/dashboard` | 인생 OS 통합 대시보드(오늘 일정·할 일·프로젝트·구독·지표 요약) | [인생 OS 확장](pages/11-life-os.md#8-인생-os-통합-대시보드-dashboard) |
 | `/mandalart` | One-Thing → 코어 → 서브 목표, 자유노트 | [One-Thing 보드](pages/02-mandalart.md) |
 | `/projects` | 목표 하위 프로젝트, 다음 행동 할 일·투입 시간 관리 | [프로젝트 관리](pages/10-projects.md) |
 | `/annual/[year]` | 연간 목표와 12개월 계획·실적 | [연간 계획](pages/03-annual.md) |

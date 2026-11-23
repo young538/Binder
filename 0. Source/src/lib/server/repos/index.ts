@@ -24,6 +24,7 @@ import { PersonRepository } from './people';
 import { LifeEventRepository } from './lifeEvents';
 import { SubscriptionRepository } from './subscriptions';
 import { GoogleCalendarConnectionRepository } from './googleCalendar';
+import { DashboardRepository } from './dashboard';
 
 /** Composes all domain repositories around the same database and authenticated owner. */
 export class UserRepositories {
@@ -50,6 +51,7 @@ export class UserRepositories {
   readonly lifeEvents: LifeEventRepository;
   readonly subscriptions: SubscriptionRepository;
   readonly googleCalendar: GoogleCalendarConnectionRepository;
+  readonly dashboard: DashboardRepository;
 
   constructor(database: BinderDatabase, userId: string) {
     this.goals = new GoalRepository(database, userId);
@@ -75,6 +77,7 @@ export class UserRepositories {
     this.lifeEvents = new LifeEventRepository(database, userId);
     this.subscriptions = new SubscriptionRepository(database, userId);
     this.googleCalendar = new GoogleCalendarConnectionRepository(database, userId);
+    this.dashboard = new DashboardRepository(database, userId);
   }
 }
 

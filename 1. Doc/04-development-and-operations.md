@@ -59,8 +59,10 @@ npm run dev -- --port 3101
 | GOOGLE_CLIENT_SECRET | (선택) Google OAuth 2.0 클라이언트 보안 비밀번호 |
 | APP_PUBLIC_ORIGIN | (선택) 리버스 프록시 뒤에서 OAuth 콜백 origin 고정 (예: `https://young538.synology.me`) |
 | GOOGLE_REDIRECT_URI | (선택) OAuth 리디렉션 전체 URI 직접 지정 |
+| GEMINI_API_KEY | (선택) AI 주간·월간 회고 코치 Gemini REST API 키 — 비우면 로컬 패턴 분석 사용 |
+| GEMINI_MODEL | (선택) Gemini 모델 ID (기본값 `gemini-2.5-flash`) |
 
-APP_PASSWORD_HASH를 바꿔도 이미 존재하는 사용자 비밀번호는 갱신되지 않습니다. 초기 사용자가 없을 때만 생성에 사용합니다. 이후 변경은 users CLI의 passwd입니다.
+APP_PASSWORD_HASH를 바꿔도 이미 존재하는 사용자 비밀번호는 갱신되지 않습니다. 초기 사용자가 없을 때만 생성에 사용합니다. 이후 변경은 설정 화면(`/settings`)의 비밀번호 변경 UI 또는 `users.mjs passwd` CLI를 사용합니다.
 
 개발 중 프로젝트 내부 WAL 파일 변경으로 재컴파일이 반복된 사례가 있으므로 로컬 DB_PATH는 프로젝트 밖 별도 개발 DB 절대경로를 사용할 수 있습니다. 운영 DB를 개발·테스트에 공유하지 않습니다.
 

@@ -6,6 +6,7 @@
 
 바인더의 목표–프로젝트–실행 루프를 생활 전반으로 확장하는 기능 묶음입니다.
 
+- `/dashboard`: 오늘 일정·하이라이트/할 일·주의 항목·진행 중 프로젝트·고정 구독·상태 지표 스파크라인 통합 대시보드
 - `/daily/[date]`: 10초 컨디션 체크인, 계획 → 실제 시간블록 확정, 이브닝 셧다운 마감 루틴, 오늘의 일정·기념일·구독 결제 스트립
 - `/retrospective/month/[yyyymm]`, `/retrospective/year/[year]`: 월간·연간 실행 집계 및 회고
 - `/metrics`: 상태·추세 지표 트래커 (체중, 순자산, 수면 평균 등)
@@ -89,10 +90,18 @@
 
 ---
 
+## 8. 인생 OS 통합 대시보드 (`/dashboard`)
+
+- **통합 스냅샷 (`GET /api/dashboard?date=YYYY-MM-DD`)**: `DashboardRepository`([dashboard.ts](../../0.%20Source/src/lib/server/repos/dashboard.ts))가 단일 읽기 트랜잭션으로 오늘 일정(Google 캘린더 동기화 일정 포함), 다가오는 7일 일정·생일·구독 결제, 오늘 하이라이트·할 일(완료 토글 지원)·시간 실행, 주간 습관 달성률, 오늘 컨디션 체크인, 진행 중 프로젝트(다음 행동 누락 경고 포함), 구독 월/연 고정비, 상태 지표 스파크라인(`MetricSparkline`)을 묶어 반환합니다.
+- **주의 배너**: 이월 대기 할 일, 다음 행동 없는 프로젝트, 안부 연락 도래 인물, 복기 예정 의사결정, 7일 이내 구독 결제가 있으면 상단에 바로가기 배지를 표시합니다.
+
+---
+
 ## 구현 파일
 
 | 파일 | 역할 |
 |---|---|
+| [DashboardPage](../../0.%20Source/src/components/dashboard/DashboardPage.tsx) / [app/(app)/dashboard/page.tsx](../../0.%20Source/src/app/(app)/dashboard/page.tsx) | 인생 OS 통합 대시보드 컨트롤 룸 |
 | [MonthlyRetroPage](../../0.%20Source/src/components/retro/MonthlyRetroPage.tsx) / [YearlyRetroPage](../../0.%20Source/src/components/retro/YearlyRetroPage.tsx) | 월·연 회고 집계 및 자동 저장 |
 | [RetroPeriodHeader](../../0.%20Source/src/components/retro/RetroPeriodHeader.tsx) / [RetroPrincipleAction](../../0.%20Source/src/components/retro/RetroPrincipleAction.tsx) | 회고 기간 이동·전환과 원칙 승격 |
 | [DailyCheckinBar](../../0.%20Source/src/components/daily/DailyCheckinBar.tsx) / [DailyTimeBlocks](../../0.%20Source/src/components/daily/DailyTimeBlocks.tsx) | 10초 컨디션 입력 및 계획→실제 확정 |

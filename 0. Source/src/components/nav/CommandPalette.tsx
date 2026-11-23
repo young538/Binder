@@ -14,6 +14,7 @@ import {
   CreditCard,
   FolderKanban,
   Inbox,
+  LayoutDashboard,
   NotebookPen,
   Plus,
   Search,
@@ -117,6 +118,7 @@ export function CommandPalette() {
     const yyyymm = format(now, 'yyyy-MM');
     const year = format(now, 'yyyy');
     const items = [
+      { key: 'nav:dashboard', label: '인생 OS 대시보드', subtitle: '/dashboard', href: '/dashboard', Icon: LayoutDashboard },
       { key: 'nav:daily', label: '오늘 일일 트래커', subtitle: today, href: `/daily/${today}`, Icon: Sun },
       { key: 'nav:projects', label: '프로젝트 실행 보드', subtitle: '/projects', href: '/projects', Icon: FolderKanban },
       { key: 'nav:notes', label: '원칙 · 의사결정 · 노트', subtitle: '/notes', href: '/notes', Icon: BookMarked },

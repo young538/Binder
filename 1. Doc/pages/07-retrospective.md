@@ -42,12 +42,21 @@
 
 같은 날짜의 일일 독서도 동일 회고 레코드의 `template.reading`을 사용합니다. 서버는 전달된 template 필드만 합칩니다. 독서와 회고는 같은 행을 공유하지만 각 편집기의 변경 필드만 저장합니다. 병합·동시 편집의 한계는 [일일 문서](06-daily.md)에 설명합니다.
 
+## AI 회고 코치 · 패턴 요약 (`RetroCoachCard`)
+
+주간 회고(`/retrospective/week/[isoweek]`)와 월간 회고(`/retrospective/month/[yyyymm]`)에 [RetroCoachCard](../../0.%20Source/src/components/retro/RetroCoachCard.tsx)를 표시합니다. `POST /api/retrospectives/coach`가 해당 기간의 시간블록(계획 대비 실제), 할 일 완료율, 습관 달성률, 수면·에너지 체크인 상관관계, 완료 프로젝트·완독 도서를 집계([retroCoach.ts](../../0.%20Source/src/lib/retroCoach.ts))합니다.
+
+- `GEMINI_API_KEY`가 없으면 외부 네트워크 호출 없이 로컬 패턴 분석으로 인사이트와 `좋았던 것` · `아쉬운 것` · `다음 행동` 초안을 생성합니다.
+- `GEMINI_API_KEY`가 설정돼 있으면 Gemini REST API([geminiCoach.ts](../../0.%20Source/src/lib/server/geminiCoach.ts))로 문장을 다듬고, 실패 시 로컬 분석으로 자동 폴백합니다.
+- **회고에 초안 채우기**로 기존 작성 내용을 덮어쓰지 않고 아래에 이어 붙이며, **AI 프롬프트 복사**로 외부 AI 대화에 바로 붙여넣을 프롬프트를 복사할 수 있습니다.
+
 ## 구현 파일
 
 | 파일 | 역할 |
 |---|---|
 | [WeeklyRetroPage](../../0.%20Source/src/components/retro/WeeklyRetroPage.tsx) | AsyncResource로 주간 데이터 조회, 회고 자동 저장 |
 | [WeeklySummary](../../0.%20Source/src/components/retro/WeeklySummary.tsx) | 통계 카드·막대 |
+| [RetroCoachCard](../../0.%20Source/src/components/retro/RetroCoachCard.tsx) / [retroCoach.ts](../../0.%20Source/src/lib/retroCoach.ts) | 패턴 요약 및 AI 회고 초안 생성 |
 | [RetroTemplate](../../0.%20Source/src/components/retro/RetroTemplate.tsx) | 공통 양식 |
 | [DailyRetroSheet](../../0.%20Source/src/components/week/DailyRetroSheet.tsx) | 일일 회고 시트 |
 | [aggregate.ts](../../0.%20Source/src/lib/aggregate.ts) | 그룹별 분 합산 |

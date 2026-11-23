@@ -1,4 +1,5 @@
 import { Retrospective, RetroType } from '../types';
+import type { RetroCoachMode, RetroCoachResponse } from '../retroCoach';
 import { http } from './http';
 import { notifyMutation } from './events';
 
@@ -25,3 +26,9 @@ export const upsertRetrospective = async (
   notifyMutation('retrospectives');
   return row;
 };
+
+export const generateRetroCoach = (
+  mode: RetroCoachMode,
+  period: string,
+): Promise<RetroCoachResponse> =>
+  http.post<RetroCoachResponse>('/api/retrospectives/coach', { mode, period });

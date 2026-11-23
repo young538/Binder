@@ -13,6 +13,7 @@ import {
   CreditCard,
   Target,
   FolderKanban,
+  LayoutDashboard,
   NotebookPen,
   MoreHorizontal,
   Search,
@@ -34,6 +35,7 @@ const primary = [
 ];
 
 const more = [
+  { label: '대시보드', Icon: LayoutDashboard, basePath: '/dashboard', href: () => '/dashboard' },
   { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
   { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
   { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },

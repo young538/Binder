@@ -15,6 +15,7 @@ import {
   CreditCard,
   FolderKanban,
   Inbox,
+  LayoutDashboard,
   LogOut,
   NotebookPen,
   Search,
@@ -38,6 +39,7 @@ const primaryLinks = [
 ];
 
 const lifeHubLinks = [
+  { label: '대시보드', Icon: LayoutDashboard, basePath: '/dashboard', href: '/dashboard' },
   { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: '/notes' },
   { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: '/metrics' },
   { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: '/subscriptions' },
@@ -85,7 +87,12 @@ export const TopNav = () => {
 
   return (
     <nav className="hidden lg:flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 px-4 xl:px-6 py-2.5 bg-white dark:bg-zinc-950 sticky top-0 z-20">
-      <span className="font-semibold mr-2 xl:mr-4 text-sm xl:text-base text-zinc-800 dark:text-zinc-50 shrink-0">Super 플래너</span>
+      <Link
+        href="/dashboard"
+        className="font-semibold mr-2 xl:mr-4 text-sm xl:text-base text-zinc-800 hover:text-blue-600 dark:text-zinc-50 dark:hover:text-blue-400 shrink-0 transition-colors"
+      >
+        Super 플래너
+      </Link>
       <div className="flex items-center gap-0.5 xl:gap-1 mr-auto">
         {primaryLinks.map(({ label, Icon, basePath, href }) => {
           const active = path.startsWith(basePath);

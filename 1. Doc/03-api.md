@@ -22,7 +22,8 @@
 
 | 메서드·경로 | 입력 | 응답 |
 |---|---|---|
-| POST `/api/auth/login` | username, password | `{ok:true}` + 쿠키; JSON 오류/누락 400, 인증 실패 401 |
+| POST `/api/auth/login` | username, password | `{ok:true}` + 쿠키; JSON 오류/누락 400, 인증 실패 401, 연속 실패 초과 429 (`Retry-After`) |
+| POST `/api/auth/password` | currentPassword, newPassword (8~128자) | `{ok:true}`; 현재 비밀번호 불일치 400, 연속 실패 초과 429 (`Retry-After`) |
 | POST `/api/auth/logout` | 없음 | `{ok:true}`, 세션 파기 |
 | GET `/api/auth/me` | 없음 | `{userId, username}` |
 
@@ -173,6 +174,8 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | GET `/api/integrations/google/callback` | Google OAuth `code`, `state` | 토큰 암호화 저장·초기 동기화 후 `returnTo?google=connected\|error` 리다이렉트 |
 | PATCH `/api/integrations/google/settings` | `selectedCalendarIds?`, `pushCalendarId?`, `syncEnabled?`, `autoPushEvents?` | 갱신된 `GoogleCalendarConnectionSummary`; 읽기 전용 캘린더 푸시 지정은 400 |
 | POST `/api/integrations/google/sync` | 없음 | `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt}`; 양방향 수동 동기화 |
+| GET `/api/dashboard?date=2026-11-20` | 기준 날짜(선택, 기본 오늘) | `DashboardSnapshot` (오늘 일정·7일 예정·오늘 할 일·프로젝트 진행·구독 요약·지표 스파크라인·주의 항목) |
+| POST `/api/retrospectives/coach` | `{mode:"weekly"\|"monthly", period}` | `RetroCoachResponse` (카테고리별 계획/실제, 인사이트, 초안 `good/bad/nextStep`, AI 프롬프트; `GEMINI_API_KEY` 미설정 시 로컬 분석) |
 | DELETE `/api/integrations/google/disconnect` | 쿼리 `purgeEvents=true\|false` | `{ok:true, deletedEvents}`; best-effort 토큰 폐기 및 연결 해제(옵션 시 Google 동기화 일정 삭제) |
 
 Google 캘린더가 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화되면 `POST /api/events`, `PATCH /api/events/[id]`, `DELETE /api/events/[id]` 시 일반 일정(`kind='event'`) 변경을 Google 캘린더에도 실시간 반영합니다(외부 일시 오류는 `lastSyncError`에 기록하고 로컬 저장은 유지합니다). `googleCalendarId`·`googleEventId`·`googleUpdatedAt`는 서버 관리 필드이므로 클라이언트 직접 수정은 400으로 거절합니다.

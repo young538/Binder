@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
+import { parseISO } from 'date-fns';
 import { ensureUserExists, loginAs } from './_helpers';
+import { toIsoWeek } from '@/lib/utils/date';
 
 async function setup(page: Page, width: number, suffix: string) {
   const username = `lifeos-${width}-${suffix}-${Date.now()}`;
@@ -218,10 +220,58 @@ for (const width of [1280, 390]) {
     await expect(page.getByTestId('time-block').filter({ hasText: '구글연동미팅' })).toBeVisible();
     await checkNoHorizontalOverflow(page);
 
+    // 9) Life OS Dashboard (/dashboard) at both 1280px & 390px
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: '인생 OS 대시보드' })).toBeVisible();
+    await expect(page.getByLabel('대시보드 핵심 지표')).toContainText('₩39,000');
+    await expect(page.getByText('구글연동미팅').first()).toBeVisible();
+    await expect(page.getByRole('img', { name: '체중트래킹 추세 그래프' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    // 10) AI Weekly Retro Coach (/retrospective/week/[isoweek])
+    const currentWeek = toIsoWeek(parseISO(today));
+    await page.goto(`/retrospective/week/${currentWeek}`);
+    const coach = page.getByRole('region', { name: 'AI 회고 코치' });
+    await coach.getByRole('button', { name: '회고 초안 생성' }).click();
+    await expect(coach.getByText('데이터 패턴 분석')).toBeVisible();
+    await Promise.all([
+      page.waitForResponse(
+        r => r.url().includes('/api/retrospectives') && !r.url().includes('/coach') && r.request().method() === 'PUT' && r.status() === 200,
+      ),
+      coach.getByRole('button', { name: '회고에 초안 채우기' }).click(),
+    ]);
+    await expect(coach.getByText('초안을 회고 입력란에 반영했어요.')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /좋았던 것/ })).not.toHaveValue('');
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: /좋았던 것/ })).not.toHaveValue('');
+    await checkNoHorizontalOverflow(page);
+
+    // 11) /settings Google panel + password change UI & relogin
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: 'Google 캘린더 양방향 연동' })).toBeVisible();
     await expect(page.getByRole('button', { name: '복사' })).toBeVisible();
+
+    const meRes = await page.request.get('/api/auth/me');
+    const currentUsername = (await meRes.json()).username as string;
+    const accountSection = page.locator('section').filter({ has: page.getByRole('heading', { name: '계정' }) });
+
+    await accountSection.getByRole('button', { name: '비밀번호 변경' }).click();
+    await accountSection.getByLabel('현재 비밀번호').fill('wrong-pw-check');
+    await accountSection.getByLabel('새 비밀번호', { exact: true }).fill('newPwTest456*');
+    await accountSection.getByLabel('새 비밀번호 확인').fill('newPwTest456*');
+    await accountSection.getByRole('button', { name: '비밀번호 저장' }).click();
+    await expect(accountSection.getByRole('alert')).toContainText('현재 비밀번호가 올바르지 않아요.');
+    await expect(page).toHaveURL(/\/settings/);
+
+    await accountSection.getByLabel('현재 비밀번호').fill('pwTest123*');
+    await accountSection.getByRole('button', { name: '비밀번호 저장' }).click();
+    await expect(accountSection.getByRole('status')).toContainText('비밀번호를 변경했어요.');
     await checkNoHorizontalOverflow(page);
+
+    await accountSection.getByRole('button', { name: '로그아웃' }).click();
+    await expect(page).toHaveURL(/\/login/);
+    await loginAs(page, currentUsername, 'newPwTest456*');
+    await expect(page).not.toHaveURL(/\/login/);
   });
 }
 
@@ -230,9 +280,14 @@ test('top nav fits 1024px desktop without horizontal overflow and rejects anonym
   await page.goto('/daily');
   await checkNoHorizontalOverflow(page);
 
+  const privacyRes = await request.get('/privacy');
+  expect(privacyRes.status()).toBe(200);
+  expect(await privacyRes.text()).toContain('개인정보처리방침');
+
   for (const url of [
     '/api/daily-checkins?date=2026-11-20',
     '/api/evening-shutdown?date=2026-11-20',
+    '/api/dashboard?date=2026-11-20',
     '/api/metrics',
     '/api/notes',
     '/api/people',
@@ -242,6 +297,8 @@ test('top nav fits 1024px desktop without horizontal overflow and rejects anonym
   ]) {
     expect((await request.get(url)).status()).toBe(401);
   }
+  expect((await request.post('/api/auth/password', { data: { currentPassword: 'a', newPassword: 'newpassword1' } })).status()).toBe(401);
+  expect((await request.post('/api/retrospectives/coach', { data: { mode: 'weekly', period: '2026-W47' } })).status()).toBe(401);
   expect((await request.post('/api/time-blocks/confirm-actuals', { data: { date: '2026-11-20' } })).status()).toBe(401);
   expect((await request.post('/api/events/import-ics', { data: { icsText: 'x' } })).status()).toBe(401);
   expect((await request.post('/api/integrations/google/sync', { data: {} })).status()).toBe(401);

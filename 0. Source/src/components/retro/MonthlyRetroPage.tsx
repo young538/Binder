@@ -13,6 +13,7 @@ import { toIsoDate } from '@/lib/utils/date';
 import { computeHabitStatsForRange } from '@/lib/utils/habitSchedule';
 import { AutosaveStatus } from '@/components/common/AutosaveStatus';
 import { PlanActualComparison } from './PlanActualComparison';
+import { RetroCoachCard } from './RetroCoachCard';
 import { RetroPeriodHeader } from './RetroPeriodHeader';
 import { RetroTemplate } from './RetroTemplate';
 
@@ -103,6 +104,15 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
           </div>
         </div>
       </section>
+
+      <RetroCoachCard
+        key={`monthly:${yyyymm}`}
+        mode="monthly"
+        period={yyyymm}
+        currentTemplate={editor.value.template}
+        editorLoaded={editor.loaded}
+        onApplyDraft={editor.patch}
+      />
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         {editor.loaded && (

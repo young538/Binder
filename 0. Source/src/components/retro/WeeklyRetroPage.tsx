@@ -12,6 +12,7 @@ import { listLogsForRange } from '@/lib/repo/habitLogs';
 import { listDailyCheckinsInRange } from '@/lib/repo/dailyCheckins';
 import { RetroPeriodHeader } from './RetroPeriodHeader';
 import { WeeklySummary } from './WeeklySummary';
+import { RetroCoachCard } from './RetroCoachCard';
 import { RetroTemplate } from './RetroTemplate';
 
 export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
@@ -45,6 +46,14 @@ export const WeeklyRetroPage = ({ isoweek }: { isoweek: string }) => {
         projects={projects}
         checkins={checkins}
         habitStats={habitStats}
+      />
+      <RetroCoachCard
+        key={`weekly:${isoweek}`}
+        mode="weekly"
+        period={isoweek}
+        currentTemplate={editor.value.template}
+        editorLoaded={editor.loaded}
+        onApplyDraft={editor.patch}
       />
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-5">
         {editor.loaded && <RetroTemplate value={editor.value} onChange={editor.patch} beforeCreate={editor.flush} source={{ type: 'weekly', dateOrWeek: isoweek }} />}
