@@ -511,3 +511,21 @@ export const financeBudgets = sqliteTable('finance_budgets', {
 }, t => [
   index('finance_budgets_user_month_idx').on(t.userId, t.yyyymm),
 ]);
+
+// FinanceAutomationConfigs — Bearer token hash & encrypted Excel password for external import automation (excluded from JSON backups)
+export const financeAutomationConfigs = sqliteTable('finance_automation_configs', {
+  userId: text('user_id').primaryKey(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  tokenHash: text('token_hash'),
+  tokenPrefix: text('token_prefix'),
+  excelPasswordEnc: text('excel_password_enc'),
+  lastImportAt: text('last_import_at'),
+  lastImportFileName: text('last_import_file_name'),
+  lastImportStatus: text('last_import_status'),
+  lastImportSummary: text('last_import_summary'),
+  lastImportError: text('last_import_error'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [
+  uniqueIndex('finance_auto_token_hash_idx').on(t.tokenHash),
+]);

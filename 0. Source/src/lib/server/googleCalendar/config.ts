@@ -19,7 +19,7 @@ export function getGoogleOAuthConfig(req?: Request): GoogleOAuthConfig {
   if (explicitRedirect) {
     redirectUri = explicitRedirect;
   } else {
-    const origin = resolveOrigin(req);
+    const origin = resolveAppOrigin(req);
     redirectUri = `${origin}${CALLBACK_PATH}`;
   }
 
@@ -31,7 +31,7 @@ export function getGoogleOAuthConfig(req?: Request): GoogleOAuthConfig {
   };
 }
 
-function resolveOrigin(req?: Request): string {
+export function resolveAppOrigin(req?: Request): string {
   const publicOrigin = process.env.APP_PUBLIC_ORIGIN?.trim().replace(/\/+$/, '');
   if (publicOrigin) return publicOrigin;
 

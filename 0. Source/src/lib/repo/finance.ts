@@ -2,6 +2,7 @@ import type {
   FinanceImportCommitResult,
   FinanceImportPreview,
 } from '../finance';
+import type { FinanceAutomationStatus } from '../financeAutomation';
 import type {
   FinanceBudget,
   FinanceTransaction,
@@ -139,3 +140,41 @@ export const commitFinanceImport = (
   password?: string,
 ): Promise<FinanceImportCommitResult> =>
   sendFinanceImport<FinanceImportCommitResult>('commit', file, password);
+
+export const getFinanceAutomationStatus = (): Promise<FinanceAutomationStatus> =>
+  http.get<FinanceAutomationStatus>('/api/finance/automation');
+
+export const issueFinanceAutomationToken = async (): Promise<{
+  token: string;
+  status: FinanceAutomationStatus;
+}> => {
+  const res = await http.post<{ token: string; status: FinanceAutomationStatus }>(
+    '/api/finance/automation',
+    { action: 'issue_token' },
+  );
+  notifyMutation('financeAutomation');
+  return res;
+};
+
+export const revokeFinanceAutomationToken = async (): Promise<{
+  status: FinanceAutomationStatus;
+}> => {
+  const res = await http.post<{ status: FinanceAutomationStatus }>(
+    '/api/finance/automation',
+    { action: 'revoke_token' },
+  );
+  notifyMutation('financeAutomation');
+  return res;
+};
+
+export const updateFinanceAutomationSettings = async (patch: {
+  enabled?: boolean;
+  excelPassword?: string | null;
+}): Promise<{ status: FinanceAutomationStatus }> => {
+  const res = await http.patch<{ status: FinanceAutomationStatus }>(
+    '/api/finance/automation',
+    patch,
+  );
+  notifyMutation('financeAutomation');
+  return res;
+};

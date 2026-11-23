@@ -103,6 +103,7 @@
 
 - **네비게이션 통합**: 상단 데스크톱(`홈 · 일일 · 할 일` + `플래너`/`목표·실행`/`재무`/`지식 · 기록` 드롭다운)과 모바일 하단(`홈 · 일일 · 할 일 · 가계부 · 더보기`)에서 1클릭으로 진입할 수 있으며, **빠른 메모 (`Alt+N`)**의 **빠른 지출** 탭에서 현금·수동 지출을 즉시 기록합니다.
 - **뱅크샐러드 통합 엑셀(`.xlsx`) 및 CSV 2단계 가져오기 ([parser.ts](../../0.%20Source/src/lib/server/finance/parser.ts) · [FinanceImportDialog.tsx](../../0.%20Source/src/components/finance/FinanceImportDialog.tsx))**: `가계부 내역` 시트(암호 설정된 엑셀 복호화 지원)와 UTF-8/EUC-KR CSV를 파싱해 미리보기(`신규 / 중복 건너뜀 / 지출·수입·이체`) 후 SHA-256 `externalHash` 기준으로 중복 없이 단일 트랜잭션 등록합니다.
+- **Gmail · Google Apps Script 자동 연동 ([FinanceAutomationDialog.tsx](../../0.%20Source/src/components/finance/FinanceAutomationDialog.tsx) · [financeAutomation.ts](../../0.%20Source/src/lib/financeAutomation.ts) · [automationImport.ts](../../0.%20Source/src/lib/server/finance/automationImport.ts))**: `/finance` 상단 **Gmail 자동 연동**에서 Bearer API 토큰(`bfi_...`) 발급, 고정 엑셀 비밀번호 AES-256-GCM 저장, 맞춤 검색 조건이 반영된 `Code.gs` 스크립트 생성을 제공합니다. Apps Script가 매일 12시·23시(`Asia/Seoul`)에 Gmail 첨부파일을 `POST /api/finance/import/automation`으로 전송하고 성공 시 `Binder-Finance-Imported` 라벨을 부여합니다.
 - **예산·구독 고정비·회고 연동 ([FinancePage.tsx](../../0.%20Source/src/components/finance/FinancePage.tsx) · [finance.ts](../../0.%20Source/src/lib/finance.ts))**: `이체` 및 `합계 제외(excluded)` 항목을 뺀 순 지출·수입·순저축·일평균 가용액을 계산하며, 매월 기본/특정 월 예산, 활성 구독 고정비 자동 반영(`syncSubscriptionsForMonth`), `/api/search` 가계부 검색, 월간 회고(`/retrospective/month`) 및 AI 월간 회고 코치를 연결합니다.
 
 ---

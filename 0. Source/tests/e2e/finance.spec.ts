@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
+import officeCrypto from 'officecrypto-tool';
 import { ensureUserExists, loginAs } from './_helpers';
 
 async function setup(page: Page, width: number, suffix: string) {
@@ -151,4 +152,100 @@ test('redesigned 1024px TopNav fits without overflow and finance APIs reject ano
   expect((await request.delete('/api/finance/budgets?id=unknown')).status()).toBe(401);
   expect((await request.post('/api/finance/import')).status()).toBe(401);
   expect((await request.post('/api/finance/sync-subscriptions', { data: {} })).status()).toBe(401);
+  expect((await request.get('/api/finance/automation')).status()).toBe(401);
+  expect((await request.post('/api/finance/automation', { data: { action: 'issue_token' } })).status()).toBe(401);
+  expect((await request.patch('/api/finance/automation', { data: { enabled: true } })).status()).toBe(401);
+  expect((await request.post('/api/finance/import/automation', { data: {} })).status()).toBe(401);
 });
+
+for (const width of [1280, 390]) {
+  test(`finance Gmail Apps Script automation token, encrypted Excel upload & telemetry at ${width}px`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page, width, 'auto');
+    const now = new Date();
+    const yyyymm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    await page.goto('/finance');
+    await checkNoHorizontalOverflow(page);
+
+    // 1) Open Gmail automation dialog, issue token, and verify script + zero overflow
+    await page.getByRole('button', { name: /Gmail 자동 연동/ }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    await dialog.getByRole('button', { name: '토큰 발급' }).click();
+    const tokenEl = dialog.locator('div.font-mono.break-all');
+    await expect(tokenEl).toContainText(/^bfi_[0-9a-f]{48}$/);
+    const issuedToken = (await tokenEl.textContent())?.trim() ?? '';
+    expect(issuedToken).toMatch(/^bfi_[0-9a-f]{48}$/);
+
+    const scriptBox = dialog.getByLabel('Google Apps Script 코드');
+    await expect(scriptBox).toHaveValue(/atHour\(12\)/);
+    await expect(scriptBox).toHaveValue(/atHour\(23\)/);
+    await expect(scriptBox).toHaveValue(/Asia\/Seoul/);
+    await expect(scriptBox).toHaveValue(/Binder-Finance-Imported/);
+
+    // 2) Save fixed Excel password
+    await dialog.getByLabel('고정 엑셀 비밀번호').fill('bank-secret-123');
+    await dialog.getByRole('button', { name: '비밀번호 저장' }).click();
+    await expect(dialog.getByText('저장됨', { exact: true })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    await dialog.getByRole('button', { name: '닫기', exact: true }).last().click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // 3) Send encrypted BankSalad .xlsx via external Bearer endpoint (simulating Google Apps Script)
+    const plainBuffer = await createSampleBankSaladXlsx(yyyymm);
+    const encryptedBuffer = officeCrypto.encrypt(plainBuffer, { password: 'bank-secret-123' });
+
+    const invalidAuth = await page.request.post('/api/finance/import/automation', {
+      headers: { Authorization: 'Bearer bfi_wrongtoken0000000000000000000000' },
+      data: { fileName: '뱅크샐러드_자동.xlsx', fileBase64: encryptedBuffer.toString('base64') },
+    });
+    expect(invalidAuth.status()).toBe(401);
+
+    const firstPush = await page.request.post('/api/finance/import/automation', {
+      headers: { Authorization: `Bearer ${issuedToken}` },
+      data: {
+        fileName: '뱅크샐러드_자동.xlsx',
+        fileBase64: encryptedBuffer.toString('base64'),
+        mode: 'commit',
+      },
+    });
+    expect(firstPush.status()).toBe(200);
+    expect(await firstPush.json()).toMatchObject({
+      ok: true,
+      mode: 'commit',
+      inserted: 2,
+      duplicates: 0,
+    });
+
+    // Re-send same file -> deduplicates cleanly
+    const secondPush = await page.request.post('/api/finance/import/automation', {
+      headers: { Authorization: `Bearer ${issuedToken}` },
+      data: {
+        fileName: '뱅크샐러드_자동.xlsx',
+        fileBase64: encryptedBuffer.toString('base64'),
+        mode: 'commit',
+      },
+    });
+    expect(secondPush.status()).toBe(200);
+    expect(await secondPush.json()).toMatchObject({
+      ok: true,
+      mode: 'commit',
+      inserted: 0,
+      duplicates: 2,
+    });
+
+    // 4) Reload /finance -> transactions appear and dialog displays last automation telemetry
+    await page.reload();
+    await expect(page.getByText('을밀대 평양냉면')).toBeVisible();
+    await page.getByRole('button', { name: /Gmail 자동 연동/ }).click();
+    const refreshedDialog = page.getByRole('dialog');
+    await expect(refreshedDialog).toContainText('뱅크샐러드_자동.xlsx');
+    await expect(refreshedDialog).toContainText('성공');
+    await expect(refreshedDialog).toContainText('중복 2건 건너뜀');
+    await checkNoHorizontalOverflow(page);
+  });
+}

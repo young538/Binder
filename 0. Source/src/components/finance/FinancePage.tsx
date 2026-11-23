@@ -10,6 +10,7 @@ import {
   CreditCard,
   EyeOff,
   FileSpreadsheet,
+  Mail,
   Pencil,
   PieChart,
   Plus,
@@ -32,6 +33,7 @@ import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import {
   deleteFinanceBudget,
   deleteFinanceTransaction,
+  getFinanceAutomationStatus,
   listFinanceBudgets,
   listFinanceTransactions,
   syncSubscriptionsToFinance,
@@ -45,6 +47,7 @@ import {
   type FinanceTransactionKind,
 } from '@/lib/types';
 import { toIsoDate } from '@/lib/utils/date';
+import { FinanceAutomationDialog } from './FinanceAutomationDialog';
 import { FinanceImportDialog } from './FinanceImportDialog';
 import { FinanceTransactionDialog } from './FinanceTransactionDialog';
 
@@ -86,6 +89,7 @@ export function FinancePage() {
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<FinanceTransaction | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [automationDialogOpen, setAutomationDialogOpen] = useState(false);
 
   const [syncingSubs, setSyncingSubs] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -104,6 +108,13 @@ export function FinancePage() {
     () => listFinanceBudgets(month),
     [],
     ['financeBudgets'],
+  );
+
+  const { value: automationStatus, refresh: refreshAutomation } = useAsyncResource(
+    'finance:automation',
+    getFinanceAutomationStatus,
+    null,
+    ['financeAutomation'],
   );
 
   const monthTransactions = useMemo(
@@ -334,6 +345,26 @@ export function FinancePage() {
           </button>
           <button
             type="button"
+            onClick={() => setAutomationDialogOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            <Mail size={13} />
+            Gmail 자동 연동
+            {automationStatus?.configured && (
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full ${
+                  automationStatus.lastImportStatus === 'error'
+                    ? 'bg-red-500'
+                    : automationStatus.enabled
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-400'
+                }`}
+              />
+            )}
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setEditingTx(null);
               setTxDialogOpen(true);
@@ -357,6 +388,26 @@ export function FinancePage() {
         >
           {notice.text}
         </p>
+      )}
+
+      {automationStatus?.lastImportStatus === 'error' && automationStatus.lastImportError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <span className="min-w-0 break-words">
+            <strong>최근 Gmail 자동 반영 오류</strong>
+            {automationStatus.lastImportFileName ? ` (${automationStatus.lastImportFileName})` : ''}:{' '}
+            {automationStatus.lastImportError}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAutomationDialogOpen(true)}
+            className="shrink-0 rounded-lg border border-amber-300 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-zinc-900 dark:text-amber-200"
+          >
+            연동 설정 확인
+          </button>
+        </div>
       )}
 
       <section aria-label="이번 달 재무 요약" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -827,6 +878,14 @@ export function FinancePage() {
         <FinanceImportDialog
           onClose={() => setImportDialogOpen(false)}
           onCommitted={handleImportCommitted}
+        />
+      )}
+
+      {automationDialogOpen && (
+        <FinanceAutomationDialog
+          status={automationStatus}
+          onClose={() => setAutomationDialogOpen(false)}
+          onChanged={() => void refreshAutomation(true)}
         />
       )}
     </div>
