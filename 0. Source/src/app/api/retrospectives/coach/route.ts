@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { endOfMonth, parseISO } from 'date-fns';
 import { buildRetroCoachSummary } from '@/lib/retroCoach';
-import { enrichRetroCoachWithGemini } from '@/lib/server/geminiCoach';
+import { enrichRetroCoach, getPublicAiCoachStatus } from '@/lib/server/aiCoach';
 import { authenticated } from '@/lib/server/http';
 import { getUserRepositories } from '@/lib/server/repos';
 import { readMutation } from '@/lib/server/validation';
 import { toIsoDate, weekDates } from '@/lib/utils/date';
 import { computeHabitStatsForRange } from '@/lib/utils/habitSchedule';
+
+export const GET = authenticated(async () => {
+  return NextResponse.json(getPublicAiCoachStatus());
+});
 
 export const POST = authenticated(async (session, req: Request) => {
   const body = await readMutation(req, 'retroCoach', session.userId);
@@ -79,6 +83,6 @@ export const POST = authenticated(async (session, req: Request) => {
     existingRetro,
   });
 
-  const enriched = await enrichRetroCoachWithGemini(summary);
+  const enriched = await enrichRetroCoach(summary, body.provider ?? 'auto');
   return NextResponse.json(enriched);
 });

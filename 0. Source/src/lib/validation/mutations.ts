@@ -65,7 +65,7 @@ export interface MutationPayloads {
   settings: Settings;
   login: { username: string; password: string };
   changePassword: { currentPassword: string; newPassword: string };
-  retroCoach: { mode: 'weekly' | 'monthly'; period: string };
+  retroCoach: { mode: 'weekly' | 'monthly'; period: string; provider?: 'auto' | 'openai' | 'gemini' | 'local' };
 }
 export type MutationKind = keyof MutationPayloads;
 type Check = (value: unknown) => boolean;
@@ -162,7 +162,7 @@ const rules: Record<MutationKind, Rules> = {
   settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark') }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },
   changePassword: { fields: { currentPassword: identifier, newPassword: value => typeof value === 'string' && value.length >= 8 && value.length <= 128 }, required: ['currentPassword', 'newPassword'] },
-  retroCoach: { fields: { mode: oneOf('weekly', 'monthly'), period: identifier }, required: ['mode', 'period'] },
+  retroCoach: { fields: { mode: oneOf('weekly', 'monthly'), period: identifier, provider: oneOf('auto', 'openai', 'gemini', 'local') }, required: ['mode', 'period'] },
 };
 
 export class ValidationError extends Error {}

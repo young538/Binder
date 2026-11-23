@@ -12,6 +12,19 @@ import type {
 
 export type RetroCoachMode = 'weekly' | 'monthly';
 
+export type RetroCoachProvider = 'local' | 'gemini' | 'openai';
+
+export type RetroCoachRequestedProvider = 'auto' | 'openai' | 'gemini' | 'local';
+
+export interface RetroCoachStatus {
+  configuredProviders: ('openai' | 'gemini')[];
+  defaultProvider: 'auto' | 'openai' | 'gemini';
+  models: {
+    openai?: string;
+    gemini?: string;
+  };
+}
+
 export interface RetroCoachCategoryStat {
   categoryId: string;
   name: string;
@@ -46,7 +59,7 @@ export interface RetroCoachResponse {
   period: string;
   startDate: string;
   endDate: string;
-  provider: 'local' | 'gemini';
+  provider: RetroCoachProvider;
   model?: string;
   fallbackReason?: string;
   metrics: RetroCoachMetrics;

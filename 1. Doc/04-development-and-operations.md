@@ -59,6 +59,10 @@ npm run dev -- --port 3101
 | GOOGLE_CLIENT_SECRET | (선택) Google OAuth 2.0 클라이언트 보안 비밀번호 |
 | APP_PUBLIC_ORIGIN | (선택) 리버스 프록시 뒤에서 OAuth 콜백 origin 고정 (예: `https://young538.synology.me`) |
 | GOOGLE_REDIRECT_URI | (선택) OAuth 리디렉션 전체 URI 직접 지정 |
+| AI_COACH_PROVIDER | (선택) AI 회고 코치 자동 우선순위(`auto` · `openai` · `gemini`, 기본 `auto`) |
+| OPENAI_API_KEY | (선택) AI 주간·월간 회고 코치 OpenAI API 키 — 설정 시 OpenAI Chat Completions 연동 |
+| OPENAI_MODEL | (선택) OpenAI 모델 ID (기본값 `gpt-4.1-mini`) |
+| OPENAI_BASE_URL | (선택) OpenAI 호환 엔드포인트 베이스 URL (기본값 `https://api.openai.com/v1`) |
 | GEMINI_API_KEY | (선택) AI 주간·월간 회고 코치 Gemini REST API 키 — 비우면 로컬 패턴 분석 사용 |
 | GEMINI_MODEL | (선택) Gemini 모델 ID (기본값 `gemini-2.5-flash`) |
 

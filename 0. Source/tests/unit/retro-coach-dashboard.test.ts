@@ -5,6 +5,7 @@ import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import { ulid } from 'ulid';
 import { buildRetroCoachSummary } from '@/lib/retroCoach';
+import { enrichRetroCoach, getPublicAiCoachStatus } from '@/lib/server/aiCoach';
 import { closeDb, getDb, schema } from '@/lib/server/db/client';
 import { UserRepositories } from '@/lib/server/repos';
 
@@ -314,5 +315,134 @@ describe('DashboardRepository snapshot & multi-user isolation', () => {
     expect(snapB.subscriptionSummary.activeCount).toBe(0);
     expect(snapB.metrics).toHaveLength(0);
     expect(snapB.activeProjects).toHaveLength(0);
+  });
+});
+
+describe('enrichRetroCoach & getPublicAiCoachStatus', () => {
+  const sampleBase = buildRetroCoachSummary({
+    mode: 'weekly',
+    period: '2026-W47',
+    startDate: '2026-11-16',
+    endDate: '2026-11-22',
+    categories: [],
+    blocks: [],
+    todos: [],
+    completedProjects: [],
+    finishedBooks: [],
+    checkins: [],
+    habitPercent: 50,
+  });
+
+  it('calls OpenAI Chat Completions, omits temperature on gpt-5 models, and never exposes keys in status', async () => {
+    const calls: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
+    const mockFetch: typeof fetch = async (input, init) => {
+      calls.push({
+        url: String(input),
+        headers: new Headers(init?.headers),
+        body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+      });
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  insights: ['OpenAI 분석 인사이트 1'],
+                  draft: { good: '- 잘한 일', bad: '- 보완할 일', nextStep: '다음 행동 1' },
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const envGpt5 = {
+      OPENAI_API_KEY: 'sk-test-secret-key',
+      OPENAI_MODEL: 'gpt-5-mini',
+      OPENAI_BASE_URL: 'https://proxy.example.com/v1/',
+    } as unknown as NodeJS.ProcessEnv;
+
+    const status = getPublicAiCoachStatus(envGpt5);
+    expect(status).toEqual({
+      configuredProviders: ['openai'],
+      defaultProvider: 'auto',
+      models: { openai: 'gpt-5-mini' },
+    });
+    expect(JSON.stringify(status)).not.toContain('sk-test-secret-key');
+
+    const resGpt5 = await enrichRetroCoach(sampleBase, 'openai', { env: envGpt5, fetchImpl: mockFetch });
+    expect(resGpt5.provider).toBe('openai');
+    expect(resGpt5.model).toBe('gpt-5-mini');
+    expect(resGpt5.insights).toEqual(['OpenAI 분석 인사이트 1']);
+    expect(calls[0].url).toBe('https://proxy.example.com/v1/chat/completions');
+    expect(calls[0].headers.get('Authorization')).toBe('Bearer sk-test-secret-key');
+    expect(calls[0].body.response_format).toEqual({ type: 'json_object' });
+    expect(calls[0].body).not.toHaveProperty('temperature');
+
+    const envGpt41 = {
+      OPENAI_API_KEY: 'sk-test-secret-key',
+      OPENAI_MODEL: 'gpt-4.1-mini',
+    } as unknown as NodeJS.ProcessEnv;
+    await enrichRetroCoach(sampleBase, 'openai', { env: envGpt41, fetchImpl: mockFetch });
+    expect(calls[1].url).toBe('https://api.openai.com/v1/chat/completions');
+    expect(calls[1].body.temperature).toBe(0.4);
+  });
+
+  it('supports Gemini, auto-falls back from failing OpenAI to Gemini, then local, and respects explicit local', async () => {
+    const envBoth = {
+      OPENAI_API_KEY: 'sk-openai-1',
+      GEMINI_API_KEY: 'gk-gemini-1',
+    } as unknown as NodeJS.ProcessEnv;
+
+    let count = 0;
+    const fallbackFetch: typeof fetch = async input => {
+      count++;
+      const url = String(input);
+      if (url.includes('api.openai.com')) {
+        return new Response('server error', { status: 500 });
+      }
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      insights: ['Gemini 폴백 인사이트'],
+                      draft: { good: '- G good', bad: '- G bad', nextStep: 'G next' },
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const autoFallback = await enrichRetroCoach(sampleBase, 'auto', { env: envBoth, fetchImpl: fallbackFetch });
+    expect(count).toBe(2);
+    expect(autoFallback.provider).toBe('gemini');
+    expect(autoFallback.insights).toEqual(['Gemini 폴백 인사이트']);
+
+    const failBothFetch: typeof fetch = async () => new Response('down', { status: 503 });
+    const localFallback = await enrichRetroCoach(sampleBase, 'auto', { env: envBoth, fetchImpl: failBothFetch });
+    expect(localFallback.provider).toBe('local');
+    expect(localFallback.fallbackReason).toBeTruthy();
+
+    let explicitLocalCalls = 0;
+    const explicitLocal = await enrichRetroCoach(sampleBase, 'local', {
+      env: envBoth,
+      fetchImpl: async () => {
+        explicitLocalCalls++;
+        return new Response('{}', { status: 200 });
+      },
+    });
+    expect(explicitLocalCalls).toBe(0);
+    expect(explicitLocal.provider).toBe('local');
   });
 });

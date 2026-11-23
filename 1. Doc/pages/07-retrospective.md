@@ -46,8 +46,8 @@
 
 주간 회고(`/retrospective/week/[isoweek]`)와 월간 회고(`/retrospective/month/[yyyymm]`)에 [RetroCoachCard](../../0.%20Source/src/components/retro/RetroCoachCard.tsx)를 표시합니다. `POST /api/retrospectives/coach`가 해당 기간의 시간블록(계획 대비 실제), 할 일 완료율, 습관 달성률, 수면·에너지 체크인 상관관계, 완료 프로젝트·완독 도서를 집계([retroCoach.ts](../../0.%20Source/src/lib/retroCoach.ts))합니다.
 
-- `GEMINI_API_KEY`가 없으면 외부 네트워크 호출 없이 로컬 패턴 분석으로 인사이트와 `좋았던 것` · `아쉬운 것` · `다음 행동` 초안을 생성합니다.
-- `GEMINI_API_KEY`가 설정돼 있으면 Gemini REST API([geminiCoach.ts](../../0.%20Source/src/lib/server/geminiCoach.ts))로 문장을 다듬고, 실패 시 로컬 분석으로 자동 폴백합니다.
+- `OPENAI_API_KEY`와 `GEMINI_API_KEY`가 모두 없으면 외부 네트워크 호출 없이 로컬 패턴 분석으로 인사이트와 `좋았던 것` · `아쉬운 것` · `다음 행동` 초안을 생성합니다.
+- `OPENAI_API_KEY` 또는 `GEMINI_API_KEY`가 설정돼 있으면 [aiCoach.ts](../../0.%20Source/src/lib/server/aiCoach.ts)가 선택한 엔진(`auto` · `openai` · `gemini` · `local`)으로 문장을 다듬고, 한쪽 응답 실패 시 다른 설정 엔진이나 로컬 패턴 분석으로 자동 폴백합니다.
 - **회고에 초안 채우기**로 기존 작성 내용을 덮어쓰지 않고 아래에 이어 붙이며, **AI 프롬프트 복사**로 외부 AI 대화에 바로 붙여넣을 프롬프트를 복사할 수 있습니다.
 
 ## 구현 파일

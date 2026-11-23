@@ -294,6 +294,7 @@ test('top nav fits 1024px desktop without horizontal overflow and rejects anonym
     '/api/events',
     '/api/subscriptions',
     '/api/integrations/google/status',
+    '/api/retrospectives/coach',
   ]) {
     expect((await request.get(url)).status()).toBe(401);
   }
