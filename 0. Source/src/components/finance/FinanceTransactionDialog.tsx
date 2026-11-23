@@ -23,7 +23,8 @@ export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSave
   const [kind, setKind] = useState<FinanceTransactionKind>(initial?.kind ?? 'expense');
   const [date, setDate] = useState(initial?.date ?? defaultDate);
   const [time, setTime] = useState(initial?.time ?? '');
-  const [amountStr, setAmountStr] = useState(initial ? String(initial.amount) : '');
+  const [amountStr, setAmountStr] = useState(initial ? String(Math.abs(initial.amount)) : '');
+  const [isNegative, setIsNegative] = useState(initial ? initial.amount < 0 : false);
   const [currency, setCurrency] = useState<SubscriptionCurrency>(initial?.currency ?? 'KRW');
   const [category, setCategory] = useState(initial?.category ?? DEFAULT_EXPENSE_CATEGORIES[0]);
   const [subCategory, setSubCategory] = useState(initial?.subCategory ?? '');
@@ -44,6 +45,7 @@ export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSave
   const handleKindChange = (nextKind: FinanceTransactionKind) => {
     setKind(nextKind);
     if (!initial) {
+      setIsNegative(nextKind === 'transfer');
       if (nextKind === 'income' && (DEFAULT_EXPENSE_CATEGORIES as readonly string[]).includes(category)) {
         setCategory(DEFAULT_INCOME_CATEGORIES[0]);
       } else if (nextKind === 'transfer') {
@@ -57,11 +59,12 @@ export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSave
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    const amount = Number(amountStr.replace(/,/g, '').trim());
-    if (!Number.isFinite(amount) || amount < 0) {
-      setError('올바른 금액을 입력해 주세요.');
+    const rawAmount = Number(amountStr.replace(/,/g, '').trim());
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      setError('0보다 큰 올바른 금액을 입력해 주세요.');
       return;
     }
+    const amount = isNegative ? -rawAmount : rawAmount;
     if (!merchant.trim()) {
       setError('거래 내용이나 가맹점을 입력해 주세요.');
       return;
@@ -130,6 +133,52 @@ export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSave
             </button>
           ))}
         </div>
+
+        {kind === 'transfer' ? (
+          <div className="flex gap-1.5" role="group" aria-label="이체 방향">
+            <button
+              type="button"
+              disabled={busy}
+              aria-pressed={isNegative}
+              onClick={() => setIsNegative(true)}
+              className={`flex-1 rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+                isNegative
+                  ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900'
+                  : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              이체 출금 (-)
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              aria-pressed={!isNegative}
+              onClick={() => setIsNegative(false)}
+              className={`flex-1 rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+                !isNegative
+                  ? 'bg-blue-600 text-white'
+                  : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              이체 입금 (+)
+            </button>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={isNegative}
+              disabled={busy}
+              onChange={e => setIsNegative(e.target.checked)}
+              className="rounded border-zinc-300 text-blue-600"
+            />
+            <span>
+              {kind === 'expense'
+                ? '결제 취소 · 환불 (합계에서 차감)'
+                : '수입 취소 · 반환 (합계에서 차감)'}
+            </span>
+          </label>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">

@@ -155,7 +155,15 @@ function parseKind(rawType: unknown, rawAmount: number, amountHeader: string): F
   const s = String(rawType ?? '').trim().toLowerCase();
   if (s.includes('이체') || s === 'transfer') return 'transfer';
   if (s.includes('수입') || s.includes('입금') || s === 'income') return 'income';
-  if (s.includes('지출') || s.includes('출금') || s === 'expense') return 'expense';
+  if (
+    s.includes('지출') ||
+    s.includes('출금') ||
+    s.includes('취소') ||
+    s.includes('환불') ||
+    s === 'expense'
+  ) {
+    return 'expense';
+  }
   if (rawAmount < 0) return 'expense';
   const hdr = normalizeHeaderName(amountHeader);
   if (hdr.includes('이용금액') || hdr.includes('승인금액') || hdr.includes('결제금액') || hdr.includes('출금')) {
@@ -211,17 +219,31 @@ function detectColumns(headers: string[]): ColumnIndices | null {
   };
 }
 
+interface CandidateFinanceRow {
+  date: string;
+  time: string | null;
+  kind: FinanceTransactionKind;
+  rawAmount: number;
+  currency: SubscriptionCurrency;
+  category: string;
+  subCategory: string | null;
+  merchant: string;
+  paymentMethod: string | null;
+  note: string | null;
+}
+
 function finalizeRows(
   rawTableRows: unknown[][],
   cols: ColumnIndices,
   source: FinanceTransactionSource,
 ): { rows: FinanceImportRow[]; skippedRows: number } {
-  const rows: FinanceImportRow[] = [];
+  const candidates: CandidateFinanceRow[] = [];
   let skippedRows = 0;
-  const occurrenceCounter = new Map<string, number>();
+  let negExpenses = 0;
+  let posExpenses = 0;
 
   for (const rowValues of rawTableRows) {
-    if (rows.length >= MAX_FINANCE_IMPORT_ROWS) {
+    if (candidates.length >= MAX_FINANCE_IMPORT_ROWS) {
       skippedRows++;
       continue;
     }
@@ -235,8 +257,12 @@ function finalizeRows(
       continue;
     }
 
-    const absAmount = Math.round(Math.abs(rawAmount) * 100) / 100;
     const kind = parseKind(cols.kind >= 0 ? rowValues[cols.kind] : '', rawAmount, cols.amountHeader);
+    if (kind === 'expense') {
+      if (rawAmount < 0) negExpenses++;
+      else if (rawAmount > 0) posExpenses++;
+    }
+
     const time = cols.time >= 0 ? parseTimeValue(rowValues[cols.time]) : null;
     const rawCategory = cols.category >= 0 ? String(rowValues[cols.category] ?? '').trim() : '';
     const subCategory = cols.subCategory >= 0 ? String(rowValues[cols.subCategory] ?? '').trim() || null : null;
@@ -247,17 +273,45 @@ function finalizeRows(
     const paymentMethod = cols.paymentMethod >= 0 ? String(rowValues[cols.paymentMethod] ?? '').trim() || null : null;
     const note = cols.note >= 0 ? String(rowValues[cols.note] ?? '').trim() || null : null;
 
-    const baseDraft = {
+    candidates.push({
       date,
       time,
       kind,
-      amount: absAmount,
+      rawAmount,
       currency,
       category,
       subCategory,
       merchant,
       paymentMethod,
       note,
+    });
+  }
+
+  // BankSalad records expense spendings as negative numbers and cancellations/refunds as positive.
+  // Card-company CSVs typically record charges as positive and refunds as negative.
+  const expenseUsesNegativeSign =
+    source === 'banksalad' ? true : negExpenses >= posExpenses && negExpenses > 0;
+
+  const rows: FinanceImportRow[] = [];
+  const occurrenceCounter = new Map<string, number>();
+
+  for (const item of candidates) {
+    const rawSigned =
+      item.kind === 'expense' && expenseUsesNegativeSign ? -item.rawAmount : item.rawAmount;
+    const rounded = Math.round(rawSigned * 100) / 100;
+    const signedAmount = rounded === 0 ? 0 : rounded;
+
+    const baseDraft = {
+      date: item.date,
+      time: item.time,
+      kind: item.kind,
+      amount: signedAmount,
+      currency: item.currency,
+      category: item.category,
+      subCategory: item.subCategory,
+      merchant: item.merchant,
+      paymentMethod: item.paymentMethod,
+      note: item.note,
       source,
     };
     const baseKey = buildFinanceRowKey(baseDraft, 0);

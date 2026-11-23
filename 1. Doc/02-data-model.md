@@ -150,7 +150,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 0012 마이그레이션은 `todos`에 Google Tasks 동기화 식별자(`google_task_list_id`, `google_task_id`, `google_task_updated_at` 및 `(user_id, google_task_list_id, google_task_id)` 인덱스)를, `google_calendar_connections`에 Google Tasks 설정·매핑 열(`tasks_sync_enabled`, `tasks_auto_push`, `tasks_selected_list_ids`, `tasks_default_list_id`, `tasks_list_meta`, `tasks_project_map`, `tasks_last_synced_at`, `tasks_last_sync_error`)을 추가합니다. `todos.google_task_*` 열은 서버 동기화 전용이므로 일반 TODO API 입력으로는 직접 수정할 수 없으며 JSON 백업에서는 형식 검증 후 보존합니다.
 
-0013 마이그레이션은 가계부 테이블 `finance_transactions`(날짜, 시간, `expense`/`income`/`transfer` 구분, 금액·통화, 대·소분류, 가맹점, 결제수단, 합계 제외 `excluded`, 출처 `source`, 중복 방지 `external_hash`, `subscription_id` 연결)와 `finance_budgets`(`default` 기본 예산 및 `YYYY-MM` 월별 총·카테고리 예산)를 추가합니다. `external_hash`는 서버가 생성·검증하는 중복 방지 키이므로 일반 거래 생성/수정 API에서는 직접 입력을 차단합니다.
+0013 마이그레이션은 가계부 테이블 `finance_transactions`(날짜, 시간, `expense`/`income`/`transfer` 구분, 금액·통화, 대·소분류, 가맹점, 결제수단, 합계 제외 `excluded`, 출처 `source`, 중복 방지 `external_hash`, `subscription_id` 연결)와 `finance_budgets`(`default` 기본 예산 및 `YYYY-MM` 월별 총·카테고리 예산)를 추가합니다. `external_hash`는 서버가 생성·검증하는 중복 방지 키이므로 일반 거래 생성/수정 API에서는 직접 입력을 차단합니다. 금액(`amount`)은 0이 아닌 실수이며, `expense`/`income`의 음수는 결제 취소·환불 차감을, `transfer`의 양수/음수는 이체 입금/이체 출금 방향을 나타냅니다.
 
 0014 마이그레이션은 Gmail 예약 에이전트 외부 자동 가져오기 설정을 저장하는 `finance_automation_configs`(SHA-256 해시 토큰 `token_hash` 및 접두어 `token_prefix`, `enabled`, `SESSION_SECRET` AES-256-GCM 암호화 고정 엑셀 비밀번호 `excel_password_enc`, 최근 실행 상태·파일명·요약·오류)를 추가합니다.
 

@@ -134,6 +134,7 @@ const taskProjectMap: Check = value => object(value) && Object.entries(value).le
 const ratingValue: Check = oneOf(1, 2, 3, 4, 5);
 const sleepHoursValue: Check = value => number(value) && (value as number) >= 0 && (value as number) <= 24;
 const nonNegativeNumber: Check = value => number(value) && (value as number) >= 0;
+const nonZeroAmount: Check = value => number(value) && (value as number) !== 0 && Math.abs(value as number) <= 1e12;
 const bool: Check = oneOf(true, false);
 const templateBlocks: Check = value => Array.isArray(value) && value.length > 0 && value.length <= 500 && value.every(block =>
   object(block) && Object.keys(block).every(key => ['dayOffset', 'startMin', 'endMin', 'text', 'categoryId', 'goalId'].includes(key))
@@ -172,7 +173,7 @@ const rules: Record<MutationKind, Rules> = {
       date: isDate,
       time: nullable(value => typeof value === 'string' && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)),
       kind: oneOf('expense', 'income', 'transfer'),
-      amount: nonNegativeNumber,
+      amount: nonZeroAmount,
       currency: oneOf('KRW', 'USD', 'JPY', 'EUR'),
       category: identifier,
       subCategory: optionalText,

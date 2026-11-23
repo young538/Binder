@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { FileSpreadsheet, Lock, Upload } from 'lucide-react';
 import {
-  formatFinanceAmount,
+  formatFinanceTransactionAmount,
+  getFinanceTransactionKindLabel,
   type FinanceImportCommitResult,
   type FinanceImportPreview,
 } from '@/lib/finance';
@@ -12,7 +13,6 @@ import {
   commitFinanceImport,
   previewFinanceImport,
 } from '@/lib/repo/finance';
-import { FINANCE_KIND_LABEL } from '@/lib/types';
 import { Dialog, actionClass, fieldClass } from '@/components/common/Dialog';
 
 interface Props {
@@ -193,13 +193,20 @@ export function FinanceImportDialog({ onClose, onCommitted }: Props) {
                     <td className="whitespace-nowrap px-2.5 py-1.5 text-zinc-600 dark:text-zinc-300">
                       {row.date}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-1.5">{FINANCE_KIND_LABEL[row.kind]}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5">
+                      {getFinanceTransactionKindLabel(row)}
+                      {row.kind !== 'transfer' && row.amount < 0 && (
+                        <span className="ml-1 rounded bg-emerald-50 px-1 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                          취소
+                        </span>
+                      )}
+                    </td>
                     <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-300">{row.category}</td>
                     <td className="max-w-[140px] truncate px-2 py-1.5 font-medium text-zinc-800 dark:text-zinc-100">
                       {row.merchant}
                     </td>
                     <td className="whitespace-nowrap px-2.5 py-1.5 text-right tabular-nums">
-                      {formatFinanceAmount(row.amount, row.currency)}
+                      {formatFinanceTransactionAmount(row)}
                     </td>
                     <td className="whitespace-nowrap px-2 py-1.5">
                       {row.duplicate ? (

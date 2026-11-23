@@ -66,6 +66,9 @@ export interface FinanceMonthlySummary {
   totalExpense: number;
   totalIncome: number;
   netSavings: number;
+  transferInTotal: number;
+  transferOutTotal: number;
+  transferNetTotal: number;
   transferTotal: number;
   excludedCount: number;
   prevMonthExpense: number;
@@ -123,8 +126,36 @@ export function nextMonthKey(yyyymm: string): string {
 }
 
 export function formatFinanceAmount(amount: number, currency: SubscriptionCurrency = 'KRW'): string {
-  if (currency === 'KRW') return `₩${Math.round(amount).toLocaleString('ko-KR')}`;
-  return formatCurrency(amount, currency);
+  const sign = amount < 0 ? '-' : '';
+  const abs = Math.abs(amount);
+  if (currency === 'KRW') return `${sign}₩${Math.round(abs).toLocaleString('ko-KR')}`;
+  return `${sign}${formatCurrency(abs, currency)}`;
+}
+
+/** Display signed transaction cashflow: + for refunds/inflows/transfer-in, - for spending/transfer-out. */
+export function formatFinanceTransactionAmount(tx: {
+  kind: FinanceTransactionKind;
+  amount: number;
+  currency: SubscriptionCurrency;
+}): string {
+  const absFormatted = formatFinanceAmount(Math.abs(tx.amount), tx.currency);
+  if (tx.kind === 'expense') {
+    return tx.amount < 0 ? `+${absFormatted}` : `-${absFormatted}`;
+  }
+  if (tx.kind === 'income') {
+    return tx.amount < 0 ? `-${absFormatted}` : `+${absFormatted}`;
+  }
+  return tx.amount >= 0 ? `+${absFormatted}` : `-${absFormatted}`;
+}
+
+export function getFinanceTransactionKindLabel(tx: {
+  kind: FinanceTransactionKind;
+  amount: number;
+}): string {
+  if (tx.kind === 'transfer') {
+    return tx.amount < 0 ? '이체 출금' : '이체 입금';
+  }
+  return tx.kind === 'income' ? '수입' : '지출';
 }
 
 export function resolveEffectiveBudgets(
@@ -177,7 +208,8 @@ export function summarizeMonthFinance(
 
   let totalExpense = 0;
   let totalIncome = 0;
-  let transferTotal = 0;
+  let transferInTotal = 0;
+  let transferOutTotal = 0;
   let excludedCount = 0;
 
   const foreignMap = new Map<SubscriptionCurrency, number>();
@@ -190,14 +222,17 @@ export function summarizeMonthFinance(
       continue;
     }
     if (tx.kind === 'transfer') {
-      if (tx.currency === 'KRW') transferTotal += tx.amount;
+      if (tx.currency === 'KRW') {
+        if (tx.amount >= 0) transferInTotal += tx.amount;
+        else transferOutTotal += Math.abs(tx.amount);
+      }
       continue;
     }
     if (tx.kind === 'income') {
       if (tx.currency === 'KRW') totalIncome += tx.amount;
       continue;
     }
-    // tx.kind === 'expense'
+    // tx.kind === 'expense' (negative amount = refund/cancellation, subtracts from totals)
     if (tx.currency !== 'KRW') {
       foreignMap.set(tx.currency, (foreignMap.get(tx.currency) ?? 0) + tx.amount);
       continue;
@@ -218,7 +253,7 @@ export function summarizeMonthFinance(
   const totalBudget = resolved.totalBudget;
   const remainingBudget = totalBudget !== null ? totalBudget - totalExpense : null;
   const budgetPercent =
-    totalBudget !== null && totalBudget > 0 ? Math.round((totalExpense / totalBudget) * 100) : null;
+    totalBudget !== null && totalBudget > 0 ? Math.max(0, Math.round((totalExpense / totalBudget) * 100)) : null;
 
   let dailyAllowance: number | null = null;
   if (remainingBudget !== null && todayIso.slice(0, 7) === yyyymm) {
@@ -240,9 +275,9 @@ export function summarizeMonthFinance(
         category,
         amount: stat.amount,
         count: stat.count,
-        percent: totalExpense > 0 ? Math.round((stat.amount / totalExpense) * 100) : 0,
+        percent: totalExpense > 0 && stat.amount > 0 ? Math.round((stat.amount / totalExpense) * 100) : 0,
         budget: catBudget,
-        budgetPercent: catBudget !== null && catBudget > 0 ? Math.round((stat.amount / catBudget) * 100) : null,
+        budgetPercent: catBudget !== null && catBudget > 0 ? Math.max(0, Math.round((stat.amount / catBudget) * 100)) : null,
       };
     })
     .sort((a, b) => b.amount - a.amount || (b.budget ?? 0) - (a.budget ?? 0) || a.category.localeCompare(b.category));
@@ -261,11 +296,17 @@ export function summarizeMonthFinance(
     .filter(c => c !== 'KRW' && foreignMap.has(c))
     .map(currency => ({ currency, amount: Math.round((foreignMap.get(currency) ?? 0) * 100) / 100 }));
 
+  const transferTotal = transferInTotal + transferOutTotal;
+  const transferNetTotal = transferInTotal - transferOutTotal;
+
   return {
     yyyymm,
     totalExpense,
     totalIncome,
     netSavings: totalIncome - totalExpense,
+    transferInTotal,
+    transferOutTotal,
+    transferNetTotal,
     transferTotal,
     excludedCount,
     prevMonthExpense,

@@ -18,11 +18,18 @@ async function checkNoHorizontalOverflow(page: Page) {
   }
 }
 
-async function createSampleBankSaladXlsx(monthPrefix: string): Promise<Buffer> {
+async function createSampleBankSaladXlsx(
+  monthPrefix: string,
+  includeSignedVariants = false,
+): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   const sheet = wb.addWorksheet('가계부 내역');
   sheet.addRow(['날짜', '시간', '타입', '대분류', '소분류', '내용', '금액', '화폐', '결제수단', '메모']);
   sheet.addRow([`${monthPrefix}-05`, '12:10', '지출', '식비', '외식', '을밀대 평양냉면', -15000, 'KRW', '현대카드', '']);
+  if (includeSignedVariants) {
+    sheet.addRow([`${monthPrefix}-05`, '12:20', '지출', '식비', '외식', '을밀대 부분취소', 5000, 'KRW', '현대카드', '']);
+    sheet.addRow([`${monthPrefix}-06`, '10:00', '이체', '용돈', '', '용돈 입금', 200000, 'KRW', '토스뱅크', '']);
+  }
   sheet.addRow([`${monthPrefix}-06`, '09:30', '이체', '내계좌이체', '', '비상금 이동', -100000, 'KRW', '토스뱅크', '']);
   const arr = await wb.xlsx.writeBuffer();
   return Buffer.from(arr as ArrayBuffer);
@@ -83,8 +90,8 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(kpi).toContainText('₩3,000,000');
 
-    // 5) Two-step BankSalad .xlsx upload + deduplication check
-    const xlsxBuffer = await createSampleBankSaladXlsx(yyyymm);
+    // 5) Two-step BankSalad .xlsx upload (with refund & +/- transfers) + deduplication check
+    const xlsxBuffer = await createSampleBankSaladXlsx(yyyymm, true);
     await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
     const importDialog = page.getByRole('dialog');
     const fileInput = importDialog.getByLabel('가계부 엑셀, ZIP 또는 CSV 파일');
@@ -96,14 +103,23 @@ for (const width of [1280, 390]) {
     });
     await importDialog.getByRole('button', { name: '파일 미리보기' }).click();
     await expect(importDialog.getByText('을밀대 평양냉면')).toBeVisible();
-    await importDialog.getByRole('button', { name: /신규 2건 가져오기 확정/ }).click();
+    await expect(importDialog.getByText('을밀대 부분취소')).toBeVisible();
+    await importDialog.getByRole('button', { name: /신규 4건 가져오기 확정/ }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await expect(page.getByText('을밀대 평양냉면')).toBeVisible();
-    // 12,500 + 15,000 = 27,500 (transfer 100,000 excluded from expense total)
-    await expect(kpi).toContainText('₩27,500');
+    await expect(page.getByText('을밀대 부분취소')).toBeVisible();
+    await expect(page.getByText('취소/환불').first()).toBeVisible();
+    await expect(page.getByText('+₩5,000', { exact: true })).toBeVisible();
+    await expect(page.getByText('이체 입금').first()).toBeVisible();
+    await expect(page.getByText('+₩200,000', { exact: true })).toBeVisible();
+    await expect(page.getByText('이체 출금').first()).toBeVisible();
+    await expect(page.getByText('-₩100,000', { exact: true })).toBeVisible();
+    // 12,500 + 15,000 - 5,000 = 22,500 (transfers excluded from expense total)
+    await expect(kpi).toContainText('₩22,500');
+    await expect(kpi).toContainText('이체 입금 +₩200,000 · 출금 -₩100,000 (제외)');
 
-    // Re-upload same Excel -> detects 2 duplicates, 0 new rows
+    // Re-upload same Excel -> detects 4 duplicates, 0 new rows
     await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
     const reimportDialog = page.getByRole('dialog');
     await reimportDialog.getByLabel('가계부 엑셀, ZIP 또는 CSV 파일').setInputFiles({
@@ -121,18 +137,18 @@ for (const width of [1280, 390]) {
     await page.getByRole('button', { name: '총 예산 저장' }).click();
     await expect(kpi).toContainText('2%');
     await page.reload();
-    await expect(kpi).toContainText('₩27,500');
+    await expect(kpi).toContainText('₩22,500');
     await checkNoHorizontalOverflow(page);
 
     // 7) Verify Dashboard & Monthly Retrospective finance summaries
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: new RegExp(`이번 달 가계부 \\(${yyyymm}\\)`) })).toBeVisible();
-    await expect(page.getByText('₩27,500').first()).toBeVisible();
+    await expect(page.getByText('₩22,500').first()).toBeVisible();
     await checkNoHorizontalOverflow(page);
 
     await page.goto(`/retrospective/month/${yyyymm}`);
     await expect(page.getByText('월간 가계부')).toBeVisible();
-    await expect(page.getByText(/지출 ₩27,500/)).toBeVisible();
+    await expect(page.getByText(/지출 ₩22,500/)).toBeVisible();
     await checkNoHorizontalOverflow(page);
   });
 }

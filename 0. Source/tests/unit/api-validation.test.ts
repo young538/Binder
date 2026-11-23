@@ -295,12 +295,15 @@ describe('mutation request boundary', () => {
     for (const badTx of [
       { ...baseTx, externalHash: 'spoofed' },
       { ...baseTx, kind: 'other' },
-      { ...baseTx, amount: -100 },
+      { ...baseTx, amount: 0 },
       { ...baseTx, merchant: '   ' },
       { ...baseTx, subscriptionId: 'missing-sub' },
     ]) {
       expect((await createFinanceTxRoute(request(badTx))).status).toBe(400);
     }
+
+    const refundRes = await createFinanceTxRoute(request({ ...baseTx, amount: -5000 }));
+    expect(refundRes.status).toBe(201);
 
     const createdRes = await createFinanceTxRoute(request({ ...baseTx, subscriptionId: ownedSub.id }));
     expect(createdRes.status).toBe(201);

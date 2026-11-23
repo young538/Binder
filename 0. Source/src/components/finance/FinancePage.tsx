@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { parseISO } from 'date-fns';
@@ -22,6 +22,8 @@ import {
 import {
   TOTAL_BUDGET_CATEGORY,
   formatFinanceAmount,
+  formatFinanceTransactionAmount,
+  getFinanceTransactionKindLabel,
   monthEndDate,
   nextMonthKey,
   prevMonthKey,
@@ -42,7 +44,6 @@ import {
 } from '@/lib/repo/finance';
 import {
   DEFAULT_EXPENSE_CATEGORIES,
-  FINANCE_KIND_LABEL,
   type FinanceTransaction,
   type FinanceTransactionKind,
 } from '@/lib/types';
@@ -116,6 +117,18 @@ export function FinancePage() {
     null,
     ['financeAutomation'],
   );
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshTx();
+        void refreshBudgets();
+        void refreshAutomation();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [refreshAutomation, refreshBudgets, refreshTx]);
 
   const monthTransactions = useMemo(
     () => rangeTransactions.filter(t => t.date.startsWith(month)),
@@ -277,7 +290,7 @@ export function FinancePage() {
   };
 
   const maxDailySpend = useMemo(
-    () => Math.max(1, ...summary.byDay.map(d => d.amount)),
+    () => Math.max(1, ...summary.byDay.map(d => Math.max(0, d.amount))),
     [summary.byDay],
   );
 
@@ -431,7 +444,9 @@ export function FinancePage() {
             {formatFinanceAmount(summary.totalIncome)}
           </div>
           <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            이체 {formatFinanceAmount(summary.transferTotal)} 제외됨
+            {summary.transferInTotal > 0 || summary.transferOutTotal > 0
+              ? `이체 입금 +${formatFinanceAmount(summary.transferInTotal)} · 출금 -${formatFinanceAmount(summary.transferOutTotal)} (제외)`
+              : '이체 ₩0 제외됨'}
           </div>
         </div>
 
@@ -573,6 +588,23 @@ export function FinancePage() {
                   <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {group.rows.map(tx => {
                       const srcBadge = SOURCE_BADGE[tx.source];
+                      const kindBadgeCls =
+                        tx.kind === 'transfer' && tx.amount >= 0
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-900'
+                          : KIND_BADGE_CLASS[tx.kind];
+                      const amountColorCls =
+                        tx.kind === 'expense'
+                          ? tx.amount < 0
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-zinc-900 dark:text-zinc-100'
+                          : tx.kind === 'income'
+                            ? tx.amount < 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-emerald-700 dark:text-emerald-400'
+                            : tx.amount > 0
+                              ? 'text-blue-700 dark:text-blue-400'
+                              : 'text-zinc-500 dark:text-zinc-400';
+
                       return (
                         <li
                           key={tx.id}
@@ -582,9 +614,19 @@ export function FinancePage() {
                         >
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${KIND_BADGE_CLASS[tx.kind]}`}>
-                                {FINANCE_KIND_LABEL[tx.kind]}
+                              <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${kindBadgeCls}`}>
+                                {getFinanceTransactionKindLabel(tx)}
                               </span>
+                              {tx.kind === 'expense' && tx.amount < 0 && (
+                                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                  취소/환불
+                                </span>
+                              )}
+                              {tx.kind === 'income' && tx.amount < 0 && (
+                                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                                  취소
+                                </span>
+                              )}
                               <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                                 {tx.category}
                                 {tx.subCategory ? ` · ${tx.subCategory}` : ''}
@@ -611,17 +653,8 @@ export function FinancePage() {
                           </div>
 
                           <div className="flex shrink-0 items-center gap-1.5">
-                            <span
-                              className={`mr-1 text-sm font-bold tabular-nums ${
-                                tx.kind === 'income'
-                                  ? 'text-emerald-700 dark:text-emerald-400'
-                                  : tx.kind === 'transfer'
-                                    ? 'text-zinc-500 dark:text-zinc-400'
-                                    : 'text-zinc-900 dark:text-zinc-100'
-                              }`}
-                            >
-                              {tx.kind === 'income' ? '+' : tx.kind === 'expense' ? '-' : ''}
-                              {formatFinanceAmount(tx.amount, tx.currency)}
+                            <span className={`mr-1 text-sm font-bold tabular-nums ${amountColorCls}`}>
+                              {formatFinanceTransactionAmount(tx)}
                             </span>
                             <button
                               type="button"
