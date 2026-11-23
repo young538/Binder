@@ -133,12 +133,69 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole('heading', { name: '꾸준히 성장', exact: true })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: '쉬고 있는 목표', exact: true })).toBeVisible();
   });
+
+  test(`two-way daily reading and book list sync at ${width}px`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page, width, 'reading-sync');
+
+    await page.goto('/daily/2026-10-10');
+    await page.locator('#daily-reading-title-2026-10-10').fill('양방향 연결 테스트');
+    await page.locator('#daily-reading-pages-2026-10-10').fill('10');
+    await page.locator('#daily-reading-memo-2026-10-10').fill('첫날 메모');
+    await expect.poll(async () => {
+      const res = await page.request.get('/api/retrospectives?type=daily&dateOrWeek=2026-10-10');
+      const row = (await res.json()) as { template?: { reading?: string } } | null;
+      return row?.template?.reading ?? '';
+    }).toContain('양방향 연결 테스트');
+
+    await page.goto('/daily/2026-10-11');
+    await page.locator('#daily-reading-title-2026-10-11').fill('양방향 연결테스트');
+    await page.locator('#daily-reading-pages-2026-10-11').fill('15');
+    await page.locator('#daily-reading-memo-2026-10-11').fill('둘째날 메모');
+    await page.getByRole('button', { name: '독서 리스트에 등록 & 연결' }).click();
+
+    const readingRegion = page.getByRole('region', { name: '오늘의 독서' });
+    await expect(readingRegion.getByText('독서 리스트(2026)에 등록하고 다른 날짜 1건도 연결했어요.')).toBeVisible();
+    await expect(readingRegion).toContainText('누적 25쪽 · 2일');
+    await expect(page.locator('#daily-reading-book-2026-10-11')).not.toHaveValue('');
+
+    await page.goto('/reading?year=2026');
+    await expect(page.locator('table')).toContainText('누적 25쪽 · 2일');
+    await page.getByRole('button', { name: '양방향 연결테스트 독서 기록 보기' }).click();
+    await expect(page.getByRole('dialog')).toContainText('누적 25쪽 · 독서한 날 2일');
+    await expect(page.getByRole('dialog')).toContainText('2026-10-10');
+    await expect(page.getByRole('dialog')).toContainText('2026-10-11');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    const putRes = await page.request.put('/api/retrospectives', {
+      data: {
+        type: 'daily',
+        dateOrWeek: '2026-10-12',
+        template: {
+          reading: JSON.stringify({ bookTitle: '미연결 책', pages: 12, memo: '미연결 메모' }),
+        },
+      },
+    });
+    expect(putRes.ok()).toBe(true);
+
+    await page.reload();
+    const unlinkedSection = page.getByRole('region', { name: '연결되지 않은 일일 독서 기록' });
+    await expect(unlinkedSection).toContainText('미연결 책');
+    await expect(unlinkedSection).toContainText('누적 12쪽 · 1일 · 최근 2026-10-12');
+    await unlinkedSection.getByRole('button', { name: '독서 리스트에 등록 & 연결' }).click();
+
+    await expect(unlinkedSection).toHaveCount(0);
+    await expect(page.locator('table')).toContainText('누적 12쪽 · 1일');
+    await screenshot(page, 'reading-sync', width);
+  });
 }
 
 test('planning endpoints reject anonymous access', async ({ request }) => {
-  for (const path of ['/api/weekly-templates', '/api/goal-review?date=2026-12-31', '/api/books/unknown/history']) {
+  for (const path of ['/api/weekly-templates', '/api/goal-review?date=2026-12-31', '/api/books/summary', '/api/books/unknown/history']) {
     expect((await request.get(path)).status()).toBe(401);
   }
   expect((await request.post('/api/weekly-templates', { data: { name: 'x', sourceWeek: '2026-W53' } })).status()).toBe(401);
   expect((await request.post('/api/weekly-templates/unknown/apply', { data: { week: '2027-W01' } })).status()).toBe(401);
+  expect((await request.post('/api/books/unknown/link-daily', { data: { dates: ['2026-10-01'] } })).status()).toBe(401);
 });

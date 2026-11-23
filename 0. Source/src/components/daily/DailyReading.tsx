@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
-import { listAllBooks } from '@/lib/repo/books';
+import { createBook, listAllBooks } from '@/lib/repo/books';
+import { getReadingSummary, linkDailyReadings } from '@/lib/repo/insights';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
-import { parseReadingEntry, type ReadingEntry } from '@/lib/reading';
+import { normalizeBookTitle, parseReadingEntry, type ReadingEntry, type ReadingSummary } from '@/lib/reading';
 import { useRetrospectiveEditor } from '@/lib/autosave/editors';
 import { AutosaveStatus } from '@/components/common/AutosaveStatus';
 import { GrowingTextarea } from '@/components/common/GrowingTextarea';
@@ -14,10 +16,11 @@ interface Props {
 }
 
 const DAILY_PAGES = 10;
+const EMPTY_SUMMARY: ReadingSummary = { byBookId: {}, unlinkedGroups: [] };
 
 /**
  * 일일 페이지 고정 섹션: 오늘의 독서 (하루 10쪽 소량 기록용).
- * - 책: 모든 연도의 독서 리스트에서 선택, 없으면 직접 입력
+ * - 책: 모든 연도의 독서 리스트에서 선택, 없으면 직접 입력 및 독서 리스트 등록/연결
  * - 읽은 쪽수: 숫자 입력 (기본 10)
  * - 독서 노트: 기억할 문장과 생각을 긴 글로도 기록
  * 저장은 retrospectives(type='daily', dateOrWeek=date).template.reading 에
@@ -26,12 +29,13 @@ const DAILY_PAGES = 10;
 export const DailyReading = ({ date }: Props) => {
   const editor = useRetrospectiveEditor('daily', date);
   const entry = parseReadingEntry(editor.value.template?.reading);
-  const [customDate, setCustomDate] = useState<string | null>(null);
-  const customTitle = customDate === date;
-  const setCustomTitle = (custom: boolean) => setCustomDate(custom ? date : null);
+  const [modeOverride, setModeOverride] = useState<{ date: string; mode: 'select' | 'custom' } | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [linkNotice, setLinkNotice] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
   const { value: books, loading: booksLoading, error: booksError, refresh: reloadBooks } = useAsyncResource('dailyReading:books', listAllBooks, [], ['books']);
-
+  const { value: summaryData, refresh: reloadSummary } = useAsyncResource('dailyReading:summary', getReadingSummary, EMPTY_SUMMARY, ['books', 'retrospectives']);
 
   const patch = (p: Partial<ReadingEntry>) => {
     editor.patch({ template: { reading: JSON.stringify({ ...entry, ...p }) } });
@@ -40,10 +44,62 @@ export const DailyReading = ({ date }: Props) => {
   if (!editor.loaded) return <AutosaveStatus {...editor} />;
   if (booksLoading) return <p className="p-4 text-sm text-zinc-500">책 목록을 불러오는 중…</p>;
 
-  const hasRecord = entry.bookTitle.trim() !== '' || entry.memo.trim() !== '';
+  const selectedBook = entry.bookId ? books.find((b) => b.id === entry.bookId) : undefined;
+  const displayTitle = selectedBook?.title?.trim() || entry.bookTitle.trim();
+  const hasUnlinkedTitle = !entry.bookId && entry.bookTitle.trim() !== '';
+  const activeOverride = modeOverride?.date === date ? modeOverride.mode : null;
+  const showCustomInput = books.length === 0 || activeOverride === 'custom' || (activeOverride !== 'select' && hasUnlinkedTitle);
+  const normalizedTyped = normalizeBookTitle(entry.bookTitle);
+  const matchingBook = normalizedTyped ? books.find((b) => normalizeBookTitle(b.title) === normalizedTyped) : undefined;
+  const selectedStats = selectedBook ? summaryData.byBookId[selectedBook.id] : undefined;
+
+  const hasRecord = displayTitle !== '' || entry.memo.trim() !== '';
   const summary = hasRecord
-    ? `${entry.bookTitle.trim() || '(제목 없음)'} · ${entry.pages}쪽`
+    ? `${displayTitle || '(제목 없음)'} · ${entry.pages}쪽`
     : '읽은 문장과 나의 생각을 남겨 보세요.';
+
+  const handleRegisterOrLink = async () => {
+    const title = entry.bookTitle.trim();
+    if (!title || linking) return;
+    setLinking(true);
+    setLinkError(null);
+    setLinkNotice(null);
+    try {
+      const reused = Boolean(matchingBook);
+      const year = date.slice(0, 4);
+      const targetBook =
+        matchingBook ??
+        (await createBook({
+          year,
+          order: books.filter((b) => b.year === year).reduce((max, b) => Math.max(max, b.order), 0) + 1,
+          title,
+        }));
+
+      patch({ bookId: targetBook.id, bookTitle: targetBook.title });
+      await editor.flush();
+      const extra = await linkDailyReadings(targetBook.id, { matchTitle: title });
+      await Promise.all([reloadBooks(), reloadSummary()]);
+      setModeOverride({ date, mode: 'select' });
+
+      if (reused) {
+        setLinkNotice(
+          extra.linkedCount > 0
+            ? `"${targetBook.title}"에 연결하고 다른 날짜 ${extra.linkedCount}건도 함께 묶었어요.`
+            : `"${targetBook.title}"에 연결했어요.`,
+        );
+      } else {
+        setLinkNotice(
+          extra.linkedCount > 0
+            ? `독서 리스트(${targetBook.year})에 등록하고 다른 날짜 ${extra.linkedCount}건도 연결했어요.`
+            : `독서 리스트(${targetBook.year})에 등록하고 연결했어요.`,
+        );
+      }
+    } catch {
+      setLinkError('독서 리스트와 연결하지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setLinking(false);
+    }
+  };
 
   return (
     <section aria-label="오늘의 독서" className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900 dark:bg-zinc-900">
@@ -76,7 +132,7 @@ export const DailyReading = ({ date }: Props) => {
       {open && (
         <div className="space-y-5 p-5">
           {!!booksError && <button onClick={() => void reloadBooks()} className="text-sm text-red-600">책 목록을 불러오지 못했어요. 다시 시도</button>}
-          {books.length > 0 && !customTitle ? (
+          {!showCustomInput ? (
             <div>
               <label
                 htmlFor={`daily-reading-book-${date}`}
@@ -90,8 +146,10 @@ export const DailyReading = ({ date }: Props) => {
                   value={entry.bookId ?? ''}
                   onChange={(e) => {
                     const id = e.target.value;
+                    setLinkNotice(null);
+                    setLinkError(null);
                     if (id === '__custom__') {
-                      setCustomTitle(true);
+                      setModeOverride({ date, mode: 'custom' });
                       patch({ bookId: undefined, bookTitle: '' });
                       return;
                     }
@@ -101,6 +159,7 @@ export const DailyReading = ({ date }: Props) => {
                       b?.title ??
                       e.target.selectedOptions?.[0]?.textContent?.trim() ??
                       '';
+                    setModeOverride({ date, mode: 'select' });
                     patch({ bookId: id || undefined, bookTitle: label });
                   }}
                   className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
@@ -112,8 +171,25 @@ export const DailyReading = ({ date }: Props) => {
                       {b.title || '(제목 없음)'}
                     </option>
                   ))}
-                  <option value="__custom__">직접 입력…</option>
+                  <option value="__custom__">직접 입력 / 새 책 등록…</option>
                 </select>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                {selectedBook ? (
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    {selectedStats && selectedStats.readingDays > 0
+                      ? `누적 ${selectedStats.totalPages}쪽 · ${selectedStats.readingDays}일`
+                      : '독서 리스트와 연결됨'}
+                  </span>
+                ) : (
+                  <span className="text-zinc-400 dark:text-zinc-500">책을 선택하면 독서 리스트에 누적 집계됩니다.</span>
+                )}
+                <Link
+                  href={selectedBook ? `/reading?year=${selectedBook.year}` : '/reading'}
+                  className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  독서 리스트 보기
+                </Link>
               </div>
             </div>
           ) : (
@@ -129,21 +205,56 @@ export const DailyReading = ({ date }: Props) => {
                   id={`daily-reading-title-${date}`}
                   type="text"
                   value={entry.bookTitle}
-                  onChange={(e) => patch({ bookTitle: e.target.value })}
+                  onChange={(e) => {
+                    setLinkNotice(null);
+                    setLinkError(null);
+                    patch({ bookTitle: e.target.value });
+                  }}
                   placeholder="예: 데미안"
                   className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
                 />
                 {books.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setCustomTitle(false)}
+                    onClick={() => setModeOverride({ date, mode: 'select' })}
                     className="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                   >
                     목록에서 선택
                   </button>
                 )}
               </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  disabled={linking || !entry.bookTitle.trim()}
+                  onClick={() => void handleRegisterOrLink()}
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {linking
+                    ? '연결 중…'
+                    : matchingBook
+                      ? `"${matchingBook.title}"에 연결`
+                      : '독서 리스트에 등록 & 연결'}
+                </button>
+                <Link
+                  href="/reading"
+                  className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  독서 리스트 보기
+                </Link>
+              </div>
             </div>
+          )}
+
+          {linkNotice && (
+            <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {linkNotice}
+            </p>
+          )}
+          {linkError && (
+            <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+              {linkError}
+            </p>
           )}
 
           <div>

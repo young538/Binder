@@ -15,7 +15,7 @@ import * as schema from '@/lib/server/db/schema';
 import { nextRepeatDate, nextRetroTarget } from '@/lib/todos/planning';
 import { comparePlanActual, reviewGoals } from '@/lib/planning/insights';
 import { validateFields, validateRelationships } from '@/lib/validation/mutations';
-import { parseReadingEntry } from '@/lib/reading';
+import { normalizeBookTitle, parseReadingEntry } from '@/lib/reading';
 import type { Goal, TimeBlock, TodoRepeatRule } from '@/lib/types';
 
 let connection: DatabaseConnection;
@@ -174,5 +174,131 @@ describe('planning workflow', () => {
     await repos().goals.create({ title: 'private', level: 'oneThing', order: 0 });
     expect(repos('b').insights.goalReview('2026-12-31').goals).toEqual([]);
     expect(connection.get().select().from(schema.goals).where(eq(schema.goals.userId, 'a')).all()).toHaveLength(1);
+  });
+
+  it('summarizes linked/unlinked daily readings, links safely by title or date, and syncs renamed book titles', async () => {
+    const db = connection.get();
+    const bookA = await repos().books.create({ title: '인생을 위한 최소한의 생각', year: '2026', order: 1 });
+    const bookOther = await repos().books.create({ title: '다른 책', year: '2026', order: 2 });
+    const foreignBook = await repos('b').books.create({ title: '타인 책', year: '2026', order: 1 });
+
+    db.insert(schema.retrospectives).values([
+      {
+        id: 'd1',
+        userId: 'a',
+        type: 'daily',
+        dateOrWeek: '2026-09-06',
+        template: { reading: JSON.stringify({ bookTitle: '', pages: 10, memo: '' }) },
+        ...times,
+      },
+      {
+        id: 'd2',
+        userId: 'a',
+        type: 'daily',
+        dateOrWeek: '2026-09-10',
+        template: {
+          good: '잘한 일 보존',
+          reading: JSON.stringify({ bookTitle: '인생을 위한 최소한의 생각', pages: 2, memo: '노트 1' }),
+        },
+        ...times,
+      },
+      {
+        id: 'd3',
+        userId: 'a',
+        type: 'daily',
+        dateOrWeek: '2026-09-29',
+        template: {
+          reading: JSON.stringify({ bookTitle: '인생을위한최소한의생각', pages: 4, memo: '노트 2' }),
+        },
+        ...times,
+      },
+      {
+        id: 'd4',
+        userId: 'a',
+        type: 'daily',
+        dateOrWeek: '2026-10-02',
+        template: {
+          reading: JSON.stringify({ bookId: bookOther.id, bookTitle: '다른 책', pages: 8, memo: '이미 연결됨' }),
+        },
+        ...times,
+      },
+      {
+        id: 'd5',
+        userId: 'a',
+        type: 'daily',
+        dateOrWeek: '2026-10-03',
+        template: {
+          reading: JSON.stringify({ bookTitle: '특수 날짜 연결 책', pages: 6, memo: '날짜 연결' }),
+        },
+        ...times,
+      },
+      {
+        id: 'b1',
+        userId: 'b',
+        type: 'daily',
+        dateOrWeek: '2026-09-10',
+        template: {
+          reading: JSON.stringify({ bookTitle: '인생을 위한 최소한의 생각', pages: 99, memo: '타인 기록' }),
+        },
+        ...times,
+      },
+    ]).run();
+
+    expect(normalizeBookTitle(' 인생을 위한 최소한의 생각 ')).toBe('인생을위한최소한의생각');
+    const summaryBefore = repos().insights.readingSummary();
+    expect(summaryBefore.byBookId[bookOther.id]).toEqual({
+      bookId: bookOther.id,
+      totalPages: 8,
+      readingDays: 1,
+      lastReadDate: '2026-10-02',
+    });
+    expect(summaryBefore.unlinkedGroups).toHaveLength(2);
+    expect(summaryBefore.unlinkedGroups[0]).toMatchObject({
+      title: '특수 날짜 연결 책',
+      totalPages: 6,
+      readingDays: 1,
+      dates: ['2026-10-03'],
+    });
+    expect(summaryBefore.unlinkedGroups[1]).toMatchObject({
+      normalizedTitle: '인생을위한최소한의생각',
+      totalPages: 4 + 2,
+      readingDays: 2,
+      dates: ['2026-09-10', '2026-09-29'],
+      lastReadDate: '2026-09-29',
+    });
+
+    expect(() => repos().insights.linkDailyReadings(foreignBook.id, { dates: ['2026-09-10'] })).toThrow('책을 찾을 수 없습니다.');
+
+    const byTitle = repos().insights.linkDailyReadings(bookA.id, { matchTitle: '인생을 위한 최소한의 생각' });
+    expect(byTitle).toEqual({ bookId: bookA.id, linkedCount: 2, linkedDates: ['2026-09-10', '2026-09-29'] });
+
+    // Preserves sibling retrospective fields and never overwrites entries linked to another book
+    const d2After = await repos().retrospectives.get('daily', '2026-09-10');
+    expect(d2After?.template.good).toBe('잘한 일 보존');
+    expect(parseReadingEntry(d2After?.template.reading)).toMatchObject({
+      bookId: bookA.id,
+      bookTitle: '인생을 위한 최소한의 생각',
+      pages: 2,
+      memo: '노트 1',
+    });
+
+    const d4After = await repos().retrospectives.get('daily', '2026-10-02');
+    expect(parseReadingEntry(d4After?.template.reading).bookId).toBe(bookOther.id);
+
+    const byDate = repos().insights.linkDailyReadings(bookA.id, { dates: ['2026-10-02', '2026-10-03'] });
+    expect(byDate).toEqual({ bookId: bookA.id, linkedCount: 1, linkedDates: ['2026-10-03'] });
+
+    expect(repos().insights.bookHistory(bookA.id)).toMatchObject({ totalPages: 12, readingDays: 3 });
+
+    // Renaming a book updates linked daily entries for owner only
+    await repos().books.update(bookA.id, { title: '개정된 책 제목' });
+    const d3AfterRename = await repos().retrospectives.get('daily', '2026-09-29');
+    expect(parseReadingEntry(d3AfterRename?.template.reading).bookTitle).toBe('개정된 책 제목');
+    const otherUserRow = await repos('b').retrospectives.get('daily', '2026-09-10');
+    expect(parseReadingEntry(otherUserRow?.template.reading)).toMatchObject({
+      bookTitle: '인생을 위한 최소한의 생각',
+      pages: 99,
+    });
+    expect(repos('b').insights.readingSummary().unlinkedGroups).toHaveLength(1);
   });
 });

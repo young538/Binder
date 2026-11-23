@@ -28,3 +28,35 @@ export interface BookHistory {
   readingDays: number;
   entries: (ReadingEntry & { date: string })[];
 }
+
+export function normalizeBookTitle(title: string): string {
+  return title.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+export interface BookReadingStats {
+  bookId: string;
+  totalPages: number;
+  readingDays: number;
+  lastReadDate: string | null;
+}
+
+export interface UnlinkedReadingGroup {
+  normalizedTitle: string;
+  title: string;
+  rawTitles: string[];
+  dates: string[];
+  totalPages: number;
+  readingDays: number;
+  lastReadDate: string;
+}
+
+export interface ReadingSummary {
+  byBookId: Record<string, BookReadingStats>;
+  unlinkedGroups: UnlinkedReadingGroup[];
+}
+
+export interface BookLinkDailyResult {
+  bookId: string;
+  linkedCount: number;
+  linkedDates: string[];
+}

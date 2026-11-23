@@ -39,7 +39,7 @@
 | `/api/todos` | 아래 별도 설명 | title, scope, scopeKey, status, order, parentGoalId?, projectId?, priority?, categoryId?, note?, repeatRule?, sourceRetro? | 동일 도메인 필드; completedAt/repeatGenerated는 수정 불가 |
 | `/api/annual-goals` | `year` 필수 | year, order 또는 year, ensureSeven:true | year, order, title, deadline, action, metric, target, monthlyTargets, monthlyActuals, parentGoalId |
 | `/api/habits` | 없음 | name, color, order, schedule?, categoryId?, note?, parentGoalId?, annualGoalId? | 동일 도메인 필드 |
-| `/api/books` | `year` 필수 또는 `all=true`로 모든 연도 | year, order, title, category?, oneThing?, keywords?, reviewUrl?, startedAt?, finishedAt? | 동일 도메인 필드 |
+| `/api/books` | `year` 필수 또는 `all=true`로 모든 연도 | year, order, title, category?, oneThing?, keywords?, reviewUrl?, startedAt?, finishedAt? | 동일 도메인 필드(제목 PATCH 시 연결된 일일 독서 `bookTitle` 동기화) |
 | `/api/time-blocks` | `startDate`, `endDate` 필수 | date, startMin, endMin, text, kind, categoryId, goalId?, projectId?, todoId? | 동일 도메인 필드 |
 | `/api/metrics` | 없음 (엔트리 포함 `LifeMetricWithEntries` 배열) | name, unit, direction(`up`·`down`·`target`), targetValue?, goalId?, color, order | 동일 도메인 필드 |
 | `/api/notes` | `kind?`, `goalId?`, `projectId?`, `dueDecisionsDate?` | kind(`principle`·`decision`·`insight`·`reference`), title, body, pinned, reviewDate?, decisionOutcome?, goalId?, projectId?, sourceRetro? | 동일 도메인 필드 |
@@ -158,6 +158,8 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | DELETE `/api/weekly-templates/[id]` | 없음 | `{ok:true}`; 적용한 시간블록은 유지 |
 | POST `/api/weekly-templates/[id]/apply` | `{week:"2027-W01"}` | `{added, skipped}`; 원자적 적용, 기존 항목은 수정하지 않음 |
 | GET `/api/books?all=true` | 없음 | 모든 연도의 본인 책 배열 |
+| GET `/api/books/summary` | 없음 | `{byBookId, unlinkedGroups}`; 책 ID별 누적 쪽수·독서 일수 및 미연결 일일 독서 그룹 요약 |
+| POST `/api/books/[id]/link-daily` | `{dates?, matchTitle?}` | `{bookId, linkedCount, linkedDates}`; `bookId`가 없는 일일 독서 기록만 날짜·정규화 제목으로 안전 연결 |
 | GET `/api/books/[id]/history` | 없음 | `{bookId,title,totalPages,readingDays,entries:[{date,bookId,bookTitle,pages,memo}]}` |
 | GET `/api/goal-review?date=2026-12-31` | 기준 날짜 | `{start,end,goals:[{goal,descendantCount,pendingTodos,completedTodos,habits,actualMinutes,inactive}]}` |
 | GET `/api/projects/overview` | 없음 | `{projects:[{project,todos,totalTodos,doneTodos,activeTodos,actualMinutes,needsNextAction}]}` |

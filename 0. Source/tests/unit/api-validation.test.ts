@@ -18,6 +18,8 @@ import { POST as createEventRoute } from '@/app/api/events/route';
 import { POST as createFinanceTxRoute } from '@/app/api/finance/transactions/route';
 import { PATCH as patchFinanceTxRoute } from '@/app/api/finance/transactions/[id]/route';
 import { PUT as putFinanceBudgetRoute, DELETE as deleteFinanceBudgetRoute } from '@/app/api/finance/budgets/route';
+import { POST as createBookRoute } from '@/app/api/books/route';
+import { POST as linkBookDailyRoute } from '@/app/api/books/[id]/link-daily/route';
 import { PATCH as patchGoogleSettingsRoute } from '@/app/api/integrations/google/settings/route';
 import { POST as importRoute } from '@/app/api/import/route';
 import { GET as exportRoute } from '@/app/api/export/route';
@@ -332,6 +334,28 @@ describe('mutation request boundary', () => {
     expect(
       (await deleteFinanceBudgetRoute(new Request(`http://localhost/api/finance/budgets?id=${savedBudget.id}`, { method: 'DELETE' }) as never)).status,
     ).toBe(200);
+  });
+
+  it('validates bookLinkDaily payloads and rejects invalid dates or empty payloads', async () => {
+    const createdBookRes = await createBookRoute(request({ year: '2026', order: 1, title: '테스트 책' }));
+    expect(createdBookRes.status).toBe(201);
+    const createdBook = await createdBookRes.json();
+
+    for (const badBody of [
+      {},
+      { dates: [] },
+      { dates: ['2026-02-30'] },
+      { matchTitle: '   ' },
+    ]) {
+      expect((await linkBookDailyRoute(request(badBody), ctx(createdBook.id))).status).toBe(400);
+    }
+
+    const okByDates = await linkBookDailyRoute(request({ dates: ['2026-10-01'] }), ctx(createdBook.id));
+    expect(okByDates.status).toBe(200);
+    expect(await okByDates.json()).toEqual({ bookId: createdBook.id, linkedCount: 0, linkedDates: [] });
+
+    const okByTitle = await linkBookDailyRoute(request({ matchTitle: '테스트 책' }), ctx(createdBook.id));
+    expect(okByTitle.status).toBe(200);
   });
 });
 

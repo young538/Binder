@@ -48,6 +48,7 @@ export interface MutationPayloads {
   annualGoals: Writable<AnnualGoal>;
   annualGoalCreate: { year: string; order?: number; ensureSeven?: boolean };
   books: Writable<Book>;
+  bookLinkDaily: { dates?: string[]; matchTitle?: string };
   focusNotes: Writable<FocusNote>;
   retrospectives: Pick<Retrospective, 'type' | 'dateOrWeek'> & Partial<Pick<Retrospective, 'rating' | 'template' | 'freeText'>>;
   dailyCheckins: Writable<DailyCheckin>;
@@ -213,6 +214,7 @@ const rules: Record<MutationKind, Rules> = {
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },
   changePassword: { fields: { currentPassword: identifier, newPassword: value => typeof value === 'string' && value.length >= 8 && value.length <= 128 }, required: ['currentPassword', 'newPassword'] },
   retroCoach: { fields: { mode: oneOf('weekly', 'monthly'), period: identifier, provider: oneOf('auto', 'openai', 'gemini', 'local') }, required: ['mode', 'period'] },
+  bookLinkDaily: { fields: { dates: value => Array.isArray(value) && value.length <= 500 && value.every(isDate), matchTitle: identifier }, required: [] },
 };
 
 export class ValidationError extends Error {}

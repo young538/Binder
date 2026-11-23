@@ -210,7 +210,7 @@ test('daily reading saves book, pages, memo per date', async ({ page }) => {
   // 새로고침 후에도 유지 + 펼쳐진 상태의 요약과 입력값 표시
   await page.reload();
   await expect(page.getByRole('button', { name: '독서 기록 접기' })).toBeVisible();
-  await expect(page.getByText(new RegExp(`${bookTitle}.*${pages}쪽`))).toBeVisible();
+  await expect(page.getByRole('button', { name: '독서 기록 접기' })).toContainText(new RegExp(`${bookTitle}.*${pages}쪽`));
   await expect(page.locator(`#daily-reading-pages-${today}`)).toHaveValue(String(pages));
   await expect(page.locator(`#daily-reading-memo-${today}`)).toHaveValue(/인상 깊었음/);
 
