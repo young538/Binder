@@ -87,7 +87,9 @@ for (const width of [1280, 390]) {
     const xlsxBuffer = await createSampleBankSaladXlsx(yyyymm);
     await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
     const importDialog = page.getByRole('dialog');
-    await importDialog.getByLabel('가계부 엑셀 또는 CSV 파일').setInputFiles({
+    const fileInput = importDialog.getByLabel('가계부 엑셀, ZIP 또는 CSV 파일');
+    await expect(fileInput).toHaveAttribute('accept', /\.zip/);
+    await fileInput.setInputFiles({
       name: 'banksalad_test.xlsx',
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: xlsxBuffer,
@@ -104,7 +106,7 @@ for (const width of [1280, 390]) {
     // Re-upload same Excel -> detects 2 duplicates, 0 new rows
     await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
     const reimportDialog = page.getByRole('dialog');
-    await reimportDialog.getByLabel('가계부 엑셀 또는 CSV 파일').setInputFiles({
+    await reimportDialog.getByLabel('가계부 엑셀, ZIP 또는 CSV 파일').setInputFiles({
       name: 'banksalad_test.xlsx',
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: xlsxBuffer,

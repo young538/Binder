@@ -1,6 +1,7 @@
 // @vitest-environment node
 import path from 'node:path';
 import vm from 'node:vm';
+import zlib from 'node:zlib';
 import { eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import officeCrypto from 'officecrypto-tool';
@@ -9,7 +10,12 @@ import { buildBankSaladAppsScript } from '@/lib/financeAutomation';
 import { DatabaseConnection } from '@/lib/server/db/connection';
 import { financeAutomationConfigs, users } from '@/lib/server/db/schema';
 import { handleFinanceAutomationImport } from '@/lib/server/finance/automationImport';
-import { MAX_FINANCE_UPLOAD_BYTES } from '@/lib/server/finance/parser';
+import {
+  FinanceImportError,
+  MAX_FINANCE_UPLOAD_BYTES,
+  parseFinanceUploadFile,
+} from '@/lib/server/finance/parser';
+import { computeCrc32 } from '@/lib/server/finance/zip';
 import { UserRepositories } from '@/lib/server/repos';
 import { resolveFinanceAutomationToken } from '@/lib/server/repos/financeAutomation';
 
@@ -343,5 +349,191 @@ describe('finance automation repository, API & Apps Script generator', () => {
 
     // Compile generated JS syntax in vm.Script to verify embedded quotes/backslashes never break syntax
     expect(() => new vm.Script(script)).not.toThrow();
+  });
+
+  it('extracts plain ZIP, ZipCrypto (flags: 9) encrypted BankSalad ZIP, and rejects nested/empty ZIPs', async () => {
+    const buildZipBuffer = (
+      entries: Array<{ name: string; content: Buffer; password?: string; flags9?: boolean }>,
+    ): Buffer => {
+      const crcTable = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+          c = (c & 1) !== 0 ? (0xedb88320 ^ (c >>> 1)) >>> 0 : c >>> 1;
+        }
+        crcTable[i] = c;
+      }
+      const stepCrc = (crc: number, b: number) =>
+        ((crc >>> 8) ^ crcTable[(crc ^ b) & 0xff]) >>> 0;
+
+      const encryptZipCrypto = (plain: Buffer, password: string, checkByte: number): Buffer => {
+        let key0 = 0x12345678 >>> 0;
+        let key1 = 0x23456789 >>> 0;
+        let key2 = 0x34567890 >>> 0;
+        const update = (b: number) => {
+          key0 = stepCrc(key0, b);
+          key1 = (key1 + (key0 & 0xff)) >>> 0;
+          key1 = (Math.imul(key1, 0x08088405) + 1) >>> 0;
+          key2 = stepCrc(key2, (key1 >>> 24) & 0xff);
+        };
+        const streamByte = () => {
+          const temp = (key2 & 0xffff) | 2;
+          return (Math.imul(temp, temp ^ 1) >>> 8) & 0xff;
+        };
+        for (const pb of Buffer.from(password, 'utf8')) update(pb);
+        const out = Buffer.allocUnsafe(12 + plain.length);
+        for (let i = 0; i < 11; i++) {
+          const r = (i * 37 + 19) & 0xff;
+          out[i] = r ^ streamByte();
+          update(r);
+        }
+        out[11] = checkByte ^ streamByte();
+        update(checkByte);
+        for (let i = 0; i < plain.length; i++) {
+          const p = plain[i];
+          out[12 + i] = p ^ streamByte();
+          update(p);
+        }
+        return out;
+      };
+
+      const localParts: Buffer[] = [];
+      const cdParts: Buffer[] = [];
+      let offset = 0;
+
+      for (const entry of entries) {
+        const nameBuf = Buffer.from(entry.name, 'utf8');
+        const compressed = zlib.deflateRawSync(entry.content);
+        const crc = computeCrc32(entry.content);
+        const modTime = 0x5432;
+        const isEnc = Boolean(entry.password);
+        const useDD = Boolean(entry.flags9);
+        const flags = (isEnc ? 1 : 0) | (useDD ? 8 : 0) | (entry.flags9 ? 0 : 0x800);
+        const checkByte = useDD ? (modTime >>> 8) & 0xff : (crc >>> 24) & 0xff;
+        const payload = entry.password
+          ? encryptZipCrypto(compressed, entry.password, checkByte)
+          : compressed;
+
+        const lh = Buffer.alloc(30);
+        lh.writeUInt32LE(0x04034b50, 0);
+        lh.writeUInt16LE(20, 4);
+        lh.writeUInt16LE(flags, 6);
+        lh.writeUInt16LE(8, 8);
+        lh.writeUInt16LE(modTime, 10);
+        lh.writeUInt16LE(0x5577, 12);
+        lh.writeUInt32LE(useDD ? 0 : crc, 14);
+        lh.writeUInt32LE(useDD ? 0 : payload.length, 18);
+        lh.writeUInt32LE(useDD ? 0 : entry.content.length, 22);
+        lh.writeUInt16LE(nameBuf.length, 26);
+        lh.writeUInt16LE(0, 28);
+
+        const dd = Buffer.alloc(useDD ? 16 : 0);
+        if (useDD) {
+          dd.writeUInt32LE(0x08074b50, 0);
+          dd.writeUInt32LE(crc, 4);
+          dd.writeUInt32LE(payload.length, 8);
+          dd.writeUInt32LE(entry.content.length, 12);
+        }
+
+        const cd = Buffer.alloc(46);
+        cd.writeUInt32LE(0x02014b50, 0);
+        cd.writeUInt16LE(20, 4);
+        cd.writeUInt16LE(20, 6);
+        cd.writeUInt16LE(flags, 8);
+        cd.writeUInt16LE(8, 10);
+        cd.writeUInt16LE(modTime, 12);
+        cd.writeUInt16LE(0x5577, 14);
+        cd.writeUInt32LE(crc, 16);
+        cd.writeUInt32LE(payload.length, 20);
+        cd.writeUInt32LE(entry.content.length, 24);
+        cd.writeUInt16LE(nameBuf.length, 28);
+        cd.writeUInt32LE(offset, 42);
+
+        localParts.push(lh, nameBuf, payload, dd);
+        cdParts.push(cd, nameBuf);
+        offset += lh.length + nameBuf.length + payload.length + dd.length;
+      }
+
+      const cdBuf = Buffer.concat(cdParts);
+      const eocd = Buffer.alloc(22);
+      eocd.writeUInt32LE(0x06054b50, 0);
+      eocd.writeUInt16LE(entries.length, 8);
+      eocd.writeUInt16LE(entries.length, 10);
+      eocd.writeUInt32LE(cdBuf.length, 12);
+      eocd.writeUInt32LE(offset, 16);
+
+      return Buffer.concat([...localParts, cdBuf, eocd]);
+    };
+
+    const xlsxBuf = await buildBankSaladWorkbookBuffer();
+
+    // 1. Plain ZIP imports cleanly
+    const plainZip = buildZipBuffer([{ name: '2026-11-23.xlsx', content: xlsxBuf }]);
+    const parsedPlainZip = await parseFinanceUploadFile({
+      fileName: 'banksalad_plain.zip',
+      buffer: plainZip,
+    });
+    expect(parsedPlainZip.format).toBe('banksalad_xlsx');
+    expect(parsedPlainZip.rows).toHaveLength(5);
+
+    // 2. BankSalad-style ZipCrypto (flags: 9) requires password, rejects wrong, accepts right
+    const encryptedZip = buildZipBuffer([
+      { name: '2025-11-23~2026-11-23.xlsx', content: xlsxBuf, password: 'zip-secret-99', flags9: true },
+    ]);
+
+    await expect(
+      parseFinanceUploadFile({ fileName: '오세영님_2025-11-23~2026-11-23.zip', buffer: encryptedZip }),
+    ).rejects.toMatchObject({ code: 'PASSWORD_REQUIRED' } satisfies Partial<FinanceImportError>);
+
+    await expect(
+      parseFinanceUploadFile({
+        fileName: '오세영님_2025-11-23~2026-11-23.zip',
+        buffer: encryptedZip,
+        password: 'wrong-zip-password',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_PASSWORD' } satisfies Partial<FinanceImportError>);
+
+    const parsedEncZip = await parseFinanceUploadFile({
+      fileName: '오세영님_2025-11-23~2026-11-23.zip',
+      buffer: encryptedZip,
+      password: 'zip-secret-99',
+    });
+    expect(parsedEncZip.rows).toHaveLength(5);
+
+    // 3. Nested .zip-in-.zip or ZIP without .xlsx/.csv rejects with UNSUPPORTED_FORMAT
+    const nestedZip = buildZipBuffer([{ name: 'inner.zip', content: plainZip }]);
+    await expect(
+      parseFinanceUploadFile({ fileName: 'nested.zip', buffer: nestedZip }),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED_FORMAT' } satisfies Partial<FinanceImportError>);
+
+    // 4. End-to-end automation endpoint handles ZipCrypto .zip using saved encrypted password
+    const db = connection.get();
+    const repos = new UserRepositories(db, 'user-a');
+    const { token } = repos.financeAutomation.issueToken(ENDPOINT_URL);
+    repos.financeAutomation.updateSettings({ excelPassword: 'zip-secret-99' }, ENDPOINT_URL);
+
+    const zipImportRes = await handleFinanceAutomationImport(
+      new Request(ENDPOINT_URL, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: '오세영님_2025-11-23~2026-11-23.zip',
+          fileBase64: encryptedZip.toString('base64'),
+          mode: 'commit',
+        }),
+      }),
+      db,
+    );
+    expect(zipImportRes.status).toBe(200);
+    expect(await zipImportRes.json()).toMatchObject({
+      ok: true,
+      mode: 'commit',
+      format: 'banksalad_xlsx',
+      inserted: 5,
+      duplicates: 0,
+    });
   });
 });

@@ -184,7 +184,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
             자동 반영 동작 흐름
           </div>
           <p>
-            뱅크샐러드 엑셀/CSV를 내 Gmail로 보내 두면 Google Apps Script가 매일 <strong>낮 12시 · 밤 11시</strong>에 새 첨부파일을 Binder로 전송하고 완료 라벨(<code>Binder-Finance-Imported</code>)을 붙입니다.
+            뱅크샐러드 엑셀·ZIP·CSV를 내 Gmail로 보내 두면 Antigravity 예약 에이전트 또는 Google Apps Script가 매일 <strong>낮 12시 · 밤 11시</strong>에 새 첨부파일을 Binder로 전송하고 완료 라벨(<code>Binder-Finance-Imported</code>)을 붙입니다.
           </p>
         </div>
 
@@ -326,7 +326,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
             </span>
           </div>
           <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            뱅크샐러드 엑셀에 비밀번호가 걸려 있다면 서버에 AES-256-GCM으로 암호화해 보관합니다.
+            뱅크샐러드 엑셀/ZIP에 비밀번호가 걸려 있다면 서버에 AES-256-GCM으로 암호화해 보관하며, 여기서 발급한 토큰과 비밀번호는 Antigravity 에이전트 자동화와 Google Apps Script 모두에서 동일하게 사용됩니다.
           </p>
 
           <form onSubmit={e => void handleSavePassword(e)} className="flex flex-wrap items-center gap-2">

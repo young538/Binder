@@ -15,7 +15,7 @@ export interface FinanceAutomationStatus {
 export const DEFAULT_GMAIL_DONE_LABEL = 'Binder-Finance-Imported';
 
 export const DEFAULT_GMAIL_SEARCH_QUERY =
-  'has:attachment newer_than:30d (뱅크샐러드 OR 가계부 OR banksalad) -label:Binder-Finance-Imported';
+  'has:attachment newer_than:30d (from:banksalad.com OR 뱅크샐러드 OR 가계부) -label:Binder-Finance-Imported';
 
 /** Build ready-to-paste Google Apps Script (Code.gs) that forwards Gmail attachments to Binder. */
 export function buildBankSaladAppsScript(options: {
@@ -65,7 +65,7 @@ function syncBankSaladEmails() {
       for (var k = 0; k < attachments.length; k++) {
         var attachment = attachments[k];
         var fileName = attachment.getName() || 'banksalad.xlsx';
-        if (!/\\.(xlsx|csv)$/i.test(fileName)) {
+        if (!/\\.(xlsx|csv|zip)$/i.test(fileName)) {
           continue;
         }
 

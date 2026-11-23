@@ -79,7 +79,7 @@ export function FinanceImportDialog({ onClose, onCommitted }: Props) {
             </div>
             <ul className="list-disc space-y-0.5 pl-4">
               <li>
-                <strong>뱅크샐러드 통합 엑셀(.xlsx)</strong>: <code>가계부 내역</code> 시트를 자동 인식합니다(비밀번호 설정 파일 지원).
+                <strong>뱅크샐러드 통합 엑셀(.xlsx · .zip)</strong>: <code>가계부 내역</code> 시트를 자동 인식합니다(비밀번호 설정 엑셀 및 이메일 첨부 <code>.zip</code> 지원).
               </li>
               <li>
                 <strong>카드사·은행 CSV(.csv)</strong>: UTF-8 및 EUC-KR 인코딩을 자동 감지합니다.
@@ -91,11 +91,11 @@ export function FinanceImportDialog({ onClose, onCommitted }: Props) {
           </div>
 
           <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            엑셀 / CSV 파일 선택 (최대 10MB)
+            엑셀 / ZIP / CSV 파일 선택 (최대 10MB)
             <input
               type="file"
-              accept=".xlsx,.csv,.txt"
-              aria-label="가계부 엑셀 또는 CSV 파일"
+              accept=".xlsx,.zip,.csv,.txt"
+              aria-label="가계부 엑셀, ZIP 또는 CSV 파일"
               disabled={busy}
               onChange={e => {
                 const picked = e.target.files?.[0] ?? null;

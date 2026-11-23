@@ -12,6 +12,7 @@ import type {
   FinanceTransactionSource,
   SubscriptionCurrency,
 } from '@/lib/types';
+import { extractFinanceEntryFromZip } from './zip';
 
 export const MAX_FINANCE_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const MAX_FINANCE_IMPORT_ROWS = 20_000;
@@ -436,6 +437,7 @@ export async function parseFinanceUploadFile(input: {
   fileName: string;
   buffer: Buffer;
   password?: string;
+  fromZip?: boolean;
 }): Promise<ParsedFinanceFile> {
   if (input.buffer.byteLength === 0) {
     throw new FinanceImportError('NO_DATA', '비어 있는 파일입니다.');
@@ -445,6 +447,21 @@ export async function parseFinanceUploadFile(input: {
   }
 
   const lower = input.fileName.trim().toLowerCase();
+  if (lower.endsWith('.zip')) {
+    if (input.fromZip) {
+      throw new FinanceImportError(
+        'UNSUPPORTED_FORMAT',
+        '중첩된 ZIP 파일은 지원하지 않습니다. 압축을 해제해 .xlsx 또는 .csv 파일을 올려 주세요.',
+      );
+    }
+    const extracted = extractFinanceEntryFromZip(input.buffer, input.password);
+    return parseFinanceUploadFile({
+      fileName: extracted.entryName,
+      buffer: extracted.buffer,
+      password: input.password,
+      fromZip: true,
+    });
+  }
   if (lower.endsWith('.csv') || lower.endsWith('.txt')) {
     return parseCsvBuffer(input.buffer);
   }
@@ -454,12 +471,12 @@ export async function parseFinanceUploadFile(input: {
   if (lower.endsWith('.xls')) {
     throw new FinanceImportError(
       'UNSUPPORTED_FORMAT',
-      '.xls 구형 형식 대신 뱅크샐러드 통합 .xlsx 또는 .csv 파일을 업로드해 주세요.',
+      '.xls 구형 형식 대신 뱅크샐러드 통합 .xlsx, .zip 또는 .csv 파일을 업로드해 주세요.',
     );
   }
 
   throw new FinanceImportError(
     'UNSUPPORTED_FORMAT',
-    '지원하지 않는 파일 형식입니다. .xlsx 또는 .csv 파일을 업로드해 주세요.',
+    '지원하지 않는 파일 형식입니다. .xlsx, .zip 또는 .csv 파일을 업로드해 주세요.',
   );
 }
