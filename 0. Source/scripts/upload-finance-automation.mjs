@@ -5,8 +5,11 @@ import { fileURLToPath } from 'node:url';
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_IMPORT_URL = 'http://127.0.0.1:3000/api/finance/import/automation';
 
-function loadEnvFallback() {
-  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+function getScriptDir() {
+  return path.dirname(fileURLToPath(import.meta.url));
+}
+
+function loadEnvFallback(scriptDir) {
   const envPath = path.resolve(scriptDir, '..', '.env.finance-automation');
   if (!fs.existsSync(envPath)) return {};
 
@@ -35,11 +38,16 @@ function parseArgs(argv) {
   let filePath = '';
   let overrideName = '';
   let mode = 'commit';
+  let cleanup = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--preview') {
       mode = 'preview';
+      continue;
+    }
+    if (arg === '--cleanup') {
+      cleanup = true;
       continue;
     }
     if (arg === '--name') {
@@ -56,19 +64,31 @@ function parseArgs(argv) {
     }
   }
 
-  return { filePath, overrideName, mode };
+  return { filePath, overrideName, mode, cleanup };
+}
+
+function cleanupTempFile(scriptDir, resolvedPath) {
+  const allowedDir = path.resolve(scriptDir, '..', 'tmp-test', 'gmail-sync');
+  const rel = path.relative(allowedDir, resolvedPath);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return;
+  }
+  if (fs.existsSync(resolvedPath)) {
+    fs.unlinkSync(resolvedPath);
+  }
 }
 
 async function main() {
-  const { filePath, overrideName, mode } = parseArgs(process.argv.slice(2));
+  const { filePath, overrideName, mode, cleanup } = parseArgs(process.argv.slice(2));
   if (!filePath) {
     console.error(
-      '사용법: node upload-finance-automation.mjs <filePath> [--name <originalFileName>] [--preview]',
+      '사용법: node upload-finance-automation.mjs <filePath> [--name <originalFileName>] [--preview] [--cleanup]',
     );
     process.exit(1);
   }
 
-  const fileEnv = loadEnvFallback();
+  const scriptDir = getScriptDir();
+  const fileEnv = loadEnvFallback(scriptDir);
   const token = (process.env.BINDER_IMPORT_TOKEN || fileEnv.BINDER_IMPORT_TOKEN || '').trim();
   const importUrl = (
     process.env.BINDER_IMPORT_URL ||
@@ -84,57 +104,77 @@ async function main() {
   }
 
   const resolvedPath = path.resolve(filePath);
-  if (!fs.existsSync(resolvedPath)) {
-    console.error(`오류: 파일을 찾을 수 없습니다: ${resolvedPath}`);
-    process.exit(1);
-  }
+  let exitCode = 0;
 
-  const stat = fs.statSync(resolvedPath);
-  if (!stat.isFile()) {
-    console.error(`오류: 일반 파일이 아닙니다: ${resolvedPath}`);
-    process.exit(1);
-  }
-  if (stat.size === 0) {
-    console.error('오류: 비어 있는 파일입니다.');
-    process.exit(1);
-  }
-  if (stat.size > MAX_FILE_BYTES) {
-    console.error('오류: 파일 크기가 최대 허용치(10MB)를 초과했습니다.');
-    process.exit(1);
-  }
-
-  const buffer = fs.readFileSync(resolvedPath);
-  const fileName = (overrideName || path.basename(resolvedPath)).trim() || 'banksalad.xlsx';
-
-  const res = await fetch(importUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      fileName,
-      fileBase64: buffer.toString('base64'),
-      mode,
-    }),
-  });
-
-  const text = await res.text();
-  let parsedBody = null;
   try {
-    parsedBody = JSON.parse(text);
-  } catch {
-    parsedBody = null;
+    if (!fs.existsSync(resolvedPath)) {
+      console.error(`오류: 파일을 찾을 수 없습니다: ${resolvedPath}`);
+      exitCode = 1;
+      return;
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isFile()) {
+      console.error(`오류: 일반 파일이 아닙니다: ${resolvedPath}`);
+      exitCode = 1;
+      return;
+    }
+    if (stat.size === 0) {
+      console.error('오류: 비어 있는 파일입니다.');
+      exitCode = 1;
+      return;
+    }
+    if (stat.size > MAX_FILE_BYTES) {
+      console.error('오류: 파일 크기가 최대 허용치(10MB)를 초과했습니다.');
+      exitCode = 1;
+      return;
+    }
+
+    const buffer = fs.readFileSync(resolvedPath);
+    const fileName = (overrideName || path.basename(resolvedPath)).trim() || 'banksalad.xlsx';
+
+    const res = await fetch(importUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fileName,
+        fileBase64: buffer.toString('base64'),
+        mode,
+      }),
+    });
+
+    const text = await res.text();
+    let parsedBody = null;
+    try {
+      parsedBody = JSON.parse(text);
+    } catch {
+      parsedBody = null;
+    }
+
+    if (parsedBody !== null) {
+      console.log(JSON.stringify(parsedBody));
+    } else if (text.trim()) {
+      console.log(text.trim());
+    }
+
+    if (!res.ok) {
+      exitCode = 1;
+    }
+  } finally {
+    if (cleanup) {
+      try {
+        cleanupTempFile(scriptDir, resolvedPath);
+      } catch (err) {
+        console.error('임시 파일 삭제 실패:', err instanceof Error ? err.message : String(err));
+      }
+    }
   }
 
-  if (parsedBody !== null) {
-    console.log(JSON.stringify(parsedBody));
-  } else if (text.trim()) {
-    console.log(text.trim());
-  }
-
-  if (!res.ok) {
-    process.exit(1);
+  if (exitCode !== 0) {
+    process.exit(exitCode);
   }
 }
 
