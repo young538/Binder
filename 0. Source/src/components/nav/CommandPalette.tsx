@@ -21,6 +21,7 @@ import {
   Settings,
   Sun,
   Target,
+  Wallet,
 } from 'lucide-react';
 import { createNote } from '@/lib/repo/notes';
 import { http } from '@/lib/repo/http';
@@ -123,6 +124,7 @@ export function CommandPalette() {
       { key: 'nav:projects', label: '프로젝트 실행 보드', subtitle: '/projects', href: '/projects', Icon: FolderKanban },
       { key: 'nav:notes', label: '원칙 · 의사결정 · 노트', subtitle: '/notes', href: '/notes', Icon: BookMarked },
       { key: 'nav:metrics', label: '상태 지표 트래커', subtitle: '/metrics', href: '/metrics', Icon: Activity },
+      { key: 'nav:finance', label: '가계부 · 예산', subtitle: '/finance', href: '/finance', Icon: Wallet },
       { key: 'nav:subscriptions', label: '구독 · 월정액 관리', subtitle: '/subscriptions', href: '/subscriptions', Icon: CreditCard },
       { key: 'nav:life', label: '일정 · 기념일 · 인간관계', subtitle: '/life', href: '/life', Icon: CalendarHeart },
       { key: 'nav:week', label: '이번 주 시간표', subtitle: isoWeek, href: `/week/${isoWeek}`, Icon: Calendar },

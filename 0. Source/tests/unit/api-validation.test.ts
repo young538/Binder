@@ -15,6 +15,9 @@ import { PUT as retroRoute } from '@/app/api/retrospectives/route';
 import { POST as createSubscriptionRoute } from '@/app/api/subscriptions/route';
 import { PATCH as patchSubscriptionRoute } from '@/app/api/subscriptions/[id]/route';
 import { POST as createEventRoute } from '@/app/api/events/route';
+import { POST as createFinanceTxRoute } from '@/app/api/finance/transactions/route';
+import { PATCH as patchFinanceTxRoute } from '@/app/api/finance/transactions/[id]/route';
+import { PUT as putFinanceBudgetRoute, DELETE as deleteFinanceBudgetRoute } from '@/app/api/finance/budgets/route';
 import { PATCH as patchGoogleSettingsRoute } from '@/app/api/integrations/google/settings/route';
 import { POST as importRoute } from '@/app/api/import/route';
 import { GET as exportRoute } from '@/app/api/export/route';
@@ -259,6 +262,73 @@ describe('mutation request boundary', () => {
     );
     expect(clearedMapRes.status).toBe(200);
     expect(await clearedMapRes.json()).toMatchObject({ tasksProjectMap: {} });
+  });
+
+  it('validates finance transactions, server-managed hashes, subscription ownership, and budgets', async () => {
+    const ownedSub = await getDb().insert(schema.subscriptions).values({
+      id: 'sub-owned',
+      userId: auth.userId,
+      name: 'Claude Pro',
+      amount: 20,
+      currency: 'USD',
+      billingCycle: 'monthly',
+      billingDay: 1,
+      nextBillingDate: '2026-11-01',
+      status: 'active',
+      autoRenew: true,
+      order: 0,
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
+
+    const baseTx = {
+      date: '2026-11-23',
+      kind: 'expense',
+      amount: 12000,
+      currency: 'KRW',
+      category: '식비',
+      merchant: '점심 식사',
+      excluded: false,
+      source: 'manual',
+    };
+
+    for (const badTx of [
+      { ...baseTx, externalHash: 'spoofed' },
+      { ...baseTx, kind: 'other' },
+      { ...baseTx, amount: -100 },
+      { ...baseTx, merchant: '   ' },
+      { ...baseTx, subscriptionId: 'missing-sub' },
+    ]) {
+      expect((await createFinanceTxRoute(request(badTx))).status).toBe(400);
+    }
+
+    const createdRes = await createFinanceTxRoute(request({ ...baseTx, subscriptionId: ownedSub.id }));
+    expect(createdRes.status).toBe(201);
+    const createdTx = await createdRes.json();
+
+    expect((await patchFinanceTxRoute(request({ externalHash: 'spoof' }), ctx(createdTx.id))).status).toBe(400);
+    const toggledRes = await patchFinanceTxRoute(request({ excluded: true }), ctx(createdTx.id));
+    expect(toggledRes.status).toBe(200);
+    expect(await toggledRes.json()).toMatchObject({ excluded: true });
+
+    for (const badBudget of [
+      { yyyymm: '2026-13', category: '__total__', amount: 1000000 },
+      { yyyymm: 'default', category: '__total__', amount: -1 },
+      { yyyymm: 'default', category: '  ', amount: 10000 },
+    ]) {
+      expect((await putFinanceBudgetRoute(request(badBudget))).status).toBe(400);
+    }
+
+    const okBudgetRes = await putFinanceBudgetRoute(
+      request({ yyyymm: 'default', category: '__total__', amount: 1500000 }),
+    );
+    expect(okBudgetRes.status).toBe(200);
+    const savedBudget = await okBudgetRes.json();
+    expect(savedBudget.amount).toBe(1500000);
+
+    expect(
+      (await deleteFinanceBudgetRoute(new Request(`http://localhost/api/finance/budgets?id=${savedBudget.id}`, { method: 'DELETE' }) as never)).status,
+    ).toBe(200);
   });
 });
 

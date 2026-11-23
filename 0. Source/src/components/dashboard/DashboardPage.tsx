@@ -16,8 +16,10 @@ import {
   FolderKanban,
   NotebookPen,
   RefreshCw,
+  Wallet,
 } from 'lucide-react';
 import type { DashboardSnapshot } from '@/lib/dashboard';
+import { formatFinanceAmount } from '@/lib/finance';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { describeDeadline } from '@/lib/projects';
 import { getDashboardSnapshot } from '@/lib/repo/dashboard';
@@ -505,6 +507,56 @@ export function DashboardPage() {
           )}
         </section>
       </div>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <Wallet size={16} className="text-emerald-600 dark:text-emerald-400" />
+            이번 달 가계부 ({data.yyyymm})
+          </h2>
+          <Link href={`/finance?month=${data.yyyymm}`} className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+            가계부 열기
+          </Link>
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+          <div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/60">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400">총 지출</div>
+            <div className="mt-0.5 text-base font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+              {formatFinanceAmount(data.monthFinance.totalExpense)}
+            </div>
+          </div>
+          <div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/60">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400">총 수입</div>
+            <div className="mt-0.5 text-base font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {formatFinanceAmount(data.monthFinance.totalIncome)}
+            </div>
+          </div>
+          <div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/60">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400">월 예산</div>
+            <div className="mt-0.5 text-base font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+              {data.monthFinance.budgetPercent !== null
+                ? `${data.monthFinance.budgetPercent}%`
+                : '미설정'}
+            </div>
+            {data.monthFinance.dailyAllowance !== null && (
+              <div className="text-[11px] text-zinc-500">
+                일평균 {formatFinanceAmount(data.monthFinance.dailyAllowance)}
+              </div>
+            )}
+          </div>
+          <div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/60">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400">상위 지출 분류</div>
+            <div className="mt-0.5 truncate font-semibold text-zinc-800 dark:text-zinc-200">
+              {data.monthFinance.topCategories.length > 0
+                ? data.monthFinance.topCategories
+                    .map(c => `${c.category} ${formatFinanceAmount(c.amount)}`)
+                    .join(' · ')
+                : '기록 없음'}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-3">
         <div className="flex items-center justify-between gap-2">

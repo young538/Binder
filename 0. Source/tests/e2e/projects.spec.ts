@@ -29,9 +29,10 @@ for (const width of [1280, 390]) {
     await page.reload();
 
     if (width >= 1024) {
+      await page.getByRole('button', { name: '목표 · 실행', exact: true }).click();
       await page.getByRole('link', { name: '프로젝트', exact: true }).click();
     } else {
-      await page.getByRole('button', { name: '더보기' }).click();
+      await page.getByRole('button', { name: '더보기', exact: true }).click();
       await page.getByRole('link', { name: '프로젝트', exact: true }).click();
     }
     await expect(page).toHaveURL(/\/projects$/);

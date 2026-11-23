@@ -4,6 +4,8 @@ import type {
   Book,
   Category,
   DailyCheckin,
+  FinanceBudget,
+  FinanceTransaction,
   FocusNote,
   Goal,
   Habit,
@@ -55,6 +57,8 @@ export interface MutationPayloads {
   people: Writable<Person>;
   lifeEvents: Omit<Writable<LifeEvent>, 'googleCalendarId' | 'googleEventId' | 'googleUpdatedAt'>;
   subscriptions: Writable<Subscription>;
+  financeTransactions: Omit<Writable<FinanceTransaction>, 'externalHash'>;
+  financeBudgets: Writable<FinanceBudget>;
   icsImport: { icsText?: string | null; url?: string | null };
   googleCalendarSettings: {
     selectedCalendarIds?: string[];
@@ -163,6 +167,32 @@ const rules: Record<MutationKind, Rules> = {
   people: { fields: { name: identifier, relationship: optionalText, cadenceDays: nullable(integer(1, 365)), lastContactAt: nullable(isDate), birthday: nullable(isDate), giftIdeas: optionalText, note: optionalText, order: integer(0) }, required: ['name', 'order'] },
   lifeEvents: { fields: { title: identifier, date: isDate, endDate: nullable(isDate), kind: oneOf('event', 'dday', 'anniversary'), allDay: bool, startMin: nullable(integer(0, 1439)), endMin: nullable(integer(1, 1440)), color: nullable(color), personId: optionalId, projectId: optionalId, goalId: optionalId, externalUid: optionalText, note: optionalText }, required: ['title', 'date', 'kind', 'allDay'] },
   subscriptions: { fields: { name: identifier, amount: nonNegativeNumber, currency: oneOf('KRW', 'USD', 'JPY', 'EUR'), billingCycle: oneOf('monthly', 'yearly', 'weekly', 'quarterly'), billingDay: nullable(integer(1, 31)), nextBillingDate: nullable(isDate), status: oneOf('active', 'paused', 'cancelled'), category: optionalText, paymentMethod: optionalText, autoRenew: bool, url: nullable(url), note: optionalText, order: integer(0) }, required: ['name', 'amount', 'currency', 'billingCycle', 'status', 'autoRenew', 'order'] },
+  financeTransactions: {
+    fields: {
+      date: isDate,
+      time: nullable(value => typeof value === 'string' && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)),
+      kind: oneOf('expense', 'income', 'transfer'),
+      amount: nonNegativeNumber,
+      currency: oneOf('KRW', 'USD', 'JPY', 'EUR'),
+      category: identifier,
+      subCategory: optionalText,
+      merchant: identifier,
+      paymentMethod: optionalText,
+      note: optionalText,
+      excluded: bool,
+      source: oneOf('manual', 'banksalad', 'csv', 'subscription', 'shortcut'),
+      subscriptionId: optionalId,
+    },
+    required: ['date', 'kind', 'amount', 'currency', 'category', 'merchant', 'excluded', 'source'],
+  },
+  financeBudgets: {
+    fields: {
+      yyyymm: value => value === 'default' || month(value),
+      category: identifier,
+      amount: nonNegativeNumber,
+    },
+    required: ['yyyymm', 'category', 'amount'],
+  },
   icsImport: { fields: { icsText: optionalText, url: nullable(url) }, required: [] },
   googleCalendarSettings: {
     fields: {
@@ -248,7 +278,7 @@ export function validateRelationships(kind: MutationKind, value: Record<string, 
   }
 }
 
-export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'projects' | 'todos' | 'annualGoals' | 'habits' | 'metrics' | 'people'>>> = {
+export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'projects' | 'todos' | 'annualGoals' | 'habits' | 'metrics' | 'people' | 'subscriptions'>>> = {
   goals: { parentId: 'goals' },
   projects: { goalId: 'goals', categoryId: 'categories' },
   todos: { parentGoalId: 'goals', categoryId: 'categories', projectId: 'projects' },
@@ -260,4 +290,5 @@ export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals
   metricEntries: { metricId: 'metrics' },
   notes: { goalId: 'goals', projectId: 'projects' },
   lifeEvents: { personId: 'people', projectId: 'projects', goalId: 'goals' },
+  financeTransactions: { subscriptionId: 'subscriptions' },
 };

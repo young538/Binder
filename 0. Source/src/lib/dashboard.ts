@@ -1,3 +1,4 @@
+import type { FinanceMonthlySummary } from './finance';
 import type { MetricSummary } from './metrics';
 import type { SubscriptionSummary } from './subscriptions';
 import type {
@@ -67,6 +68,7 @@ export interface DashboardSnapshot {
   upcomingItems: DashboardUpcomingItem[];
   activeProjects: DashboardProjectItem[];
   subscriptionSummary: SubscriptionSummary;
+  monthFinance: FinanceMonthlySummary;
   metrics: DashboardMetricItem[];
   attention: {
     overdueTodosCount: number;

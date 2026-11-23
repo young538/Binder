@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { endOfMonth, parseISO } from 'date-fns';
+import { prevMonthKey, summarizeMonthFinance } from '@/lib/finance';
 import { buildRetroCoachSummary } from '@/lib/retroCoach';
 import { enrichRetroCoach, getPublicAiCoachStatus } from '@/lib/server/aiCoach';
 import { authenticated } from '@/lib/server/http';
@@ -55,6 +56,24 @@ export const POST = authenticated(async (session, req: Request) => {
   ]);
 
   const subscriptions = repositories.subscriptions.list();
+  const financeSummary =
+    body.mode === 'monthly'
+      ? (() => {
+          const prevPeriod = prevMonthKey(body.period);
+          const txs = repositories.finance.listTransactions({
+            startDate: `${prevPeriod}-01`,
+            endDate,
+          });
+          const budgets = repositories.finance.listBudgets(body.period);
+          return summarizeMonthFinance(
+            txs.filter(t => t.date.startsWith(body.period)),
+            budgets,
+            txs.filter(t => t.date.startsWith(prevPeriod)),
+            body.period,
+            endDate,
+          );
+        })()
+      : null;
   const habitStats = computeHabitStatsForRange(habits, habitLogs, startObj, endObj);
 
   const completedProjects = projects.filter(p => {
@@ -80,6 +99,7 @@ export const POST = authenticated(async (session, req: Request) => {
     checkins,
     habitPercent: habitStats.percent,
     subscriptions,
+    financeSummary,
     existingRetro,
   });
 

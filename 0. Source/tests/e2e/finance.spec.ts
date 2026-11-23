@@ -1,0 +1,154 @@
+import { test, expect, type Page } from '@playwright/test';
+import ExcelJS from 'exceljs';
+import { ensureUserExists, loginAs } from './_helpers';
+
+async function setup(page: Page, width: number, suffix: string) {
+  const username = `fin-${width}-${suffix}-${Date.now()}`;
+  await ensureUserExists(username, 'pwTest123*');
+  await page.setViewportSize({ width, height: 900 });
+  await loginAs(page, username, 'pwTest123*');
+}
+
+async function checkNoHorizontalOverflow(page: Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const dialog = page.getByRole('dialog');
+  if (await dialog.count()) {
+    expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  }
+}
+
+async function createSampleBankSaladXlsx(monthPrefix: string): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const sheet = wb.addWorksheet('가계부 내역');
+  sheet.addRow(['날짜', '시간', '타입', '대분류', '소분류', '내용', '금액', '화폐', '결제수단', '메모']);
+  sheet.addRow([`${monthPrefix}-05`, '12:10', '지출', '식비', '외식', '을밀대 평양냉면', -15000, 'KRW', '현대카드', '']);
+  sheet.addRow([`${monthPrefix}-06`, '09:30', '이체', '내계좌이체', '', '비상금 이동', -100000, 'KRW', '토스뱅크', '']);
+  const arr = await wb.xlsx.writeBuffer();
+  return Buffer.from(arr as ArrayBuffer);
+}
+
+for (const width of [1280, 390]) {
+  test(`finance ledger, quick expense, BankSalad Excel import, budgets, nav & dashboard integration at ${width}px`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page, width, 'flow');
+    const now = new Date();
+    const yyyymm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    await checkNoHorizontalOverflow(page);
+
+    // 1) QuickCapture -> '빠른 지출' tab
+    await page.getByRole('button', { name: '빠른 메모', exact: true }).click();
+    const quickDialog = page.getByRole('dialog');
+    await quickDialog.getByRole('tab', { name: '빠른 지출' }).click();
+    await quickDialog.getByLabel('지출 금액').fill('12500');
+    await quickDialog.getByLabel('지출 내용').fill('테스트 커피');
+    await quickDialog.getByLabel('지출 분류').selectOption('카페/간식');
+    await quickDialog.getByRole('button', { name: '지출 저장' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // 2) Navigate to /finance via redesigned TopNav / BottomNav
+    if (width >= 1024) {
+      await page.getByRole('button', { name: '재무', exact: true }).click();
+      await page.getByRole('link', { name: '가계부', exact: true }).click();
+    } else {
+      await page.locator('nav:visible').getByRole('link', { name: '가계부', exact: true }).click();
+    }
+    await expect(page).toHaveURL(/\/finance$/);
+    await checkNoHorizontalOverflow(page);
+
+    const kpi = page.getByLabel('이번 달 재무 요약');
+    await expect(kpi).toContainText('₩12,500');
+    await expect(page.getByText('테스트 커피')).toBeVisible();
+
+    // 3) Toggle excluded on transaction -> totals update live
+    const toggleExcludedBtn = page.getByRole('button', { name: '테스트 커피 합계 제외 전환' });
+    await toggleExcludedBtn.click();
+    await expect(toggleExcludedBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(kpi).toContainText('합계 제외 1건');
+    await expect(kpi).toContainText('총 지출₩0');
+
+    await toggleExcludedBtn.click();
+    await expect(toggleExcludedBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(kpi).toContainText('합계 제외 0건');
+    await expect(kpi).toContainText('총 지출₩12,500');
+
+    // 4) Add manual income
+    await page.getByRole('button', { name: '거래 추가' }).click();
+    const txDialog = page.getByRole('dialog');
+    await txDialog.getByRole('button', { name: '수입', exact: true }).click();
+    await txDialog.getByLabel('거래 금액').fill('3000000');
+    await txDialog.getByLabel('거래 내용').fill('11월 급여');
+    await txDialog.getByRole('button', { name: '거래 저장' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(kpi).toContainText('₩3,000,000');
+
+    // 5) Two-step BankSalad .xlsx upload + deduplication check
+    const xlsxBuffer = await createSampleBankSaladXlsx(yyyymm);
+    await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
+    const importDialog = page.getByRole('dialog');
+    await importDialog.getByLabel('가계부 엑셀 또는 CSV 파일').setInputFiles({
+      name: 'banksalad_test.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: xlsxBuffer,
+    });
+    await importDialog.getByRole('button', { name: '파일 미리보기' }).click();
+    await expect(importDialog.getByText('을밀대 평양냉면')).toBeVisible();
+    await importDialog.getByRole('button', { name: /신규 2건 가져오기 확정/ }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await expect(page.getByText('을밀대 평양냉면')).toBeVisible();
+    // 12,500 + 15,000 = 27,500 (transfer 100,000 excluded from expense total)
+    await expect(kpi).toContainText('₩27,500');
+
+    // Re-upload same Excel -> detects 2 duplicates, 0 new rows
+    await page.getByRole('button', { name: '뱅크샐러드 엑셀 가져오기' }).click();
+    const reimportDialog = page.getByRole('dialog');
+    await reimportDialog.getByLabel('가계부 엑셀 또는 CSV 파일').setInputFiles({
+      name: 'banksalad_test.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: xlsxBuffer,
+    });
+    await reimportDialog.getByRole('button', { name: '파일 미리보기' }).click();
+    await expect(reimportDialog.getByRole('button', { name: /신규 거래 없음/ })).toBeDisabled();
+    await reimportDialog.getByRole('button', { name: '닫기', exact: true }).click();
+
+    // 6) Budget tab
+    await page.getByRole('tab', { name: /예산 · 분석/ }).click();
+    await page.getByLabel('월 총 예산').fill('1500000');
+    await page.getByRole('button', { name: '총 예산 저장' }).click();
+    await expect(kpi).toContainText('2%');
+    await page.reload();
+    await expect(kpi).toContainText('₩27,500');
+    await checkNoHorizontalOverflow(page);
+
+    // 7) Verify Dashboard & Monthly Retrospective finance summaries
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: new RegExp(`이번 달 가계부 \\(${yyyymm}\\)`) })).toBeVisible();
+    await expect(page.getByText('₩27,500').first()).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    await page.goto(`/retrospective/month/${yyyymm}`);
+    await expect(page.getByText('월간 가계부')).toBeVisible();
+    await expect(page.getByText(/지출 ₩27,500/)).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+  });
+}
+
+test('redesigned 1024px TopNav fits without overflow and finance APIs reject anonymous requests', async ({ page, request }) => {
+  await setup(page, 1024, 'nav1024');
+  await page.goto('/dashboard');
+  await checkNoHorizontalOverflow(page);
+  await page.goto('/finance');
+  await checkNoHorizontalOverflow(page);
+
+  for (const url of ['/api/finance/transactions', '/api/finance/budgets']) {
+    expect((await request.get(url)).status()).toBe(401);
+  }
+  expect((await request.post('/api/finance/transactions', { data: { date: '2026-11-23', kind: 'expense', amount: 1000, currency: 'KRW', category: '식비', merchant: 'x', excluded: false, source: 'manual' } })).status()).toBe(401);
+  expect((await request.patch('/api/finance/transactions/unknown', { data: { excluded: true } })).status()).toBe(401);
+  expect((await request.delete('/api/finance/transactions/unknown')).status()).toBe(401);
+  expect((await request.put('/api/finance/budgets', { data: { yyyymm: 'default', category: '__total__', amount: 1000 } })).status()).toBe(401);
+  expect((await request.delete('/api/finance/budgets?id=unknown')).status()).toBe(401);
+  expect((await request.post('/api/finance/import')).status()).toBe(401);
+  expect((await request.post('/api/finance/sync-subscriptions', { data: {} })).status()).toBe(401);
+});

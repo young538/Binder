@@ -252,11 +252,13 @@ describe('life OS phase 1-4 domains', () => {
       },
     });
     const out = backups.exportFor('legacy-v12');
-    expect(out.version).toBe(14);
+    expect(out.version).toBe(15);
     expect(out.projects).toHaveLength(1);
     expect(out.notes).toEqual([]);
     expect(out.metrics).toEqual([]);
     expect(out.subscriptions).toEqual([]);
+    expect(out.financeTransactions).toEqual([]);
+    expect(out.financeBudgets).toEqual([]);
   });
 
   it('calculates recurring subscriptions, advances billing dates, isolates users, and surfaces 3-day morning boot alerts', () => {

@@ -94,8 +94,16 @@
 
 ## 8. 인생 OS 통합 대시보드 (`/dashboard`)
 
-- **통합 스냅샷 (`GET /api/dashboard?date=YYYY-MM-DD`)**: `DashboardRepository`([dashboard.ts](../../0.%20Source/src/lib/server/repos/dashboard.ts))가 단일 읽기 트랜잭션으로 오늘 일정(Google 캘린더 동기화 일정 포함), 다가오는 7일 일정·생일·구독 결제, 오늘 하이라이트·할 일(완료 토글 지원)·시간 실행, 주간 습관 달성률, 오늘 컨디션 체크인, 진행 중 프로젝트(다음 행동 누락 경고 포함), 구독 월/연 고정비, 상태 지표 스파크라인(`MetricSparkline`)을 묶어 반환합니다.
+- **통합 스냅샷 (`GET /api/dashboard?date=YYYY-MM-DD`)**: `DashboardRepository`([dashboard.ts](../../0.%20Source/src/lib/server/repos/dashboard.ts))가 단일 읽기 트랜잭션으로 오늘 일정(Google 캘린더 동기화 일정 포함), 다가오는 7일 일정·생일·구독 결제, 오늘 하이라이트·할 일(완료 토글 지원)·시간 실행, 주간 습관 달성률, 오늘 컨디션 체크인, 진행 중 프로젝트(다음 행동 누락 경고 포함), 구독 월/연 고정비, **이번 달 가계부(지출·수입·예산 사용률·상위 분류)**, 상태 지표 스파크라인(`MetricSparkline`)을 묶어 반환합니다.
 - **주의 배너**: 이월 대기 할 일, 다음 행동 없는 프로젝트, 안부 연락 도래 인물, 복기 예정 의사결정, 7일 이내 구독 결제가 있으면 상단에 바로가기 배지를 표시합니다.
+
+---
+
+## 9. 가계부 · 뱅크샐러드 엑셀 가져오기 (`/finance`)
+
+- **네비게이션 통합**: 상단 데스크톱(`홈 · 일일 · 할 일` + `플래너`/`목표·실행`/`재무`/`지식 · 기록` 드롭다운)과 모바일 하단(`홈 · 일일 · 할 일 · 가계부 · 더보기`)에서 1클릭으로 진입할 수 있으며, **빠른 메모 (`Alt+N`)**의 **빠른 지출** 탭에서 현금·수동 지출을 즉시 기록합니다.
+- **뱅크샐러드 통합 엑셀(`.xlsx`) 및 CSV 2단계 가져오기 ([parser.ts](../../0.%20Source/src/lib/server/finance/parser.ts) · [FinanceImportDialog.tsx](../../0.%20Source/src/components/finance/FinanceImportDialog.tsx))**: `가계부 내역` 시트(암호 설정된 엑셀 복호화 지원)와 UTF-8/EUC-KR CSV를 파싱해 미리보기(`신규 / 중복 건너뜀 / 지출·수입·이체`) 후 SHA-256 `externalHash` 기준으로 중복 없이 단일 트랜잭션 등록합니다.
+- **예산·구독 고정비·회고 연동 ([FinancePage.tsx](../../0.%20Source/src/components/finance/FinancePage.tsx) · [finance.ts](../../0.%20Source/src/lib/finance.ts))**: `이체` 및 `합계 제외(excluded)` 항목을 뺀 순 지출·수입·순저축·일평균 가용액을 계산하며, 매월 기본/특정 월 예산, 활성 구독 고정비 자동 반영(`syncSubscriptionsForMonth`), `/api/search` 가계부 검색, 월간 회고(`/retrospective/month`) 및 AI 월간 회고 코치를 연결합니다.
 
 ---
 
@@ -112,6 +120,7 @@
 | [NotesPage](../../0.%20Source/src/components/notes/NotesPage.tsx) / [NoteEditorDialog](../../0.%20Source/src/components/notes/NoteEditorDialog.tsx) | 원칙·의사결정·인사이트·레퍼런스 관리 |
 | [LifePage](../../0.%20Source/src/components/life/LifePage.tsx) / [LifeEventsSection](../../0.%20Source/src/components/life/LifeEventsSection.tsx) / [IcsImportDialog](../../0.%20Source/src/components/life/IcsImportDialog.tsx) / [PeopleSection](../../0.%20Source/src/components/life/PeopleSection.tsx) | 일정·기념일·`.ics` 가져오기·소중한 사람 CRM |
 | [SubscriptionsPage](../../0.%20Source/src/components/subscriptions/SubscriptionsPage.tsx) / [SubscriptionEditorDialog](../../0.%20Source/src/components/subscriptions/SubscriptionEditorDialog.tsx) | 구독·월정액 CRUD, 요약 카드, 결제일 갱신 |
+| [FinancePage](../../0.%20Source/src/components/finance/FinancePage.tsx) / [FinanceImportDialog](../../0.%20Source/src/components/finance/FinanceImportDialog.tsx) / [parser.ts](../../0.%20Source/src/lib/server/finance/parser.ts) | 가계부, 월 예산, 뱅크샐러드 엑셀/CSV 가져오기 |
 | [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) / [TodoHubPage](../../0.%20Source/src/components/inbox/TodoHubPage.tsx) | `Ctrl/Cmd+K` 런처, 빠른 입력·수집함/오늘/예정/프로젝트 통합 허브 |
 | [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [subscriptions.ts](../../0.%20Source/src/lib/subscriptions.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·구독 환산·마감 유틸리티 |
 | [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) / [subscriptions](../../0.%20Source/src/app/(app)/subscriptions/page.tsx) | App Router 페이지 진입점 |

@@ -490,3 +490,66 @@ export type GoogleAutoSyncSkipReason =
 export type GoogleCalendarAutoSyncOutcome =
   | { skipped: true; reason: GoogleAutoSyncSkipReason; lastSyncedAt?: string | null }
   | ({ skipped: false } & GoogleCalendarSyncResult);
+
+export type FinanceTransactionKind = 'expense' | 'income' | 'transfer';
+
+export type FinanceTransactionSource = 'manual' | 'banksalad' | 'csv' | 'subscription' | 'shortcut';
+
+export const FINANCE_KIND_LABEL: Record<FinanceTransactionKind, string> = {
+  expense: '지출',
+  income: '수입',
+  transfer: '이체',
+};
+
+export const DEFAULT_EXPENSE_CATEGORIES = [
+  '식비',
+  '카페/간식',
+  '생활/쇼핑',
+  '교통',
+  '주거/통신',
+  '의료/건강',
+  '문화/여가',
+  '교육/자기계발',
+  '구독/고정비',
+  '경조사/선물',
+  '기타',
+] as const;
+
+export const DEFAULT_INCOME_CATEGORIES = [
+  '급여',
+  '사업/부수입',
+  '금융/배당',
+  '용돈/기타',
+] as const;
+
+export interface FinanceTransaction {
+  id: string;
+  userId: string;
+  date: string;
+  time?: string | null;
+  kind: FinanceTransactionKind;
+  amount: number;
+  currency: SubscriptionCurrency;
+  category: string;
+  subCategory?: string | null;
+  merchant: string;
+  paymentMethod?: string | null;
+  note?: string | null;
+  excluded: boolean;
+  source: FinanceTransactionSource;
+  externalHash?: string | null;
+  subscriptionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FinanceBudget {
+  id: string;
+  userId: string;
+  yyyymm: string; // 'default' | 'YYYY-MM'
+  category: string; // '__total__' | category name
+  amount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+

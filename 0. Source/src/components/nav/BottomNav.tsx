@@ -2,58 +2,80 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import {
   Activity,
   BookMarked,
+  BookOpen,
   Calendar,
   CalendarDays,
   CalendarHeart,
   CalendarRange,
   Command,
   CreditCard,
-  Target,
   FolderKanban,
-  LayoutDashboard,
-  NotebookPen,
-  MoreHorizontal,
-  Search,
   Inbox,
-  BookOpen,
+  LayoutDashboard,
+  MoreHorizontal,
+  NotebookPen,
+  Search,
   Settings as SettingsIcon,
   Sun,
+  Target,
+  Wallet,
   X,
 } from 'lucide-react';
-import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
-import { format } from 'date-fns';
+import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 
 const primary = [
-  { label: 'One-Thing', Icon: Target, basePath: '/mandalart', href: () => '/mandalart' },
+  { label: '홈', Icon: LayoutDashboard, basePath: '/dashboard', href: () => '/dashboard' },
   { label: '일일', Icon: Sun, basePath: '/daily', href: () => '/daily' },
-  { label: '연간', Icon: CalendarRange, basePath: '/annual', href: () => `/annual/${format(new Date(), 'yyyy')}` },
-  { label: '월간', Icon: CalendarDays, basePath: '/monthly', href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
-  { label: '주간', Icon: Calendar, basePath: '/week', href: () => `/week/${toIsoWeek(new Date())}` },
+  { label: '할 일', Icon: Inbox, basePath: '/inbox', href: () => '/inbox' },
+  { label: '가계부', Icon: Wallet, basePath: '/finance', href: () => '/finance' },
 ];
 
-const more = [
-  { label: '대시보드', Icon: LayoutDashboard, basePath: '/dashboard', href: () => '/dashboard' },
-  { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
-  { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
-  { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },
-  { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: () => '/subscriptions' },
-  { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: () => '/life' },
-  { label: '수집함', Icon: Inbox, basePath: '/inbox', href: () => '/inbox' },
-  { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: () => '/goal-review' },
-  { label: '전체 검색', Icon: Search, basePath: '/search', href: () => '/search' },
-  { label: '회고', Icon: NotebookPen, basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
-  { label: '독서', Icon: BookOpen, basePath: '/reading', href: () => '/reading' },
-  { label: '설정', Icon: SettingsIcon, basePath: '/settings', href: () => '/settings' },
+const moreGroups = [
+  {
+    title: '플래너',
+    items: [
+      { label: '주간', Icon: Calendar, basePath: '/week', href: () => `/week/${toIsoWeek(new Date())}` },
+      { label: '월간', Icon: CalendarDays, basePath: '/monthly', href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
+      { label: '연간', Icon: CalendarRange, basePath: '/annual', href: () => `/annual/${format(new Date(), 'yyyy')}` },
+      { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: () => '/life' },
+    ],
+  },
+  {
+    title: '목표 · 실행',
+    items: [
+      { label: 'One-Thing', Icon: Target, basePath: '/mandalart', href: () => '/mandalart' },
+      { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
+      { label: '회고', Icon: NotebookPen, basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
+      { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: () => '/goal-review' },
+    ],
+  },
+  {
+    title: '재무',
+    items: [
+      { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: () => '/subscriptions' },
+    ],
+  },
+  {
+    title: '기록 · 도구',
+    items: [
+      { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
+      { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },
+      { label: '독서', Icon: BookOpen, basePath: '/reading', href: () => '/reading' },
+      { label: '전체 검색', Icon: Search, basePath: '/search', href: () => '/search' },
+      { label: '설정', Icon: SettingsIcon, basePath: '/settings', href: () => '/settings' },
+    ],
+  },
 ];
 
 export const BottomNav = () => {
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const moreActive = more.some((m) => path.startsWith(m.basePath));
+  const moreActive = moreGroups.some(g => g.items.some(m => path.startsWith(m.basePath)));
 
   return (
     <>
@@ -97,11 +119,11 @@ export const BottomNav = () => {
         >
           <div className="absolute inset-0 bg-zinc-900/25 backdrop-blur-sm" />
           <div
-            className="relative w-full max-h-[80dvh] overflow-y-auto bg-white dark:bg-zinc-900 rounded-t-2xl p-3 pb-6 shadow-xl"
+            className="relative w-full max-h-[82dvh] overflow-y-auto bg-white dark:bg-zinc-900 rounded-t-2xl p-3 pb-6 shadow-xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-3 px-2">
-              <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">더보기</h3>
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-50">전체 메뉴</h3>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -122,27 +144,35 @@ export const BottomNav = () => {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {more.map(({ label, Icon, basePath, href }) => {
-                const active = path.startsWith(basePath);
-                return (
-                  <Link
-                    key={basePath}
-                    href={href()}
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition
-                      ${
-                        active
-                          ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
-                          : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                      }`}
-                  >
-                    <Icon size={18} />
-                    <span className="text-sm font-medium">{label}</span>
-                  </Link>
-                );
-              })}
-            </div>
+
+            {moreGroups.map(group => (
+              <div key={group.title} className="space-y-1.5">
+                <div className="px-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  {group.title}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {group.items.map(({ label, Icon, basePath, href }) => {
+                    const active = path.startsWith(basePath);
+                    return (
+                      <Link
+                        key={basePath}
+                        href={href()}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border transition
+                          ${
+                            active
+                              ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                              : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                      >
+                        <Icon size={17} />
+                        <span className="text-sm font-medium">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

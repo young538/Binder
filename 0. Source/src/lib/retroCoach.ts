@@ -1,3 +1,4 @@
+import { formatFinanceAmount, type FinanceMonthlySummary } from './finance';
 import { summarizeSubscriptions, formatCurrency } from './subscriptions';
 import type {
   Book,
@@ -82,6 +83,7 @@ export interface RetroCoachInput {
   checkins: DailyCheckin[];
   habitPercent: number;
   subscriptions?: Subscription[];
+  financeSummary?: FinanceMonthlySummary | null;
   existingRetro?: Retrospective | null;
 }
 
@@ -265,6 +267,25 @@ export function buildRetroCoachSummary(input: RetroCoachInput): RetroCoachRespon
       `고정 구독 점검: 활성 구독 ${subscriptionSummary.activeCount}건(월 환산 ${monthlyText || '₩0'})이 유지 중입니다.`,
     );
   }
+  if (
+    input.mode === 'monthly' &&
+    input.financeSummary &&
+    (input.financeSummary.totalExpense > 0 || input.financeSummary.totalIncome > 0)
+  ) {
+    const budgetPart =
+      input.financeSummary.budgetPercent !== null
+        ? `, 예산 사용률 ${input.financeSummary.budgetPercent}%`
+        : '';
+    const topPart =
+      input.financeSummary.topCategories.length > 0
+        ? ` · 상위 지출: ${input.financeSummary.topCategories
+            .map(c => `${c.category} ${formatFinanceAmount(c.amount)}`)
+            .join(', ')}`
+        : '';
+    insights.push(
+      `재무 요약: 총 지출 ${formatFinanceAmount(input.financeSummary.totalExpense)}, 수입 ${formatFinanceAmount(input.financeSummary.totalIncome)}${budgetPart}${topPart}.`,
+    );
+  }
 
   // Build non-empty draft suggestions grounded in observed data.
   const goodLines: string[] = [];
@@ -346,6 +367,9 @@ export function buildRetroCoachSummary(input: RetroCoachInput): RetroCoachRespon
     `- 컨디션: 평균 수면 ${avgSleep != null ? `${avgSleep}시간` : '미기록'}, 에너지 ${avgEnergy ?? '미기록'}/5, 스트레스 ${avgStress ?? '미기록'}/5`,
     `- 완료 프로젝트(${input.completedProjects.length}개): ${input.completedProjects.map(p => p.title).join(', ') || '없음'}`,
     `- 완독 도서(${input.finishedBooks.length}권): ${input.finishedBooks.map(b => b.title).join(', ') || '없음'}`,
+    input.mode === 'monthly' && input.financeSummary && (input.financeSummary.totalExpense > 0 || input.financeSummary.totalIncome > 0)
+      ? `- 가계부: 지출 ${formatFinanceAmount(input.financeSummary.totalExpense)} / 수입 ${formatFinanceAmount(input.financeSummary.totalIncome)}${input.financeSummary.budgetPercent !== null ? ` (예산 ${input.financeSummary.budgetPercent}%)` : ''}`
+      : '',
     '',
     '[카테고리별 계획 대비 실제]',
     categoryTable,

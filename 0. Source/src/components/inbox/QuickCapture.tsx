@@ -4,9 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { addDays } from 'date-fns';
 import { Plus } from 'lucide-react';
+import { createFinanceTransaction } from '@/lib/repo/finance';
 import { createNote } from '@/lib/repo/notes';
 import { createTodo } from '@/lib/repo/todos';
-import type { NoteKind, TodoPriority, TodoScope } from '@/lib/types';
+import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  type NoteKind,
+  type TodoPriority,
+  type TodoScope,
+} from '@/lib/types';
 import { toIsoDate } from '@/lib/utils/date';
 import { useBinder } from '@/store';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
@@ -18,7 +24,7 @@ export function QuickCapture() {
   const path = usePathname();
   const { projects = [] } = useBinder();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'todo' | 'note'>('todo');
+  const [mode, setMode] = useState<'todo' | 'note' | 'expense'>('todo');
   const [captureWhen, setCaptureWhen] = useState<QuickWhen>('inbox');
   const [customDate, setCustomDate] = useState(() => toIsoDate(new Date()));
   const [captureProjectId, setCaptureProjectId] = useState('');
@@ -28,6 +34,13 @@ export function QuickCapture() {
   const [noteBody, setNoteBody] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteError, setNoteError] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseMerchant, setExpenseMerchant] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState<string>(DEFAULT_EXPENSE_CATEGORIES[0]);
+  const [expensePayment, setExpensePayment] = useState('');
+  const [expenseDate, setExpenseDate] = useState(() => toIsoDate(new Date()));
+  const [expenseBusy, setExpenseBusy] = useState(false);
+  const [expenseError, setExpenseError] = useState('');
 
   const openModal = () => {
     setMode('todo');
@@ -35,6 +48,10 @@ export function QuickCapture() {
     setCustomDate(toIsoDate(new Date()));
     setCaptureProjectId('');
     setCapturePriority('');
+    setExpenseDate(toIsoDate(new Date()));
+    setExpenseAmount('');
+    setExpenseMerchant('');
+    setExpenseError('');
     setOpen(true);
   };
 
@@ -105,7 +122,7 @@ export function QuickCapture() {
         빠른 메모
       </button>
       {open && (
-        <Dialog title="빠른 메모" onClose={() => { if (!noteBusy) setOpen(false); }}>
+        <Dialog title="빠른 메모" onClose={() => { if (!noteBusy && !expenseBusy) setOpen(false); }}>
           <div className="mb-4 flex gap-1.5" role="tablist" aria-label="빠른 입력 유형">
             <button
               type="button"
@@ -132,6 +149,19 @@ export function QuickCapture() {
               }`}
             >
               빠른 노트
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'expense'}
+              onClick={() => setMode('expense')}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                mode === 'expense'
+                  ? 'bg-blue-600 text-white'
+                  : 'border border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'
+              }`}
+            >
+              빠른 지출
             </button>
           </div>
 
@@ -226,7 +256,7 @@ export function QuickCapture() {
                 수집함 열기
               </Link>
             </>
-          ) : (
+          ) : mode === 'note' ? (
             <form onSubmit={e => void submitNote(e)} className="space-y-3">
               <select
                 aria-label="빠른 노트 분류"
@@ -265,6 +295,113 @@ export function QuickCapture() {
                 </Link>
                 <button type="submit" disabled={noteBusy} className={actionClass}>
                   {noteBusy ? '저장 중…' : '노트로 저장'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                if (expenseBusy) return;
+                const parsedAmount = Number(expenseAmount.replace(/,/g, '').trim());
+                if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                  setExpenseError('올바른 지출 금액을 입력해 주세요.');
+                  return;
+                }
+                if (!expenseMerchant.trim()) {
+                  setExpenseError('내용 또는 가맹점을 입력해 주세요.');
+                  return;
+                }
+                setExpenseBusy(true);
+                setExpenseError('');
+                try {
+                  await createFinanceTransaction({
+                    date: expenseDate || todayIso,
+                    time: null,
+                    kind: 'expense',
+                    amount: parsedAmount,
+                    currency: 'KRW',
+                    category: expenseCategory || DEFAULT_EXPENSE_CATEGORIES[0],
+                    subCategory: null,
+                    merchant: expenseMerchant.trim(),
+                    paymentMethod: expensePayment.trim() || null,
+                    note: null,
+                    excluded: false,
+                    source: 'manual',
+                    subscriptionId: null,
+                  });
+                  setExpenseAmount('');
+                  setExpenseMerchant('');
+                  setExpensePayment('');
+                  setOpen(false);
+                } catch {
+                  setExpenseError('지출 내역을 저장하지 못했어요.');
+                } finally {
+                  setExpenseBusy(false);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  aria-label="지출 금액"
+                  placeholder="금액 (원)"
+                  value={expenseAmount}
+                  disabled={expenseBusy}
+                  onChange={e => setExpenseAmount(e.target.value)}
+                  className={fieldClass}
+                />
+                <input
+                  type="date"
+                  aria-label="지출 날짜"
+                  value={expenseDate}
+                  disabled={expenseBusy}
+                  onChange={e => setExpenseDate(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <input
+                type="text"
+                aria-label="지출 내용"
+                placeholder="내용 / 가맹점 (예: 스타벅스)"
+                value={expenseMerchant}
+                disabled={expenseBusy}
+                onChange={e => setExpenseMerchant(e.target.value)}
+                className={fieldClass}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  aria-label="지출 분류"
+                  value={expenseCategory}
+                  disabled={expenseBusy}
+                  onChange={e => setExpenseCategory(e.target.value)}
+                  className={fieldClass}
+                >
+                  {DEFAULT_EXPENSE_CATEGORIES.map(c => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  aria-label="지출 결제수단"
+                  placeholder="결제수단 (선택)"
+                  value={expensePayment}
+                  disabled={expenseBusy}
+                  onChange={e => setExpensePayment(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              {expenseError && <p role="alert" className="text-xs text-red-600">{expenseError}</p>}
+              <div className="flex items-center justify-between pt-1">
+                <Link href="/finance" onClick={() => setOpen(false)} className="text-sm text-blue-600">
+                  가계부 열기
+                </Link>
+                <button type="submit" disabled={expenseBusy} className={actionClass}>
+                  {expenseBusy ? '저장 중…' : '지출 저장'}
                 </button>
               </div>
             </form>

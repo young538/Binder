@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import {
   Activity,
   BookMarked,
@@ -22,30 +23,69 @@ import {
   Settings as SettingsIcon,
   Sun,
   Target,
+  Wallet,
 } from 'lucide-react';
-import { toIsoWeek, toIsoDate } from '@/lib/utils/date';
-import { format } from 'date-fns';
 import { useBinder } from '@/store';
 import { logout } from '@/lib/repo/auth';
+import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 
-const primaryLinks = [
-  { label: 'One-Thing', Icon: Target, basePath: '/mandalart', href: () => '/mandalart' },
-  { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
+const directLinks = [
+  { label: '홈', Icon: LayoutDashboard, basePath: '/dashboard', href: () => '/dashboard' },
   { label: '일일', Icon: Sun, basePath: '/daily', href: () => '/daily' },
-  { label: '주간', Icon: Calendar, basePath: '/week', href: () => `/week/${toIsoWeek(new Date())}` },
-  { label: '월간', Icon: CalendarDays, basePath: '/monthly', href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
-  { label: '연간', Icon: CalendarRange, basePath: '/annual', href: () => `/annual/${format(new Date(), 'yyyy')}` },
-  { label: '회고', Icon: NotebookPen, basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
+  { label: '할 일', Icon: Inbox, basePath: '/inbox', href: () => '/inbox' },
 ];
 
-const lifeHubLinks = [
-  { label: '대시보드', Icon: LayoutDashboard, basePath: '/dashboard', href: '/dashboard' },
-  { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: '/notes' },
-  { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: '/metrics' },
-  { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: '/subscriptions' },
-  { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: '/life' },
-  { label: '독서', Icon: BookOpen, basePath: '/reading', href: '/reading' },
-  { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: '/goal-review' },
+type GroupKey = 'planner' | 'goals' | 'finance' | 'records';
+
+interface DropdownGroup {
+  key: GroupKey;
+  label: string;
+  items: Array<{
+    label: string;
+    Icon: typeof Target;
+    basePath: string;
+    href: () => string;
+  }>;
+}
+
+const dropdownGroups: DropdownGroup[] = [
+  {
+    key: 'planner',
+    label: '플래너',
+    items: [
+      { label: '주간', Icon: Calendar, basePath: '/week', href: () => `/week/${toIsoWeek(new Date())}` },
+      { label: '월간', Icon: CalendarDays, basePath: '/monthly', href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
+      { label: '연간', Icon: CalendarRange, basePath: '/annual', href: () => `/annual/${format(new Date(), 'yyyy')}` },
+      { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: () => '/life' },
+    ],
+  },
+  {
+    key: 'goals',
+    label: '목표 · 실행',
+    items: [
+      { label: 'One-Thing', Icon: Target, basePath: '/mandalart', href: () => '/mandalart' },
+      { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
+      { label: '회고', Icon: NotebookPen, basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
+      { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: () => '/goal-review' },
+    ],
+  },
+  {
+    key: 'finance',
+    label: '재무',
+    items: [
+      { label: '가계부', Icon: Wallet, basePath: '/finance', href: () => '/finance' },
+      { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: () => '/subscriptions' },
+    ],
+  },
+  {
+    key: 'records',
+    label: '지식 · 기록',
+    items: [
+      { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
+      { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },
+      { label: '독서', Icon: BookOpen, basePath: '/reading', href: () => '/reading' },
+    ],
+  },
 ];
 
 export const TopNav = () => {
@@ -53,18 +93,17 @@ export const TopNav = () => {
   const router = useRouter();
   const me = useBinder(s => s.me);
   const [busy, setBusy] = useState(false);
-  const [hubOpen, setHubOpen] = useState(false);
-  const hubRef = useRef<HTMLDivElement>(null);
+  const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
   const settingsActive = path.startsWith('/settings');
-  const hubActive = lifeHubLinks.some(item => path.startsWith(item.basePath));
 
   useEffect(() => {
-    if (!hubOpen) return;
+    if (!openGroup) return;
     const onOutside = (e: MouseEvent) => {
-      if (hubRef.current && !hubRef.current.contains(e.target as Node)) setHubOpen(false);
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
     };
     const onEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setHubOpen(false);
+      if (e.key === 'Escape') setOpenGroup(null);
     };
     window.addEventListener('mousedown', onOutside);
     window.addEventListener('keydown', onEscape);
@@ -72,7 +111,7 @@ export const TopNav = () => {
       window.removeEventListener('mousedown', onOutside);
       window.removeEventListener('keydown', onEscape);
     };
-  }, [hubOpen]);
+  }, [openGroup]);
 
   const onLogout = async () => {
     if (busy) return;
@@ -86,25 +125,28 @@ export const TopNav = () => {
   };
 
   return (
-    <nav className="hidden lg:flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 px-4 xl:px-6 py-2.5 bg-white dark:bg-zinc-950 sticky top-0 z-20">
+    <nav className="hidden lg:flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 px-3 xl:px-6 py-2.5 bg-white dark:bg-zinc-950 sticky top-0 z-20">
       <Link
         href="/dashboard"
         className="font-semibold mr-2 xl:mr-4 text-sm xl:text-base text-zinc-800 hover:text-blue-600 dark:text-zinc-50 dark:hover:text-blue-400 shrink-0 transition-colors"
       >
         Super 플래너
       </Link>
-      <div className="flex items-center gap-0.5 xl:gap-1 mr-auto">
-        {primaryLinks.map(({ label, Icon, basePath, href }) => {
+
+      <div ref={navRef} className="flex items-center gap-0.5 xl:gap-1 mr-auto">
+        {directLinks.map(({ label, Icon, basePath, href }) => {
           const active = path.startsWith(basePath);
           return (
             <Link
               key={basePath}
               href={href()}
+              onClick={() => setOpenGroup(null)}
               onNavigate={basePath === '/daily' ? (event) => {
                 event.preventDefault();
+                setOpenGroup(null);
                 router.push(`/daily/${toIsoDate(new Date())}`);
               } : undefined}
-              className={`relative flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full transition-colors text-[13px] xl:text-sm whitespace-nowrap
+              className={`relative flex items-center gap-1 xl:gap-1.5 px-2.5 py-1.5 rounded-full transition-colors text-[13px] xl:text-sm whitespace-nowrap
                 ${active
                   ? 'text-blue-700 font-semibold bg-blue-50/70 dark:bg-blue-950/40 dark:text-blue-300'
                   : 'text-zinc-600 hover:text-zinc-800 hover:bg-stone-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900'}`}
@@ -115,42 +157,48 @@ export const TopNav = () => {
           );
         })}
 
-        <div className="relative" ref={hubRef}>
-          <button
-            type="button"
-            aria-expanded={hubOpen}
-            onClick={() => setHubOpen(v => !v)}
-            className={`flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-full transition-colors text-[13px] xl:text-sm whitespace-nowrap
-              ${hubActive
-                ? 'text-blue-700 font-semibold bg-blue-50/70 dark:bg-blue-950/40 dark:text-blue-300'
-                : 'text-zinc-600 hover:text-zinc-800 hover:bg-stone-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900'}`}
-          >
-            <span>라이프 허브</span>
-            <ChevronDown size={14} />
-          </button>
-          {hubOpen && (
-            <div className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-              {lifeHubLinks.map(({ label, Icon, basePath, href }) => {
-                const active = path.startsWith(basePath);
-                return (
-                  <Link
-                    key={basePath}
-                    href={href}
-                    onClick={() => setHubOpen(false)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
-                      active
-                        ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                        : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <Icon size={15} />
-                    <span>{label}</span>
-                  </Link>
-                );
-              })}
+        {dropdownGroups.map(group => {
+          const groupActive = group.items.some(item => path.startsWith(item.basePath));
+          const isOpen = openGroup === group.key;
+          return (
+            <div key={group.key} className="relative">
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => setOpenGroup(prev => (prev === group.key ? null : group.key))}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full transition-colors text-[13px] xl:text-sm whitespace-nowrap
+                  ${groupActive
+                    ? 'text-blue-700 font-semibold bg-blue-50/70 dark:bg-blue-950/40 dark:text-blue-300'
+                    : 'text-zinc-600 hover:text-zinc-800 hover:bg-stone-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900'}`}
+              >
+                <span>{group.label}</span>
+                <ChevronDown size={13} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOpen && (
+                <div className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+                  {group.items.map(({ label, Icon, basePath, href }) => {
+                    const active = path.startsWith(basePath);
+                    return (
+                      <Link
+                        key={basePath}
+                        href={href()}
+                        onClick={() => setOpenGroup(null)}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                          active
+                            ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                            : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <Icon size={15} />
+                        <span>{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
       {me && (
@@ -170,9 +218,6 @@ export const TopNav = () => {
       </button>
       <Link href="/search" aria-label="전체 검색" title="전체 검색" className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0">
         <Search size={17} />
-      </Link>
-      <Link href="/inbox" aria-label="수집함" title="수집함" className="rounded-full p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0">
-        <Inbox size={17} />
       </Link>
       <Link
         href="/settings"

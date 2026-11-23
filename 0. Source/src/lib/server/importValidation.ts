@@ -61,6 +61,10 @@ export function validateImport(
         delete fields.googleTaskId;
         delete fields.googleTaskUpdatedAt;
       }
+      if (name === 'financeTransactions') {
+        if (fields.externalHash !== undefined && fields.externalHash !== null && typeof fields.externalHash !== 'string') fail('Invalid externalHash');
+        delete fields.externalHash;
+      }
       if (name === 'lifeEvents') {
         if (fields.googleCalendarId !== undefined && fields.googleCalendarId !== null && typeof fields.googleCalendarId !== 'string') fail('Invalid googleCalendarId');
         if (fields.googleEventId !== undefined && fields.googleEventId !== null && typeof fields.googleEventId !== 'string') fail('Invalid googleEventId');

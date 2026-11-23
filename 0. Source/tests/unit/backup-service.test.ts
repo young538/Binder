@@ -24,6 +24,8 @@ const fixture = () => ({
   notes: [{ id: 'binderNote', kind: 'principle', title: '원칙', body: '본문', pinned: true, reviewDate: null, decisionOutcome: null, goalId: 'goal', projectId: 'project', sourceRetro: null, ...times }],
   lifeEvents: [{ id: 'event', title: '기념일', date: '2026-10-29', endDate: null, kind: 'anniversary', allDay: true, startMin: null, endMin: null, color: null, personId: 'person', projectId: 'project', goalId: 'goal', externalUid: null, googleCalendarId: null, googleEventId: null, googleUpdatedAt: null, note: '메모', ...times }],
   subscriptions: [{ id: 'sub', name: 'ChatGPT Plus', amount: 29000, currency: 'KRW', billingCycle: 'monthly', status: 'active', billingDay: 1, nextBillingDate: '2026-11-01', category: 'AI/생산성', paymentMethod: '현대카드', autoRenew: true, url: 'https://chatgpt.com', note: '메모', order: 0, ...times }],
+  financeTransactions: [{ id: 'ftx', date: '2026-10-29', time: '12:30', kind: 'expense', amount: 12000, currency: 'KRW', category: '식비', subCategory: '점심', merchant: '김밥천국', paymentMethod: '현대카드', note: '메모', excluded: false, source: 'manual', externalHash: null, subscriptionId: 'sub', ...times }],
+  financeBudgets: [{ id: 'fbd', yyyymm: 'default', category: '__total__', amount: 1500000, ...times }],
   timeBlocks: [{ id: 'time', date: '2026-10-29', startMin: 540, endMin: 600, text: '계획', kind: 'plan', categoryId: 'category', projectId: 'project', todoId: 'todo', ...times }],
   retrospectives: [{ id: 'retro', type: 'daily', dateOrWeek: '2026-10-29', template: { good: '기록' }, ...times }],
   todos: [{ id: 'todo', title: '할 일', scope: 'day', scopeKey: '2026-10-29', status: 'pending', order: 0, parentGoalId: 'goal', projectId: 'project', ...times }],
@@ -56,7 +58,7 @@ describe('backup service transactions and account boundaries', () => {
     const first = backups.exportFor('a');
     expect(first).not.toHaveProperty('googleCalendarConnections');
     expect(JSON.stringify(first)).not.toContain('enc-secret-oauth-token');
-    expect(first.version).toBe(14);
+    expect(first.version).toBe(15);
     expect(first.generatedAt).toBe(now);
     expect(first.annualGoals[0].target).toBe(365);
     expect(first.annualGoals[0].monthlyActualAdjustments).toHaveLength(12);

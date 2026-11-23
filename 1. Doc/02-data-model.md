@@ -138,7 +138,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 기간 조회 인덱스와 사용자 인덱스는 있지만 `habitId+date`, `scope+scopeKey`, `type+dateOrWeek`의 논리상 단일 레코드를 모두 UNIQUE로 강제하지 않습니다. 습관 토글, 회고·한 문장 upsert는 즉시 트랜잭션으로 read/write를 직렬화합니다. 연간 기본 7행 확보도 조회와 부족분 삽입을 같은 즉시 트랜잭션에서 수행합니다. 다른 경로와 외부 직접 DB 쓰기까지 UNIQUE 제약으로 강제하는 것은 아닙니다.
 
-내보내기는 version 14의 19개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드와 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
+내보내기는 version 15의 21개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드, 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`), 가계부 도메인(`financeTransactions`, `financeBudgets`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
 
 ## TODO 작업 기록
 
@@ -149,5 +149,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 0006 마이그레이션은 `todo_create_requests`(user_id+request_key 복합 PK, 본문 해시·최초 응답·생성 시각)와 `todo_trash`(TODO ID PK, 소유자·스냅샷·만료 시각)를 추가합니다. 요청 기록은 삭제 이후의 지연 재요청도 새 항목을 만들지 않도록 유지합니다. 휴지통은 30초 후 복원이 차단되고 다음 TODO 삭제 시 만료 행을 정리합니다.
 
 0012 마이그레이션은 `todos`에 Google Tasks 동기화 식별자(`google_task_list_id`, `google_task_id`, `google_task_updated_at` 및 `(user_id, google_task_list_id, google_task_id)` 인덱스)를, `google_calendar_connections`에 Google Tasks 설정·매핑 열(`tasks_sync_enabled`, `tasks_auto_push`, `tasks_selected_list_ids`, `tasks_default_list_id`, `tasks_list_meta`, `tasks_project_map`, `tasks_last_synced_at`, `tasks_last_sync_error`)을 추가합니다. `todos.google_task_*` 열은 서버 동기화 전용이므로 일반 TODO API 입력으로는 직접 수정할 수 없으며 JSON 백업에서는 형식 검증 후 보존합니다.
+
+0013 마이그레이션은 가계부 테이블 `finance_transactions`(날짜, 시간, `expense`/`income`/`transfer` 구분, 금액·통화, 대·소분류, 가맹점, 결제수단, 합계 제외 `excluded`, 출처 `source`, 중복 방지 `external_hash`, `subscription_id` 연결)와 `finance_budgets`(`default` 기본 예산 및 `YYYY-MM` 월별 총·카테고리 예산)를 추가합니다. `external_hash`는 서버가 생성·검증하는 중복 방지 키이므로 일반 거래 생성/수정 API에서는 직접 입력을 차단합니다.
 
 운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections` 역시 `SESSION_SECRET` 기반 AES-256-GCM 암호화 토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않으며, CLI 계정 삭제 시 함께 제거합니다.

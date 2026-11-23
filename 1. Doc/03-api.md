@@ -176,8 +176,13 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | POST `/api/integrations/google/sync` | `{mode?:"manual"\|"auto"}` (생략 시 `manual`) | `manual`: `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt, tasks?}`; `auto`: 쿨다운 내 스킵 시 `{skipped:true, reason}`, 실행 시 `{skipped:false, ...결과}` |
 | GET `/api/dashboard?date=2026-11-20` | 기준 날짜(선택, 기본 오늘) | `DashboardSnapshot` (오늘 일정·7일 예정·오늘 할 일·프로젝트 진행·구독 요약·지표 스파크라인·주의 항목) |
 | GET `/api/retrospectives/coach` | 없음 | `{configuredProviders, defaultProvider, models}` (OpenAI/Gemini 설정 여부; API 키 미노출) |
-| POST `/api/retrospectives/coach` | `{mode:"weekly"\|"monthly", period, provider?}` | `RetroCoachResponse` (카테고리별 계획/실제, 인사이트, 초안 `good/bad/nextStep`, AI 프롬프트; `provider`: `auto`\|`openai`\|`gemini`\|`local`, 미설정/장애 시 로컬 자동 폴백) |
+| POST `/api/retrospectives/coach` | `{mode:"weekly"\|"monthly", period, provider?}` | `RetroCoachResponse` (카테고리별 계획/실제, 인사이트, 초안 `good/bad/nextStep`, AI 프롬프트; `provider`: `auto`\|`openai`\|`gemini`\|`local`, 미설정/장애 시 로컬 자동 폴백, 월간 모드 시 가계부 요약 포함) |
 | DELETE `/api/integrations/google/disconnect` | 쿼리 `purgeEvents=true\|false` | `{ok:true, deletedEvents}`; best-effort 토큰 폐기 및 연결 해제(옵션 시 Google 동기화 일정 삭제) |
+| GET / POST `/api/finance/transactions` | `GET` 쿼리 `month?`, `startDate?&endDate?`, `kind?` / `POST` 거래 본문 | `FinanceTransaction[]` 또는 201 생성 행 (`externalHash` 클라이언트 지정은 400) |
+| PATCH / DELETE `/api/finance/transactions/[id]` | 수정 필드 또는 없음 | 수정된 `FinanceTransaction` (`excluded` 합계 제외 토글 포함) 또는 `{ok:true}` |
+| GET / PUT / DELETE `/api/finance/budgets` | `GET` `yyyymm?`, `PUT` `{yyyymm, category, amount}`, `DELETE` `?id=` | `FinanceBudget[]`, upsert 결과, `{ok:true}` |
+| POST `/api/finance/import` | `multipart/form-data`: `file`(`.xlsx`/`.csv`, 최대 10MB), `password?`, `mode?:preview\|commit` | `preview`: 신규·중복 건수 및 샘플 50건(`422` 비밀번호 필요/오류); `commit`: 단일 트랜잭션 일괄 등록 결과 |
+| POST `/api/finance/sync-subscriptions` | `{yyyymm?}` | `{yyyymm, created, skipped}` (활성 구독 고정비를 `sub:<id>:<yyyymm>` 키로 중복 없이 반영) |
 
 Google 계정이 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화되면 `POST /api/events`, `PATCH /api/events/[id]`, `DELETE /api/events/[id]` 시 일반 일정(`kind='event'`) 변경을 Google 캘린더에도 실시간 반영합니다(외부 일시 오류는 `lastSyncError`에 기록하고 로컬 저장은 유지합니다). `googleCalendarId`·`googleEventId`·`googleUpdatedAt`는 서버 관리 필드이므로 클라이언트 직접 수정은 400으로 거절합니다. 마찬가지로 `tasksSyncEnabled`/`tasksAutoPush`가 활성화되면 `POST /api/todos`, `PATCH /api/todos/[id]`, `POST /api/todos/[id]/toggle-done`, `POST /api/todos/rollover`, `POST /api/todos/[id]/restore`, `DELETE /api/todos/[id]` 시 `inbox`/`day` 할 일 변경을 Google Tasks에 실시간 반영하며(목록-프로젝트 매핑 이동 포함), `googleTaskListId`·`googleTaskId`·`googleTaskUpdatedAt`의 클라이언트 직접 수정은 400으로 거절합니다. Google Tasks API 오류는 캘린더 동기화와 격리되어 `tasksLastSyncError`에만 기록됩니다.
 

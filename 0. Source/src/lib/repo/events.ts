@@ -21,6 +21,8 @@ export type MutationResource =
   | 'people'
   | 'lifeEvents'
   | 'subscriptions'
+  | 'financeTransactions'
+  | 'financeBudgets'
   | 'googleCalendar';
 type Listener = (resource?: MutationResource) => void;
 

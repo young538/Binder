@@ -472,3 +472,42 @@ export const googleCalendarConnections = sqliteTable('google_calendar_connection
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+// FinanceTransactions — personal income/expense/transfer ledger & BankSalad imports
+export const financeTransactions = sqliteTable('finance_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  date: text('date').notNull(),
+  time: text('time'),
+  kind: text('kind').notNull(), // 'expense' | 'income' | 'transfer'
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull().default('KRW'),
+  category: text('category').notNull(),
+  subCategory: text('sub_category'),
+  merchant: text('merchant').notNull(),
+  paymentMethod: text('payment_method'),
+  note: text('note'),
+  excluded: integer('excluded', { mode: 'boolean' }).notNull().default(false),
+  source: text('source').notNull().default('manual'),
+  externalHash: text('external_hash'),
+  subscriptionId: text('subscription_id'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [
+  index('finance_tx_user_date_idx').on(t.userId, t.date),
+  index('finance_tx_user_kind_date_idx').on(t.userId, t.kind, t.date),
+  index('finance_tx_user_hash_idx').on(t.userId, t.externalHash),
+]);
+
+// FinanceBudgets — default ('default') and per-month ('YYYY-MM') total/category budgets
+export const financeBudgets = sqliteTable('finance_budgets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  yyyymm: text('yyyymm').notNull(),
+  category: text('category').notNull(), // '__total__' or category name
+  amount: real('amount').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [
+  index('finance_budgets_user_month_idx').on(t.userId, t.yyyymm),
+]);

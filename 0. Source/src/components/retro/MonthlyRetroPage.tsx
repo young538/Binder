@@ -1,10 +1,18 @@
 'use client';
+import Link from 'next/link';
 import { endOfMonth, parseISO } from 'date-fns';
+import {
+  formatFinanceAmount,
+  prevMonthKey,
+  summarizeMonthFinance,
+  type FinanceMonthlySummary,
+} from '@/lib/finance';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { useBinder } from '@/store';
 import { useRetrospectiveEditor } from '@/lib/autosave/editors';
 import { listByYear as listBooksByYear } from '@/lib/repo/books';
 import { listDailyCheckinsInRange } from '@/lib/repo/dailyCheckins';
+import { listFinanceBudgets, listFinanceTransactions } from '@/lib/repo/finance';
 import { listLogsForRange } from '@/lib/repo/habitLogs';
 import { listHabits } from '@/lib/repo/habits';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
@@ -22,6 +30,7 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
   const editor = useRetrospectiveEditor('monthly', yyyymm);
   const year = yyyymm.slice(0, 4);
 
+  const prevYyyymm = prevMonthKey(yyyymm);
   const { value } = useAsyncResource(
     `retro:monthly:${yyyymm}`,
     async () => {
@@ -29,7 +38,7 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
       const endObj = endOfMonth(startObj);
       const start = toIsoDate(startObj);
       const end = toIsoDate(endObj);
-      const [blocks, dayTodos, monthTodos, habits, logs, books, checkins] = await Promise.all([
+      const [blocks, dayTodos, monthTodos, habits, logs, books, checkins, financeTxRange, financeBudgets] = await Promise.all([
         getTimeBlocksInRange(start, end),
         listDayTodosInRange(start, end),
         listByScope('month', yyyymm),
@@ -37,13 +46,23 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
         listLogsForRange(start, end),
         listBooksByYear(year),
         listDailyCheckinsInRange(start, end),
+        listFinanceTransactions({ startDate: `${prevYyyymm}-01`, endDate: end }),
+        listFinanceBudgets(yyyymm),
       ]);
+      const financeSummary: FinanceMonthlySummary | null = summarizeMonthFinance(
+        financeTxRange.filter(t => t.date.startsWith(yyyymm)),
+        financeBudgets,
+        financeTxRange.filter(t => t.date.startsWith(prevYyyymm)),
+        yyyymm,
+        toIsoDate(new Date()),
+      );
       return {
         blocks,
         todos: [...monthTodos, ...dayTodos],
         habitStats: computeHabitStatsForRange(habits, logs, startObj, endObj),
         finishedBooks: books.filter(b => b.finishedAt?.slice(0, 7) === yyyymm),
         checkins,
+        financeSummary: financeSummary as FinanceMonthlySummary | null,
       };
     },
     {
@@ -52,8 +71,9 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
       habitStats: { total: 0, logs: 0, expected: 0, percent: 0 },
       finishedBooks: [],
       checkins: [],
+      financeSummary: null as FinanceMonthlySummary | null,
     },
-    ['timeBlocks', 'todos', 'habits', 'habitLogs', 'books', 'dailyCheckins'],
+    ['timeBlocks', 'todos', 'habits', 'habitLogs', 'books', 'dailyCheckins', 'financeTransactions', 'financeBudgets'],
   );
 
   const actualMin = value.blocks
@@ -103,6 +123,27 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
             </div>
           </div>
         </div>
+
+        {value.financeSummary && (value.financeSummary.totalExpense > 0 || value.financeSummary.totalIncome > 0) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-wrap items-center gap-3 text-zinc-700 dark:text-zinc-300">
+              <strong className="text-zinc-900 dark:text-zinc-100">월간 가계부</strong>
+              <span>지출 {formatFinanceAmount(value.financeSummary.totalExpense)}</span>
+              <span>수입 {formatFinanceAmount(value.financeSummary.totalIncome)}</span>
+              {value.financeSummary.budgetPercent !== null && (
+                <span>예산 {value.financeSummary.budgetPercent}%</span>
+              )}
+              {value.financeSummary.topCategories.length > 0 && (
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  상위: {value.financeSummary.topCategories.map(c => `${c.category}(${formatFinanceAmount(c.amount)})`).join(', ')}
+                </span>
+              )}
+            </div>
+            <Link href={`/finance?month=${yyyymm}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              가계부 보기
+            </Link>
+          </div>
+        )}
       </section>
 
       <RetroCoachCard

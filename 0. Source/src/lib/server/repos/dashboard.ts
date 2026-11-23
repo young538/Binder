@@ -8,6 +8,7 @@ import type {
   DashboardTodayEvent,
   DashboardUpcomingItem,
 } from '@/lib/dashboard';
+import { monthEndDate, prevMonthKey, summarizeMonthFinance } from '@/lib/finance';
 import { annualOccurrenceForYear, describeEventDday, isContactDue, nextAnnualOccurrence } from '@/lib/lifeEvents';
 import { sortMetricEntries, summarizeMetric } from '@/lib/metrics';
 import { buildProjectOverview } from '@/lib/projects';
@@ -15,6 +16,8 @@ import { describeBillingDday, formatCurrency, summarizeSubscriptions } from '@/l
 import type {
   BinderNote,
   DailyCheckin,
+  FinanceBudget,
+  FinanceTransaction,
   Habit,
   HabitLog,
   LifeEvent,
@@ -32,6 +35,8 @@ import type { BinderDatabase } from '../db/connection';
 import {
   binderNotes,
   dailyCheckins,
+  financeBudgets,
+  financeTransactions,
   focusNotes,
   googleCalendarConnections,
   habitLogs,
@@ -351,6 +356,37 @@ export class DashboardRepository {
         .where(eq(googleCalendarConnections.userId, this.userId))
         .get();
 
+      const prevYyyymm = prevMonthKey(yyyymm);
+      const financeTxRows = tx
+        .select()
+        .from(financeTransactions)
+        .where(
+          and(
+            eq(financeTransactions.userId, this.userId),
+            between(financeTransactions.date, `${prevYyyymm}-01`, monthEndDate(yyyymm)),
+          ),
+        )
+        .all() as FinanceTransaction[];
+
+      const financeBudgetRows = tx
+        .select()
+        .from(financeBudgets)
+        .where(
+          and(
+            eq(financeBudgets.userId, this.userId),
+            or(eq(financeBudgets.yyyymm, 'default'), eq(financeBudgets.yyyymm, yyyymm)),
+          ),
+        )
+        .all() as FinanceBudget[];
+
+      const monthFinance = summarizeMonthFinance(
+        financeTxRows.filter(t => t.date.startsWith(yyyymm)),
+        financeBudgetRows,
+        financeTxRows.filter(t => t.date.startsWith(prevYyyymm)),
+        yyyymm,
+        date,
+      );
+
       const countableTodayTodos = todayTodoRows.filter(t => t.status !== 'cancelled');
       const doneTodayCount = countableTodayTodos.filter(t => t.status === 'done').length;
       const pendingTodayCount = countableTodayTodos.filter(
@@ -378,6 +414,7 @@ export class DashboardRepository {
         upcomingItems: upcomingItems.slice(0, 12),
         activeProjects: activeProjects.slice(0, 6),
         subscriptionSummary,
+        monthFinance,
         metrics: dashboardMetrics,
         attention: {
           overdueTodosCount: overdueTodoRows.length,
