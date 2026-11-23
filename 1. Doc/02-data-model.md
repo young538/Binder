@@ -152,6 +152,6 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 0013 마이그레이션은 가계부 테이블 `finance_transactions`(날짜, 시간, `expense`/`income`/`transfer` 구분, 금액·통화, 대·소분류, 가맹점, 결제수단, 합계 제외 `excluded`, 출처 `source`, 중복 방지 `external_hash`, `subscription_id` 연결)와 `finance_budgets`(`default` 기본 예산 및 `YYYY-MM` 월별 총·카테고리 예산)를 추가합니다. `external_hash`는 서버가 생성·검증하는 중복 방지 키이므로 일반 거래 생성/수정 API에서는 직접 입력을 차단합니다.
 
-0014 마이그레이션은 Gmail/Google Apps Script 외부 자동 가져오기 설정을 저장하는 `finance_automation_configs`(SHA-256 해시 토큰 `token_hash` 및 접두어 `token_prefix`, `enabled`, `SESSION_SECRET` AES-256-GCM 암호화 고정 엑셀 비밀번호 `excel_password_enc`, 최근 실행 상태·파일명·요약·오류)를 추가합니다.
+0014 마이그레이션은 Gmail 예약 에이전트 외부 자동 가져오기 설정을 저장하는 `finance_automation_configs`(SHA-256 해시 토큰 `token_hash` 및 접두어 `token_prefix`, `enabled`, `SESSION_SECRET` AES-256-GCM 암호화 고정 엑셀 비밀번호 `excel_password_enc`, 최근 실행 상태·파일명·요약·오류)를 추가합니다.
 
 운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections`와 `finance_automation_configs` 역시 `SESSION_SECRET` 기반 암호화 비밀번호·토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않습니다(`google_calendar_connections`는 CLI 계정 삭제 시 함께 제거합니다).

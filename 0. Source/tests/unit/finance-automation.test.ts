@@ -1,12 +1,10 @@
 // @vitest-environment node
 import path from 'node:path';
-import vm from 'node:vm';
 import zlib from 'node:zlib';
 import { eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import officeCrypto from 'officecrypto-tool';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildBankSaladAppsScript } from '@/lib/financeAutomation';
 import { DatabaseConnection } from '@/lib/server/db/connection';
 import { financeAutomationConfigs, users } from '@/lib/server/db/schema';
 import { handleFinanceAutomationImport } from '@/lib/server/finance/automationImport';
@@ -71,7 +69,7 @@ afterEach(() => {
   }
 });
 
-describe('finance automation repository, API & Apps Script generator', () => {
+describe('finance automation repository, API & encrypted ZIP parser', () => {
   it('issues, rotates, disables, revokes tokens and stores only SHA-256 hashes with user isolation', () => {
     const db = connection.get();
     const reposA = new UserRepositories(db, 'user-a');
@@ -332,23 +330,6 @@ describe('finance automation repository, API & Apps Script generator', () => {
       db,
     );
     expect(disabledRes.status).toBe(401);
-  });
-
-  it('builds valid Google Apps Script code with safe JSON string escaping and Seoul 12/23h triggers', () => {
-    const trickyQuery = 'has:attachment subject:"가계부" path\\test -label:Binder-Finance-Imported';
-    const script = buildBankSaladAppsScript({
-      endpointUrl: `${ENDPOINT_URL}?v="test"`,
-      searchQuery: trickyQuery,
-    });
-
-    expect(script).toContain('atHour(12)');
-    expect(script).toContain('atHour(23)');
-    expect(script).toContain("inTimezone('Asia/Seoul')");
-    expect(script).toContain('Binder-Finance-Imported');
-    expect(script).toContain('BINDER_IMPORT_TOKEN');
-
-    // Compile generated JS syntax in vm.Script to verify embedded quotes/backslashes never break syntax
-    expect(() => new vm.Script(script)).not.toThrow();
   });
 
   it('extracts plain ZIP, ZipCrypto (flags: 9) encrypted BankSalad ZIP, and rejects nested/empty ZIPs', async () => {

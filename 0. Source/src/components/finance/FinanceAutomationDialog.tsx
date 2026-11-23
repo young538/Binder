@@ -1,12 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Check, Copy, KeyRound, Lock, Mail, RefreshCw, ShieldAlert } from 'lucide-react';
-import {
-  DEFAULT_GMAIL_SEARCH_QUERY,
-  buildBankSaladAppsScript,
-  type FinanceAutomationStatus,
-} from '@/lib/financeAutomation';
+import type { FinanceAutomationStatus } from '@/lib/financeAutomation';
 import {
   issueFinanceAutomationToken,
   revokeFinanceAutomationToken,
@@ -23,28 +19,12 @@ interface Props {
 export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [excelPasswordInput, setExcelPasswordInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState(DEFAULT_GMAIL_SEARCH_QUERY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  const [copiedField, setCopiedField] = useState<'token' | 'endpoint' | 'script' | null>(null);
+  const [copiedToken, setCopiedToken] = useState(false);
 
-  const endpointUrl =
-    status?.endpointUrl ||
-    (typeof window !== 'undefined'
-      ? `${window.location.origin}/api/finance/import/automation`
-      : '/api/finance/import/automation');
-
-  const scriptText = useMemo(
-    () => buildBankSaladAppsScript({ endpointUrl, searchQuery }),
-    [endpointUrl, searchQuery],
-  );
-
-  const copyText = async (
-    text: string,
-    field: 'token' | 'endpoint' | 'script',
-    label: string,
-  ) => {
+  const copyToken = async (text: string) => {
     setError('');
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -60,10 +40,10 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
         document.execCommand('copy');
         document.body.removeChild(el);
       }
-      setCopiedField(field);
-      setInfo(`${label} 클립보드에 복사했습니다.`);
+      setCopiedToken(true);
+      setInfo('토큰을 클립보드에 복사했습니다.');
     } catch {
-      setError(`${label} 복사에 실패했습니다. 직접 선택해서 복사해 주세요.`);
+      setError('토큰 복사에 실패했습니다. 직접 선택해서 복사해 주세요.');
     }
   };
 
@@ -81,8 +61,8 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
     try {
       const res = await issueFinanceAutomationToken();
       setIssuedToken(res.token);
-      setCopiedField(null);
-      setInfo('새 자동 연동 토큰을 발급했습니다. 아래 스크립트 속성에 등록해 주세요.');
+      setCopiedToken(false);
+      setInfo('새 자동 연동 토큰을 발급했습니다. 로컬 에이전트 설정(.env.finance-automation)에 등록해 주세요.');
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '토큰 발급에 실패했습니다.');
@@ -110,7 +90,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
 
   const handleRevokeToken = async () => {
     if (busy || !status?.configured) return;
-    if (!confirm('토큰을 폐기하면 Google Apps Script에서 더 이상 업로드할 수 없습니다. 폐기할까요?')) {
+    if (!confirm('토큰을 폐기하면 자동 연동 에이전트에서 더 이상 업로드할 수 없습니다. 폐기할까요?')) {
       return;
     }
     setBusy(true);
@@ -137,7 +117,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
     try {
       await updateFinanceAutomationSettings({ excelPassword: excelPasswordInput });
       setExcelPasswordInput('');
-      setInfo('고정 엑셀 비밀번호를 암호화해 저장했습니다.');
+      setInfo('고정 엑셀 · ZIP 비밀번호를 암호화해 저장했습니다.');
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '비밀번호 저장에 실패했습니다.');
@@ -148,14 +128,14 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
 
   const handleClearPassword = async () => {
     if (busy || !status?.hasExcelPassword) return;
-    if (!confirm('저장된 고정 엑셀 비밀번호를 삭제할까요?')) return;
+    if (!confirm('저장된 고정 엑셀 · ZIP 비밀번호를 삭제할까요?')) return;
     setBusy(true);
     setError('');
     setInfo('');
     try {
       await updateFinanceAutomationSettings({ excelPassword: null });
       setExcelPasswordInput('');
-      setInfo('저장된 엑셀 비밀번호를 삭제했습니다.');
+      setInfo('저장된 비밀번호를 삭제했습니다.');
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '비밀번호 삭제에 실패했습니다.');
@@ -172,7 +152,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
 
   return (
     <Dialog
-      title="Gmail · Apps Script 자동 연동"
+      title="Gmail 자동 연동"
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -184,7 +164,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
             자동 반영 동작 흐름
           </div>
           <p>
-            뱅크샐러드 엑셀·ZIP·CSV를 내 Gmail로 보내 두면 Antigravity 예약 에이전트 또는 Google Apps Script가 매일 <strong>낮 12시 · 밤 11시</strong>에 새 첨부파일을 Binder로 전송하고 완료 라벨(<code>Binder-Finance-Imported</code>)을 붙입니다.
+            뱅크샐러드 엑셀·ZIP·CSV를 내 Gmail로 보내 두면 예약 에이전트가 매일 <strong>낮 12시 · 밤 11시</strong>에 새 첨부파일을 Binder로 전송하고 완료 라벨(<code>Binder-Finance-Imported</code>)을 붙입니다.
           </p>
         </div>
 
@@ -260,16 +240,19 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
               <div className="font-semibold text-blue-900 dark:text-blue-200">
                 새 토큰 (창을 닫으면 다시 확인할 수 없습니다)
               </div>
+              <p className="text-[11px] text-blue-800 dark:text-blue-300">
+                로컬 에이전트 설정(<code>.env.finance-automation</code>)에 등록하세요.
+              </p>
               <div className="break-all rounded bg-white/90 px-2 py-1.5 font-mono text-[11px] text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
                 {issuedToken}
               </div>
               <button
                 type="button"
                 aria-label="발급된 토큰 복사"
-                onClick={() => void copyText(issuedToken, 'token', '토큰을')}
+                onClick={() => void copyToken(issuedToken)}
                 className="inline-flex items-center gap-1 rounded-md border border-blue-300 bg-white px-2.5 py-1 font-medium text-blue-800 hover:bg-blue-100 dark:border-blue-800 dark:bg-zinc-900 dark:text-blue-200"
               >
-                {copiedField === 'token' ? <Check size={12} /> : <Copy size={12} />}
+                {copiedToken ? <Check size={12} /> : <Copy size={12} />}
                 토큰 복사
               </button>
             </div>
@@ -308,12 +291,12 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
           )}
         </section>
 
-        {/* Section 2: Encrypted fixed Excel password */}
+        {/* Section 2: Encrypted fixed Excel/ZIP password */}
         <section className="space-y-2.5 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
               <Lock size={14} />
-              <span>2. 고정 엑셀 비밀번호 (선택)</span>
+              <span>2. 고정 엑셀 · ZIP 비밀번호 (선택)</span>
             </div>
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -326,7 +309,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
             </span>
           </div>
           <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            뱅크샐러드 엑셀/ZIP에 비밀번호가 걸려 있다면 서버에 AES-256-GCM으로 암호화해 보관하며, 여기서 발급한 토큰과 비밀번호는 Antigravity 에이전트 자동화와 Google Apps Script 모두에서 동일하게 사용됩니다.
+            뱅크샐러드 엑셀/ZIP에 비밀번호가 걸려 있다면 서버에 AES-256-GCM으로 암호화해 보관합니다. 에이전트는 암호화된 파일만 전달하고, 복호화는 Binder 서버 내부에서 처리합니다.
           </p>
 
           <form onSubmit={e => void handleSavePassword(e)} className="flex flex-wrap items-center gap-2">
@@ -335,7 +318,7 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
               aria-label="고정 엑셀 비밀번호"
               value={excelPasswordInput}
               onChange={e => setExcelPasswordInput(e.target.value)}
-              placeholder={status?.hasExcelPassword ? '새 비밀번호 입력 시 덮어씀' : '엑셀 파일 비밀번호 입력'}
+              placeholder={status?.hasExcelPassword ? '새 비밀번호 입력 시 덮어씀' : '엑셀 · ZIP 비밀번호 입력'}
               disabled={busy}
               className={`${fieldClass} flex-1 basis-40`}
             />
@@ -357,99 +340,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
               </button>
             )}
           </form>
-        </section>
-
-        {/* Section 3: Google Apps Script code */}
-        <section className="space-y-2.5 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
-          <div className="font-semibold text-zinc-900 dark:text-zinc-100">
-            3. Google Apps Script 설정 (Code.gs)
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950">
-            <span className="min-w-0 flex-1 break-all font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
-              {endpointUrl}
-            </span>
-            <button
-              type="button"
-              aria-label="엔드포인트 URL 복사"
-              onClick={() => void copyText(endpointUrl, 'endpoint', '엔드포인트 URL을')}
-              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            >
-              {copiedField === 'endpoint' ? <Check size={12} /> : <Copy size={12} />}
-              URL 복사
-            </button>
-          </div>
-
-          <label className="block space-y-1">
-            <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-              <span>Gmail 검색 조건</span>
-              {searchQuery !== DEFAULT_GMAIL_SEARCH_QUERY && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery(DEFAULT_GMAIL_SEARCH_QUERY)}
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  기본값 복원
-                </button>
-              )}
-            </div>
-            <input
-              type="text"
-              aria-label="Gmail 검색 조건"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className={fieldClass}
-            />
-          </label>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-                Code.gs 붙여넣기용 스크립트
-              </span>
-              <button
-                type="button"
-                aria-label="스크립트 복사"
-                onClick={() => void copyText(scriptText, 'script', 'Apps Script 코드를')}
-                className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              >
-                {copiedField === 'script' ? <Check size={12} /> : <Copy size={12} />}
-                스크립트 복사
-              </button>
-            </div>
-            <textarea
-              readOnly
-              rows={10}
-              aria-label="Google Apps Script 코드"
-              value={scriptText}
-              className="w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 font-mono text-[11px] leading-relaxed text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-            />
-          </div>
-
-          <ol className="list-decimal space-y-1 pl-4 text-[11px] leading-5 text-zinc-600 dark:text-zinc-300">
-            <li>
-              <a
-                href="https://script.google.com"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-blue-600 underline dark:text-blue-400"
-              >
-                script.google.com
-              </a>
-              에서 새 프로젝트를 만들고 위 코드를 <code>Code.gs</code>에 붙여넣습니다.
-            </li>
-            <li>
-              왼쪽 <strong>프로젝트 설정 → 스크립트 속성</strong>에 속성 이름{' '}
-              <code>BINDER_IMPORT_TOKEN</code>과 위에서 발급한 토큰을 저장합니다.
-            </li>
-            <li>
-              상단 함수 목록에서 <code>setupTriggers</code>를 1회 실행해 매일 <strong>낮 12시 · 밤 11시(서울)</strong> 자동 실행을 등록합니다.
-            </li>
-            <li>
-              <code>syncBankSaladEmails</code>를 실행해 테스트하면 Gmail에{' '}
-              <code>Binder-Finance-Imported</code> 라벨이 붙고 Binder 가계부에 반영됩니다.
-            </li>
-          </ol>
         </section>
 
         <div className="flex justify-end">

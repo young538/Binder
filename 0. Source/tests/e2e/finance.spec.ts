@@ -161,7 +161,7 @@ test('redesigned 1024px TopNav fits without overflow and finance APIs reject ano
 });
 
 for (const width of [1280, 390]) {
-  test(`finance Gmail Apps Script automation token, encrypted Excel upload & telemetry at ${width}px`, async ({ page }) => {
+  test(`finance Gmail agent automation token, encrypted Excel upload & telemetry at ${width}px`, async ({ page }) => {
     test.setTimeout(120000);
     await setup(page, width, 'auto');
     const now = new Date();
@@ -170,10 +170,12 @@ for (const width of [1280, 390]) {
     await page.goto('/finance');
     await checkNoHorizontalOverflow(page);
 
-    // 1) Open Gmail automation dialog, issue token, and verify script + zero overflow
+    // 1) Open Gmail automation dialog, issue token, and verify agent-only UI + zero overflow
     await page.getByRole('button', { name: /Gmail 자동 연동/ }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
+    await expect(dialog).not.toContainText('Apps Script');
+    await expect(dialog).not.toContainText('Code.gs');
     await checkNoHorizontalOverflow(page);
 
     await dialog.getByRole('button', { name: '토큰 발급' }).click();
@@ -181,12 +183,6 @@ for (const width of [1280, 390]) {
     await expect(tokenEl).toContainText(/^bfi_[0-9a-f]{48}$/);
     const issuedToken = (await tokenEl.textContent())?.trim() ?? '';
     expect(issuedToken).toMatch(/^bfi_[0-9a-f]{48}$/);
-
-    const scriptBox = dialog.getByLabel('Google Apps Script 코드');
-    await expect(scriptBox).toHaveValue(/atHour\(12\)/);
-    await expect(scriptBox).toHaveValue(/atHour\(23\)/);
-    await expect(scriptBox).toHaveValue(/Asia\/Seoul/);
-    await expect(scriptBox).toHaveValue(/Binder-Finance-Imported/);
 
     // 2) Save fixed Excel password
     await dialog.getByLabel('고정 엑셀 비밀번호').fill('bank-secret-123');
@@ -197,7 +193,7 @@ for (const width of [1280, 390]) {
     await dialog.getByRole('button', { name: '닫기', exact: true }).last().click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    // 3) Send encrypted BankSalad .xlsx via external Bearer endpoint (simulating Google Apps Script)
+    // 3) Send encrypted BankSalad .xlsx via external Bearer endpoint (simulating local agent upload)
     const plainBuffer = await createSampleBankSaladXlsx(yyyymm);
     const encryptedBuffer = officeCrypto.encrypt(plainBuffer, { password: 'bank-secret-123' });
 

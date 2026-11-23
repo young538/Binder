@@ -128,7 +128,7 @@ function toStatus(
   };
 }
 
-/** User-scoped storage for external Gmail/Apps Script import tokens, Excel password & telemetry. */
+/** User-scoped storage for external Gmail agent import tokens, Excel password & telemetry. */
 export class FinanceAutomationRepository {
   constructor(
     private readonly database: BinderDatabase,
