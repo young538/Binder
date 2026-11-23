@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginForm() {
@@ -79,6 +80,12 @@ function LoginForm() {
       >
         {loading ? '로그인 중…' : '로그인'}
       </button>
+      <Link
+        href="/privacy"
+        className="block text-center text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 underline-offset-2 hover:underline"
+      >
+        개인정보처리방침
+      </Link>
     </form>
   );
 }

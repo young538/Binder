@@ -64,6 +64,8 @@ export interface MutationPayloads {
   };
   settings: Settings;
   login: { username: string; password: string };
+  changePassword: { currentPassword: string; newPassword: string };
+  retroCoach: { mode: 'weekly' | 'monthly'; period: string };
 }
 export type MutationKind = keyof MutationPayloads;
 type Check = (value: unknown) => boolean;
@@ -159,6 +161,8 @@ const rules: Record<MutationKind, Rules> = {
   googleCalendarSettings: { fields: { selectedCalendarIds: calendarIdList, pushCalendarId: identifier, syncEnabled: bool, autoPushEvents: bool }, required: [] },
   settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark') }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },
+  changePassword: { fields: { currentPassword: identifier, newPassword: value => typeof value === 'string' && value.length >= 8 && value.length <= 128 }, required: ['currentPassword', 'newPassword'] },
+  retroCoach: { fields: { mode: oneOf('weekly', 'monthly'), period: identifier }, required: ['mode', 'period'] },
 };
 
 export class ValidationError extends Error {}
@@ -218,6 +222,11 @@ export function validateRelationships(kind: MutationKind, value: Record<string, 
   }
   if (kind === 'retrospectives' && !retroDateOrWeek(value.type, value.dateOrWeek)) invalid('Invalid dateOrWeek');
   if (kind === 'todos' && value.repeatRule && value.scope !== 'day') invalid('반복 할 일은 날짜를 지정해 주세요.');
+  if (kind === 'changePassword' && value.currentPassword === value.newPassword) invalid('새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.');
+  if (kind === 'retroCoach') {
+    if (value.mode === 'weekly' && !isWeek(value.period)) invalid('Invalid week');
+    if (value.mode === 'monthly' && !isMonth(value.period)) invalid('Invalid month');
+  }
 }
 
 export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'projects' | 'todos' | 'annualGoals' | 'habits' | 'metrics' | 'people'>>> = {

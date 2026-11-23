@@ -8,7 +8,7 @@
 
 ## 계정과 카테고리
 
-계정 카드에서 현재 사용자 이름을 보고 로그아웃합니다. 사용자 추가·비밀번호 변경·계정 삭제는 CLI 기능입니다.
+계정 카드에서 현재 사용자 이름을 보고 **비밀번호 변경** UI(`POST /api/auth/password`, 현재 비밀번호 확인 후 8자 이상 argon2id 해시 갱신) 또는 로그아웃을 실행할 수 있습니다. 사용자 추가·계정 삭제는 CLI 기능입니다.
 
 카테고리 편집은 이름·색 변경, 추가·삭제를 제공합니다. 이름과 색은 포커스 이탈 시 변경값을 저장하고 공통 저장소를 reload합니다. 카테고리는 시간블록·TODO·습관의 색과 분류에 사용하며 독서의 자유 텍스트 category와 다릅니다.
 
@@ -56,7 +56,7 @@
 
 | 파일 | 역할 |
 |---|---|
-| [AccountPanel](../../0.%20Source/src/components/settings/AccountPanel.tsx) | 계정·로그아웃 |
+| [AccountPanel](../../0.%20Source/src/components/settings/AccountPanel.tsx) | 계정·비밀번호 변경·로그아웃 |
 | [CategoryEditor](../../0.%20Source/src/components/settings/CategoryEditor.tsx) | 카테고리 CRUD |
 | [SettingsForm](../../0.%20Source/src/components/settings/SettingsForm.tsx) | 표시 설정 즉시 저장 |
 | [GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) / [syncService](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts) | Google OAuth 상태·캘린더 선택·양방향 동기화 |

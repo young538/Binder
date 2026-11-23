@@ -7,7 +7,7 @@ interface SessionData {
 }
 
 const COOKIE_NAME = 'binder_session';
-const PUBLIC_PATHS = ['/login', '/api/auth/login'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/privacy'];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

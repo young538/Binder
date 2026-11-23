@@ -4,6 +4,14 @@ import { cookies } from 'next/headers';
 import argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from './db/client';
+import type { BinderDatabase } from './db/connection';
+
+export const PASSWORD_HASH_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 19456,
+  timeCost: 2,
+  parallelism: 1,
+} as const;
 
 export interface SessionData {
   loggedIn?: boolean;
@@ -75,4 +83,49 @@ export const requireSession = async (): Promise<RequiredSession> => {
     throw new Response('Unauthorized', { status: 401 });
   }
   return { userId: session.userId, username: session.username };
+};
+
+export type PasswordChangeResult =
+  | { ok: true }
+  | { ok: false; error: string; status: number };
+
+export const changeUserPassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  database: BinderDatabase = getDb(),
+): Promise<PasswordChangeResult> => {
+  const row = await database
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .get();
+  if (!row) {
+    return { ok: false, error: '사용자를 찾을 수 없어요.', status: 404 };
+  }
+
+  let verified = false;
+  try {
+    verified = await argon2.verify(row.passwordHash, currentPassword);
+  } catch (err) {
+    console.error(`[auth] argon2.verify failed during password change for userId='${userId}'`, err);
+    return { ok: false, error: '현재 비밀번호 확인에 실패했어요.', status: 400 };
+  }
+
+  if (!verified) {
+    // 400 (not 401) so the authenticated client doesn't trigger a forced /login redirect.
+    return { ok: false, error: '현재 비밀번호가 올바르지 않아요.', status: 400 };
+  }
+
+  const nextHash = await argon2.hash(newPassword, PASSWORD_HASH_OPTIONS);
+  await database
+    .update(schema.users)
+    .set({
+      passwordHash: nextHash,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(schema.users.id, userId))
+    .run();
+
+  return { ok: true };
 };

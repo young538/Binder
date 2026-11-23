@@ -38,9 +38,10 @@ const ensureMigrationsApplied = async () => {
         body: JSON.stringify({ username: '__nonexistent__', password: 'x' }),
       });
       // 401 = verifyCredentials ran (DB is up, migrations done, admin row not us).
+      // 429 = rate limiter already checked after ≥5 earlier __nonexistent__ calls (DB/migrations already applied).
       // 400 = bad input (still touched the route handler but not DB — keep waiting).
       // 500 = SESSION_SECRET missing (config error) — fail loudly.
-      if (res.status === 401) return;
+      if (res.status === 401 || res.status === 429) return;
       if (res.status === 500) {
         const body = await res.text();
         throw new Error(`dev server 500 on /api/auth/login: ${body}`);
