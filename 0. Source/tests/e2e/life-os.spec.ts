@@ -168,6 +168,46 @@ for (const width of [1280, 390]) {
 
     await page.goto('/inbox');
     await expect(page.getByTestId('todo-title').filter({ hasText: '팔레트 수집 작업' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    // 7b) Todo Hub project triage + upgraded Quick Capture
+    await page.request.post('/api/projects', {
+      data: { title: '백엔드 개선', status: 'active', order: 0 },
+    });
+    await page.reload();
+    await page.getByRole('button', { name: '빠른 메모' }).click();
+    const captureDialog = page.getByRole('dialog');
+    await captureDialog.getByLabel('빠른 입력 프로젝트').selectOption({ label: '📁 백엔드 개선' });
+    await captureDialog.getByLabel('빠른 입력 우선순위').selectOption('1');
+    await captureDialog.getByRole('textbox', { name: '새 할 일' }).fill('API 응답 최적화');
+    await captureDialog.getByRole('button', { name: '수집함에 저장' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await expect(page.getByTestId('todo-title').filter({ hasText: 'API 응답 최적화' })).toBeVisible();
+    await page.getByRole('button', { name: /백엔드 개선/ }).click();
+    const projectItem = page.locator('li').filter({ hasText: 'API 응답 최적화' });
+    await expect(projectItem).toBeVisible();
+    await Promise.all([
+      page.waitForResponse(
+        r => r.url().includes('/api/todos/') && r.request().method() === 'PATCH' && r.status() === 200,
+      ),
+      projectItem.getByRole('button', { name: '오늘', exact: true }).click(),
+    ]);
+    await expect(projectItem.getByText('오늘', { exact: true })).toBeVisible();
+
+    const viewNav = page.getByRole('navigation', { name: '할 일 보기 전환' });
+    await viewNav.getByRole('button', { name: /^오늘/ }).click();
+    await expect(page.getByTestId('todo-title').filter({ hasText: 'API 응답 최적화' })).toBeVisible();
+    await page.reload();
+    await page.getByRole('navigation', { name: '할 일 보기 전환' }).getByRole('button', { name: /^오늘/ }).click();
+    await expect(page.getByTestId('todo-title').filter({ hasText: 'API 응답 최적화' })).toBeVisible();
+    await expect(page.locator('li').filter({ hasText: 'API 응답 최적화' }).getByText('P1')).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    await page.locator('li').filter({ hasText: 'API 응답 최적화' }).getByRole('link', { name: /백엔드 개선/ }).click();
+    await expect(page).toHaveURL(/\/projects\?project=/);
+    await expect(page.getByTestId('todo-title').filter({ hasText: 'API 응답 최적화' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
 
     await page.keyboard.press('Control+k');
     await page.getByLabel('커맨드 또는 검색어 입력').fill('체중트래킹');

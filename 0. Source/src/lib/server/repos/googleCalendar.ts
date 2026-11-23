@@ -1,6 +1,10 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
-import type { GoogleCalendarConnectionSummary, GoogleCalendarInfo } from '@/lib/types';
+import type {
+  GoogleCalendarConnectionSummary,
+  GoogleCalendarInfo,
+  GoogleTaskListInfo,
+} from '@/lib/types';
 import type { BinderDatabase } from '../db/connection';
 import { googleCalendarConnections } from '../db/schema';
 
@@ -17,6 +21,14 @@ export interface GoogleCalendarConnectionRow {
   autoPushEvents: boolean;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
+  tasksSyncEnabled: boolean;
+  tasksAutoPush: boolean;
+  tasksSelectedListIds: string[];
+  tasksDefaultListId: string | null;
+  tasksListMeta: GoogleTaskListInfo[];
+  tasksProjectMap: Record<string, string>;
+  tasksLastSyncedAt: string | null;
+  tasksLastSyncError: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,13 +38,21 @@ export function toGoogleConnectionSummary(
 ): GoogleCalendarConnectionSummary {
   return {
     googleEmail: row.googleEmail,
-    selectedCalendarIds: row.selectedCalendarIds,
+    selectedCalendarIds: row.selectedCalendarIds ?? [],
     pushCalendarId: row.pushCalendarId,
-    calendarMeta: row.calendarMeta,
-    syncEnabled: row.syncEnabled,
-    autoPushEvents: row.autoPushEvents,
-    lastSyncedAt: row.lastSyncedAt,
-    lastSyncError: row.lastSyncError,
+    calendarMeta: row.calendarMeta ?? [],
+    syncEnabled: row.syncEnabled ?? true,
+    autoPushEvents: row.autoPushEvents ?? true,
+    lastSyncedAt: row.lastSyncedAt ?? null,
+    lastSyncError: row.lastSyncError ?? null,
+    tasksSyncEnabled: row.tasksSyncEnabled ?? true,
+    tasksAutoPush: row.tasksAutoPush ?? true,
+    tasksSelectedListIds: row.tasksSelectedListIds ?? [],
+    tasksDefaultListId: row.tasksDefaultListId ?? null,
+    tasksListMeta: row.tasksListMeta ?? [],
+    tasksProjectMap: row.tasksProjectMap ?? {},
+    tasksLastSyncedAt: row.tasksLastSyncedAt ?? null,
+    tasksLastSyncError: row.tasksLastSyncError ?? null,
   };
 }
 
@@ -66,6 +86,9 @@ export class GoogleCalendarConnectionRepository {
     calendarMeta: GoogleCalendarInfo[];
     selectedCalendarIds?: string[];
     pushCalendarId?: string;
+    tasksListMeta?: GoogleTaskListInfo[];
+    tasksSelectedListIds?: string[];
+    tasksDefaultListId?: string;
   }): GoogleCalendarConnectionRow {
     const existing = this.get();
     const timestamp = this.now().toISOString();
@@ -92,6 +115,25 @@ export class GoogleCalendarConnectionRepository {
     const pushCalendarId =
       input.pushCalendarId ?? retainedPush ?? writableCal?.id ?? 'primary';
 
+    const tasksListMeta = input.tasksListMeta ?? existing?.tasksListMeta ?? [];
+    const availableTaskListIds = new Set(tasksListMeta.map(l => l.id));
+    const defaultTaskList = tasksListMeta.find(l => l.isDefault) ?? tasksListMeta[0] ?? null;
+    const retainedTaskSelected =
+      existing?.tasksSelectedListIds?.filter(id => availableTaskListIds.has(id)) ?? [];
+    const tasksSelectedListIds =
+      input.tasksSelectedListIds ??
+      (retainedTaskSelected.length > 0
+        ? retainedTaskSelected
+        : defaultTaskList
+          ? [defaultTaskList.id]
+          : []);
+    const retainedDefaultTaskList =
+      existing?.tasksDefaultListId && availableTaskListIds.has(existing.tasksDefaultListId)
+        ? existing.tasksDefaultListId
+        : null;
+    const tasksDefaultListId =
+      input.tasksDefaultListId ?? retainedDefaultTaskList ?? defaultTaskList?.id ?? null;
+
     if (existing) {
       return this.database
         .update(googleCalendarConnections)
@@ -105,6 +147,9 @@ export class GoogleCalendarConnectionRepository {
           calendarMeta: input.calendarMeta,
           syncEnabled: true,
           lastSyncError: null,
+          tasksListMeta,
+          tasksSelectedListIds,
+          tasksDefaultListId,
           updatedAt: timestamp,
         })
         .where(eq(googleCalendarConnections.userId, this.userId))
@@ -125,6 +170,14 @@ export class GoogleCalendarConnectionRepository {
       autoPushEvents: true,
       lastSyncedAt: null,
       lastSyncError: null,
+      tasksSyncEnabled: true,
+      tasksAutoPush: true,
+      tasksSelectedListIds,
+      tasksDefaultListId,
+      tasksListMeta,
+      tasksProjectMap: {},
+      tasksLastSyncedAt: null,
+      tasksLastSyncError: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -158,10 +211,26 @@ export class GoogleCalendarConnectionRepository {
     pushCalendarId?: string;
     syncEnabled?: boolean;
     autoPushEvents?: boolean;
+    tasksSyncEnabled?: boolean;
+    tasksAutoPush?: boolean;
+    tasksSelectedListIds?: string[];
+    tasksDefaultListId?: string | null;
+    tasksProjectMap?: Record<string, string | null>;
   }): GoogleCalendarConnectionRow | null {
     const existing = this.get();
     if (!existing) return null;
     const timestamp = this.now().toISOString();
+
+    let nextProjectMap: Record<string, string> | undefined;
+    if (patch.tasksProjectMap !== undefined) {
+      nextProjectMap = {};
+      for (const [listId, projectId] of Object.entries(patch.tasksProjectMap)) {
+        if (typeof projectId === 'string' && projectId.trim()) {
+          nextProjectMap[listId] = projectId;
+        }
+      }
+    }
+
     return this.database
       .update(googleCalendarConnections)
       .set({
@@ -171,6 +240,15 @@ export class GoogleCalendarConnectionRepository {
         ...(patch.pushCalendarId !== undefined ? { pushCalendarId: patch.pushCalendarId } : {}),
         ...(patch.syncEnabled !== undefined ? { syncEnabled: patch.syncEnabled } : {}),
         ...(patch.autoPushEvents !== undefined ? { autoPushEvents: patch.autoPushEvents } : {}),
+        ...(patch.tasksSyncEnabled !== undefined ? { tasksSyncEnabled: patch.tasksSyncEnabled } : {}),
+        ...(patch.tasksAutoPush !== undefined ? { tasksAutoPush: patch.tasksAutoPush } : {}),
+        ...(patch.tasksSelectedListIds !== undefined
+          ? { tasksSelectedListIds: patch.tasksSelectedListIds }
+          : {}),
+        ...(patch.tasksDefaultListId !== undefined
+          ? { tasksDefaultListId: patch.tasksDefaultListId }
+          : {}),
+        ...(nextProjectMap !== undefined ? { tasksProjectMap: nextProjectMap } : {}),
         updatedAt: timestamp,
       })
       .where(eq(googleCalendarConnections.userId, this.userId))
@@ -189,12 +267,56 @@ export class GoogleCalendarConnectionRepository {
       .run();
   }
 
+  updateTaskListMeta(tasksListMeta: GoogleTaskListInfo[]): void {
+    const existing = this.get();
+    if (!existing) return;
+    const available = new Set(tasksListMeta.map(l => l.id));
+    const defaultList = tasksListMeta.find(l => l.isDefault) ?? tasksListMeta[0] ?? null;
+
+    const currentSelected = (existing.tasksSelectedListIds ?? []).filter(id => available.has(id));
+    const nextSelected =
+      currentSelected.length > 0 ? currentSelected : defaultList ? [defaultList.id] : [];
+
+    const nextDefaultId =
+      existing.tasksDefaultListId && available.has(existing.tasksDefaultListId)
+        ? existing.tasksDefaultListId
+        : (defaultList?.id ?? null);
+
+    this.database
+      .update(googleCalendarConnections)
+      .set({
+        tasksListMeta,
+        tasksSelectedListIds: nextSelected,
+        tasksDefaultListId: nextDefaultId,
+        updatedAt: this.now().toISOString(),
+      })
+      .where(eq(googleCalendarConnections.userId, this.userId))
+      .run();
+  }
+
   recordSyncStatus(status: { lastSyncedAt?: string; lastSyncError: string | null }): void {
     this.database
       .update(googleCalendarConnections)
       .set({
         ...(status.lastSyncedAt !== undefined ? { lastSyncedAt: status.lastSyncedAt } : {}),
         lastSyncError: status.lastSyncError,
+        updatedAt: this.now().toISOString(),
+      })
+      .where(eq(googleCalendarConnections.userId, this.userId))
+      .run();
+  }
+
+  recordTasksSyncStatus(status: {
+    tasksLastSyncedAt?: string;
+    tasksLastSyncError: string | null;
+  }): void {
+    this.database
+      .update(googleCalendarConnections)
+      .set({
+        ...(status.tasksLastSyncedAt !== undefined
+          ? { tasksLastSyncedAt: status.tasksLastSyncedAt }
+          : {}),
+        tasksLastSyncError: status.tasksLastSyncError,
         updatedAt: this.now().toISOString(),
       })
       .where(eq(googleCalendarConnections.userId, this.userId))

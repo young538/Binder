@@ -1,6 +1,7 @@
 import 'server-only';
 import type { GoogleCalendarEventResource, GoogleCalendarWriteBody } from '@/lib/googleCalendar';
-import type { GoogleCalendarInfo } from '@/lib/types';
+import type { GoogleTaskResource, GoogleTaskWriteBody } from '@/lib/googleTasks';
+import type { GoogleCalendarInfo, GoogleTaskListInfo } from '@/lib/types';
 
 export class GoogleApiError extends Error {
   constructor(
@@ -23,8 +24,10 @@ const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const OAUTH_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
+const TASKS_API_BASE = 'https://tasks.googleapis.com/tasks/v1';
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/tasks',
   'https://www.googleapis.com/auth/userinfo.email',
 ].join(' ');
 
@@ -212,6 +215,142 @@ export class GoogleCalendarApiClient {
     );
     if (res.status === 404 || res.status === 410 || res.ok) return;
     throw new GoogleApiError(`Google Calendar event delete failed (${res.status})`, res.status);
+  }
+
+  async listTaskLists(accessToken: string): Promise<GoogleTaskListInfo[]> {
+    const lists: Array<{ id: string; title: string }> = [];
+    let pageToken: string | undefined;
+
+    for (let page = 0; page < 5; page++) {
+      const url = new URL(`${TASKS_API_BASE}/users/@me/lists`);
+      url.searchParams.set('maxResults', '100');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+      const data = await this.requestJson<{
+        items?: Array<{ id?: string; title?: string }>;
+        nextPageToken?: string;
+      }>(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      for (const item of data.items ?? []) {
+        if (!item.id) continue;
+        lists.push({
+          id: item.id,
+          title: item.title?.trim() || '내 할 일',
+        });
+      }
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
+
+    let defaultListId: string | null = null;
+    try {
+      const def = await this.requestJson<{ id?: string }>(
+        `${TASKS_API_BASE}/users/@me/lists/@default`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      defaultListId = def.id ?? null;
+    } catch {
+      defaultListId = lists[0]?.id ?? null;
+    }
+
+    return lists.map((list, idx) => ({
+      id: list.id,
+      title: list.title,
+      isDefault: defaultListId ? list.id === defaultListId : idx === 0,
+    }));
+  }
+
+  async listTasks(accessToken: string, taskListId: string): Promise<GoogleTaskResource[]> {
+    const tasks: GoogleTaskResource[] = [];
+    let pageToken: string | undefined;
+
+    for (let page = 0; page < 5; page++) {
+      const url = new URL(`${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks`);
+      url.searchParams.set('showCompleted', 'true');
+      url.searchParams.set('showHidden', 'true');
+      url.searchParams.set('showDeleted', 'true');
+      url.searchParams.set('maxResults', '100');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+      const data = await this.requestJson<{
+        items?: GoogleTaskResource[];
+        nextPageToken?: string;
+      }>(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (Array.isArray(data.items)) {
+        tasks.push(...data.items);
+      }
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
+
+    return tasks;
+  }
+
+  async createTask(
+    accessToken: string,
+    taskListId: string,
+    body: GoogleTaskWriteBody,
+  ): Promise<GoogleTaskResource> {
+    const payload: Record<string, unknown> = {
+      title: body.title,
+      status: body.status,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.due !== undefined && body.due !== null ? { due: body.due } : {}),
+    };
+    return this.requestJson<GoogleTaskResource>(
+      `${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+  }
+
+  async updateTask(
+    accessToken: string,
+    taskListId: string,
+    taskId: string,
+    body: GoogleTaskWriteBody,
+  ): Promise<GoogleTaskResource> {
+    const payload: Record<string, unknown> = {
+      title: body.title,
+      status: body.status,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      due: body.due ?? null,
+    };
+    return this.requestJson<GoogleTaskResource>(
+      `${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks/${encodeURIComponent(taskId)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+  }
+
+  async deleteTask(accessToken: string, taskListId: string, taskId: string): Promise<void> {
+    const res = await this.fetchImpl(
+      `${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks/${encodeURIComponent(taskId)}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(12000),
+      },
+    );
+    if (res.status === 404 || res.status === 410 || res.ok) return;
+    throw new GoogleApiError(`Google Task delete failed (${res.status})`, res.status);
   }
 
   async revokeToken(token: string): Promise<void> {

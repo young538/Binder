@@ -7,6 +7,7 @@ import { UserRepositories } from '../repos';
 import { GoogleCalendarApiClient } from './client';
 import { getGoogleOAuthConfig, type GoogleOAuthConfig } from './config';
 import { GoogleCalendarSyncService, GoogleSyncNotConnectedError } from './syncService';
+import { GoogleTasksSyncService } from './tasksSyncService';
 
 export const DEFAULT_SERVER_SYNC_INTERVAL_MINUTES = 15;
 export const DEFAULT_CLIENT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
@@ -93,15 +94,43 @@ export class GoogleSyncCoordinator {
       }
     }
 
+    const apiClient = options?.apiClient ?? new GoogleCalendarApiClient();
     const syncService = new GoogleCalendarSyncService(
       repos,
-      options?.apiClient ?? new GoogleCalendarApiClient(),
+      apiClient,
       config,
       now,
     );
 
     try {
-      const result = await this.runCoalesced(userId, () => syncService.syncNow());
+      const result = await this.runCoalesced(userId, async () => {
+        const calendarResult = await syncService.syncNow();
+        let tasksResult: GoogleCalendarSyncResult['tasks'] = null;
+        const latestConn = repos.googleCalendar.get();
+        if (latestConn?.tasksSyncEnabled) {
+          try {
+            const tasksService = new GoogleTasksSyncService(repos, apiClient, config, now);
+            tasksResult = await tasksService.syncNow();
+          } catch (tasksErr) {
+            const latestAfterErr = repos.googleCalendar.get();
+            tasksResult = {
+              pulledCreated: 0,
+              pulledUpdated: 0,
+              pulledDeleted: 0,
+              pushedCreated: 0,
+              pushedUpdated: 0,
+              listsSynced: 0,
+              syncedAt: now().toISOString(),
+              error:
+                latestAfterErr?.tasksLastSyncError ??
+                (tasksErr instanceof Error
+                  ? tasksErr.message
+                  : 'Google Tasks 동기화에 실패했습니다.'),
+            };
+          }
+        }
+        return { ...calendarResult, tasks: tasksResult };
+      });
       this.lastFailureAt.delete(userId);
       return { skipped: false, ...result };
     } catch (err) {

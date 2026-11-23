@@ -15,6 +15,11 @@ export const updateGoogleCalendarSettings = async (patch: {
   pushCalendarId?: string;
   syncEnabled?: boolean;
   autoPushEvents?: boolean;
+  tasksSyncEnabled?: boolean;
+  tasksAutoPush?: boolean;
+  tasksSelectedListIds?: string[];
+  tasksDefaultListId?: string | null;
+  tasksProjectMap?: Record<string, string | null>;
 }): Promise<GoogleCalendarConnectionSummary> => {
   const result = await http.patch<GoogleCalendarConnectionSummary>(
     '/api/integrations/google/settings',
@@ -27,6 +32,7 @@ export const updateGoogleCalendarSettings = async (patch: {
 export const syncGoogleCalendar = async (): Promise<GoogleCalendarSyncResult> => {
   const result = await http.post<GoogleCalendarSyncResult>('/api/integrations/google/sync', {});
   notifyMutation('lifeEvents');
+  notifyMutation('todos');
   notifyMutation('googleCalendar');
   return result;
 };
@@ -43,6 +49,16 @@ export const syncGoogleCalendarIfDue = async (): Promise<GoogleCalendarAutoSyncO
       result.pushedCreated > 0
     ) {
       notifyMutation('lifeEvents');
+    }
+    if (
+      result.tasks &&
+      (result.tasks.pulledCreated > 0 ||
+        result.tasks.pulledUpdated > 0 ||
+        result.tasks.pulledDeleted > 0 ||
+        result.tasks.pushedCreated > 0 ||
+        result.tasks.pushedUpdated > 0)
+    ) {
+      notifyMutation('todos');
     }
     notifyMutation('googleCalendar');
   }

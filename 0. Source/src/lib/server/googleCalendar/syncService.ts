@@ -22,6 +22,37 @@ export class GoogleSyncNotConnectedError extends Error {
   }
 }
 
+export async function ensureGoogleAccessToken(
+  repos: UserRepositories,
+  apiClient: GoogleCalendarApiClient,
+  config: GoogleOAuthConfig,
+  conn: GoogleCalendarConnectionRow,
+  now: () => Date = () => new Date(),
+): Promise<string> {
+  const expiresAtMs = Date.parse(conn.tokenExpiresAt);
+  if (Number.isFinite(expiresAtMs) && expiresAtMs - now().getTime() > TOKEN_REFRESH_LEEWAY_MS) {
+    return decryptSecret(conn.accessTokenEnc);
+  }
+
+  if (!config.configured) {
+    throw new Error('Google OAuth 클라이언트 환경변수가 설정되지 않았습니다.');
+  }
+
+  const refreshToken = decryptSecret(conn.refreshTokenEnc);
+  const refreshed = await apiClient.refreshAccessToken({
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    refreshToken,
+  });
+  const nextExpiresAt = new Date(now().getTime() + refreshed.expiresInSec * 1000).toISOString();
+  repos.googleCalendar.updateTokens({
+    accessTokenEnc: encryptSecret(refreshed.accessToken),
+    tokenExpiresAt: nextExpiresAt,
+    ...(refreshed.refreshToken ? { refreshTokenEnc: encryptSecret(refreshed.refreshToken) } : {}),
+  });
+  return refreshed.accessToken;
+}
+
 export class GoogleCalendarSyncService {
   constructor(
     private readonly repos: UserRepositories,
@@ -31,28 +62,7 @@ export class GoogleCalendarSyncService {
   ) {}
 
   async ensureAccessToken(conn: GoogleCalendarConnectionRow): Promise<string> {
-    const expiresAtMs = Date.parse(conn.tokenExpiresAt);
-    if (Number.isFinite(expiresAtMs) && expiresAtMs - this.now().getTime() > TOKEN_REFRESH_LEEWAY_MS) {
-      return decryptSecret(conn.accessTokenEnc);
-    }
-
-    if (!this.config.configured) {
-      throw new Error('Google OAuth 클라이언트 환경변수가 설정되지 않았습니다.');
-    }
-
-    const refreshToken = decryptSecret(conn.refreshTokenEnc);
-    const refreshed = await this.apiClient.refreshAccessToken({
-      clientId: this.config.clientId,
-      clientSecret: this.config.clientSecret,
-      refreshToken,
-    });
-    const nextExpiresAt = new Date(this.now().getTime() + refreshed.expiresInSec * 1000).toISOString();
-    this.repos.googleCalendar.updateTokens({
-      accessTokenEnc: encryptSecret(refreshed.accessToken),
-      tokenExpiresAt: nextExpiresAt,
-      ...(refreshed.refreshToken ? { refreshTokenEnc: encryptSecret(refreshed.refreshToken) } : {}),
-    });
-    return refreshed.accessToken;
+    return ensureGoogleAccessToken(this.repos, this.apiClient, this.config, conn, this.now);
   }
 
   async syncNow(todayOverride?: string): Promise<GoogleCalendarSyncResult> {

@@ -63,10 +63,11 @@
    - `event`(단발/기간 일정), `dday`(D-Day), `anniversary`(매년 반복 기념일; `02-29`는 비윤년 `02-28`로 보정)를 관리합니다.
    - 다가오는 일정은 모닝 부팅(3일 이내 `upcomingEvents`), 일일 트래커 상단 스트립, 월간 달력 셀과 날짜 서랍에 자동 표시됩니다.
    - 일일(`/daily/[date]`)·주간(`/week/[isoweek]`) 시간표의 `계획` 컬럼에는 시간 지정 일정이 오버레이로 겹쳐 표시되며, 클릭 한 번으로 `BlockEditor`를 열어 계획 시간블록으로 가져올 수 있습니다(종일 일정은 날짜 헤더에 배지 표시).
-2. **Google 캘린더 양방향 연동 ([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) · [syncService.ts](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts) · [autoSync.ts](../../0.%20Source/src/lib/server/googleCalendar/autoSync.ts))**:
-   - Google OAuth 2.0(`calendar`, `userinfo.email`)으로 인증해 선택한 Google 캘린더 일정을 `-30일 ~ +180일` 범위로 가져오고, 구글 측 삭제 일정도 바인더 동기화 일정에 반영합니다.
-   - 앱 열기/탭 복귀/10분 간격 접속 체크([GoogleCalendarAutoSync](../../0.%20Source/src/components/providers/GoogleCalendarAutoSync.tsx))와 서버 시작 hook([instrumentation.ts](../../0.%20Source/src/instrumentation.ts)) 기반 15분 백그라운드 스케줄러로 Google 캘린더 변경분도 자동 가져옵니다(`syncEnabled` 켜짐 기준).
-   - 바인더에서 일반 일정을 생성·수정·삭제하면 연결된 Google 캘린더에 실시간 반영되며(단, `dday`·`anniversary` 및 기존 `.ics` 외부 일정은 로컬 유지), Google API 일시 오류 시 로컬 저장을 막지 않고 최근 오류만 기록합니다.
+2. **Google 캘린더 · Google Tasks 양방향 연동 ([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx) · [syncService.ts](../../0.%20Source/src/lib/server/googleCalendar/syncService.ts) · [tasksSyncService.ts](../../0.%20Source/src/lib/server/googleCalendar/tasksSyncService.ts) · [autoSync.ts](../../0.%20Source/src/lib/server/googleCalendar/autoSync.ts))**:
+   - Google OAuth 2.0(`calendar`, `tasks`, `userinfo.email`)으로 인증해 선택한 Google 캘린더 일정을 `-30일 ~ +180일` 범위로 가져오고(구글 측 삭제 일정 반영 포함), 선택한 Google Tasks 목록의 할 일을 바인더의 수집함(`inbox`)·일간(`day`) 할 일과 프로젝트 매핑(`tasksProjectMap`) 기준으로 양방향 동기화합니다.
+   - 앱 열기/탭 복귀/10분 간격 접속 체크([GoogleCalendarAutoSync](../../0.%20Source/src/components/providers/GoogleCalendarAutoSync.tsx))와 서버 시작 hook([instrumentation.ts](../../0.%20Source/src/instrumentation.ts)) 기반 15분 백그라운드 스케줄러로 Google 캘린더와 Google Tasks 변경분을 함께 자동 가져옵니다(`syncEnabled`/`tasksSyncEnabled` 켜짐 기준).
+   - 바인더에서 일반 일정을 생성·수정·삭제하면 연결된 Google 캘린더에, 수집함·일간 할 일을 생성·완료·수정·이월·삭제·복원하면 연결된 Google Tasks 목록에 실시간 반영됩니다(단, `dday`·`anniversary`·`.ics` 외부 일정 및 주/월/연 단위 목표 할 일은 로컬 유지). Tasks API 권한 누락 등 오류는 캘린더 동기화와 격리해 `tasksLastSyncError`에만 기록합니다.
+   - `/inbox`([TodoHubPage](../../0.%20Source/src/components/inbox/TodoHubPage.tsx))는 수집함·오늘·예정·전체·프로젝트별 보기, 검색/우선순위/완료 필터, 원클릭 `오늘`/`내일`/프로젝트 분류와 Google Tasks 동기화 카드를 제공합니다.
 3. **`.ics` 가져오기 (`IcsImportDialog` · `lib/ics.ts`)**:
    - `.ics` 파일 업로드, 원문 붙여넣기, 또는 직접 `https://` 구독 URL(2MB 제한, 사설/루프백 IP 및 리다이렉트 차단)을 통해 RFC 5545 `VEVENT`를 파싱합니다.
    - 줄 바꿈 접기(line unfolding), `VALUE=DATE` 배타적 `DTEND` -1일 보정, UTC `Z` 시각의 `Asia/Seoul` 변환을 지원하며, `externalUid` 기준으로 중복 생성 대신 기존 일정을 갱신합니다.
@@ -111,6 +112,6 @@
 | [NotesPage](../../0.%20Source/src/components/notes/NotesPage.tsx) / [NoteEditorDialog](../../0.%20Source/src/components/notes/NoteEditorDialog.tsx) | 원칙·의사결정·인사이트·레퍼런스 관리 |
 | [LifePage](../../0.%20Source/src/components/life/LifePage.tsx) / [LifeEventsSection](../../0.%20Source/src/components/life/LifeEventsSection.tsx) / [IcsImportDialog](../../0.%20Source/src/components/life/IcsImportDialog.tsx) / [PeopleSection](../../0.%20Source/src/components/life/PeopleSection.tsx) | 일정·기념일·`.ics` 가져오기·소중한 사람 CRM |
 | [SubscriptionsPage](../../0.%20Source/src/components/subscriptions/SubscriptionsPage.tsx) / [SubscriptionEditorDialog](../../0.%20Source/src/components/subscriptions/SubscriptionEditorDialog.tsx) | 구독·월정액 CRUD, 요약 카드, 결제일 갱신 |
-| [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) | `Ctrl/Cmd+K` 런처 및 빠른 노트·할 일 입력 |
+| [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) / [TodoHubPage](../../0.%20Source/src/components/inbox/TodoHubPage.tsx) | `Ctrl/Cmd+K` 런처, 빠른 입력·수집함/오늘/예정/프로젝트 통합 허브 |
 | [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [subscriptions.ts](../../0.%20Source/src/lib/subscriptions.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·구독 환산·마감 유틸리티 |
 | [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) / [subscriptions](../../0.%20Source/src/app/(app)/subscriptions/page.tsx) | App Router 페이지 진입점 |

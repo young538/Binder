@@ -26,9 +26,9 @@
 
 선택·입력 변경 즉시 PATCH하고 공통 데이터를 다시 읽습니다. 설정 행이 없으면 GET은 기본값만 반환하며 첫 PATCH에서 행을 생성합니다. 서버는 허용 필드·enum·시간 범위를 검증하고, SettingsRepository가 기존 설정과 합친 시작·종료 순서를 저장 트랜잭션 안에서 다시 검사합니다.
 
-## Google 캘린더 양방향 연동
+## Google 캘린더·Google Tasks 양방향 연동
 
-`#google-calendar` 패널([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx))에서 OAuth 연결 상태·리디렉션 URI를 확인하고, 가져올 캘린더 목록·바인더 일정을 보낼 쓰기 캘린더·실시간 푸시(`autoPushEvents`)·자동 양방향 동기화(앱 접속 시 10분 쿨다운 + 서버 15분 백그라운드 주기)·수동 지금 동기화·연결 해제를 관리합니다. OAuth 토큰은 `SESSION_SECRET` 기반 AES-256-GCM으로 암호화되어 SQLite에만 보관되며 JSON 백업에는 포함되지 않습니다.
+`#google-calendar` 패널([GoogleCalendarPanel](../../0.%20Source/src/components/settings/GoogleCalendarPanel.tsx))에서 OAuth 연결 상태·리디렉션 URI를 확인하고, 가져올 캘린더 목록·바인더 일정을 보낼 쓰기 캘린더·실시간 푸시(`autoPushEvents`)·자동 양방향 동기화(앱 접속 시 10분 쿨다운 + 서버 15분 백그라운드 주기)·수동 지금 동기화·연결 해제를 관리합니다. 하단 **Google Tasks 할 일 양방향 연동** 섹션에서 `tasksSyncEnabled`·`tasksAutoPush`, 동기화할 작업 목록, 프로젝트 미연결 기본 목록(`tasksDefaultListId`), Google 작업 목록 ↔ 바인더 프로젝트 1:1 매핑(`tasksProjectMap`)을 설정할 수 있으며 Tasks 범위 승인이 필요한 경우 `계정 다시 연결` 버튼으로 즉시 재승인할 수 있습니다. OAuth 토큰은 `SESSION_SECRET` 기반 AES-256-GCM으로 암호화되어 SQLite에만 보관되며 JSON 백업에는 포함되지 않습니다.
 
 ## JSON 내보내기
 

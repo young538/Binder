@@ -91,6 +91,9 @@ export interface Todo {
   sourceRetro?: RetroSource | null;
   completedAt?: string | null;
   repeatGenerated?: boolean;
+  googleTaskListId?: string | null;
+  googleTaskId?: string | null;
+  googleTaskUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -424,6 +427,23 @@ export interface GoogleCalendarInfo {
   accessRole: string;
 }
 
+export interface GoogleTaskListInfo {
+  id: string;
+  title: string;
+  isDefault: boolean;
+}
+
+export interface GoogleTasksSyncResult {
+  pulledCreated: number;
+  pulledUpdated: number;
+  pulledDeleted: number;
+  pushedCreated: number;
+  pushedUpdated: number;
+  listsSynced: number;
+  syncedAt: string;
+  error?: string | null;
+}
+
 export interface GoogleCalendarConnectionSummary {
   googleEmail: string;
   selectedCalendarIds: string[];
@@ -433,6 +453,14 @@ export interface GoogleCalendarConnectionSummary {
   autoPushEvents: boolean;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
+  tasksSyncEnabled: boolean;
+  tasksAutoPush: boolean;
+  tasksSelectedListIds: string[];
+  tasksDefaultListId: string | null;
+  tasksListMeta: GoogleTaskListInfo[];
+  tasksProjectMap: Record<string, string>;
+  tasksLastSyncedAt: string | null;
+  tasksLastSyncError: string | null;
 }
 
 export interface GoogleCalendarStatus {
@@ -449,6 +477,7 @@ export interface GoogleCalendarSyncResult {
   pushedCreated: number;
   calendarsSynced: number;
   syncedAt: string;
+  tasks?: GoogleTasksSyncResult | null;
 }
 
 export type GoogleAutoSyncSkipReason =

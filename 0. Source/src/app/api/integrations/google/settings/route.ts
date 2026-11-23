@@ -30,6 +30,27 @@ export const PATCH = authenticated(async (session, req: Request) => {
     }
   }
 
+  const knownTaskListIds = new Set(existing.tasksListMeta.map(l => l.id));
+  if (patch.tasksSelectedListIds && knownTaskListIds.size > 0) {
+    if (patch.tasksSelectedListIds.some(id => !knownTaskListIds.has(id))) {
+      return NextResponse.json({ error: '유효하지 않은 Google Tasks 목록이 선택되었습니다.' }, { status: 400 });
+    }
+  }
+  if (patch.tasksDefaultListId && knownTaskListIds.size > 0 && !knownTaskListIds.has(patch.tasksDefaultListId)) {
+    return NextResponse.json({ error: '존재하지 않는 기본 Google Tasks 목록입니다.' }, { status: 400 });
+  }
+  if (patch.tasksProjectMap) {
+    const knownProjectIds = new Set((await repositories.projects.list()).map(p => p.id));
+    for (const [listId, projectId] of Object.entries(patch.tasksProjectMap)) {
+      if (knownTaskListIds.size > 0 && !knownTaskListIds.has(listId)) {
+        return NextResponse.json({ error: '존재하지 않는 Google Tasks 목록이 매핑되었습니다.' }, { status: 400 });
+      }
+      if (projectId !== null && !knownProjectIds.has(projectId)) {
+        return NextResponse.json({ error: '존재하지 않는 바인더 프로젝트가 매핑되었습니다.' }, { status: 400 });
+      }
+    }
+  }
+
   const updated = repositories.googleCalendar.updateSettings({
     ...(patch.selectedCalendarIds !== undefined
       ? { selectedCalendarIds: [...new Set(patch.selectedCalendarIds)] }
@@ -37,6 +58,17 @@ export const PATCH = authenticated(async (session, req: Request) => {
     ...(patch.pushCalendarId !== undefined ? { pushCalendarId: patch.pushCalendarId } : {}),
     ...(patch.syncEnabled !== undefined ? { syncEnabled: patch.syncEnabled } : {}),
     ...(patch.autoPushEvents !== undefined ? { autoPushEvents: patch.autoPushEvents } : {}),
+    ...(patch.tasksSyncEnabled !== undefined ? { tasksSyncEnabled: patch.tasksSyncEnabled } : {}),
+    ...(patch.tasksAutoPush !== undefined ? { tasksAutoPush: patch.tasksAutoPush } : {}),
+    ...(patch.tasksSelectedListIds !== undefined
+      ? { tasksSelectedListIds: [...new Set(patch.tasksSelectedListIds)] }
+      : {}),
+    ...(patch.tasksDefaultListId !== undefined
+      ? { tasksDefaultListId: patch.tasksDefaultListId }
+      : {}),
+    ...(patch.tasksProjectMap !== undefined
+      ? { tasksProjectMap: patch.tasksProjectMap }
+      : {}),
   });
 
   if (!updated) {

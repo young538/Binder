@@ -5,6 +5,7 @@ import { GoogleCalendarApiClient } from '@/lib/server/googleCalendar/client';
 import { getGoogleOAuthConfig, OAUTH_STATE_COOKIE } from '@/lib/server/googleCalendar/config';
 import { encryptSecret, verifyOAuthState } from '@/lib/server/googleCalendar/crypto';
 import { GoogleCalendarSyncService } from '@/lib/server/googleCalendar/syncService';
+import { GoogleTasksSyncService } from '@/lib/server/googleCalendar/tasksSyncService';
 import { getUserRepositories } from '@/lib/server/repos';
 
 function buildReturnRedirect(redirectUri: string, returnTo: string, query: Record<string, string>) {
@@ -78,9 +79,10 @@ export const GET = authenticated(async (session, req: NextRequest) => {
       });
     }
 
-    const [googleEmail, calendarMeta] = await Promise.all([
+    const [googleEmail, calendarMeta, tasksListMeta] = await Promise.all([
       apiClient.getUserEmail(tokens.accessToken),
       apiClient.listCalendars(tokens.accessToken),
+      apiClient.listTaskLists(tokens.accessToken).catch(() => []),
     ]);
 
     repositories.googleCalendar.upsert({
@@ -89,6 +91,7 @@ export const GET = authenticated(async (session, req: NextRequest) => {
       refreshTokenEnc,
       tokenExpiresAt: new Date(Date.now() + tokens.expiresInSec * 1000).toISOString(),
       calendarMeta,
+      tasksListMeta,
     });
 
     // Best-effort initial sync so calendars populate right away after returning.
@@ -97,6 +100,14 @@ export const GET = authenticated(async (session, req: NextRequest) => {
       await syncService.syncNow();
     } catch {
       // Failure is recorded in lastSyncError for visibility in settings.
+    }
+
+    // Best-effort initial Google Tasks sync (errors stay isolated in tasksLastSyncError).
+    try {
+      const tasksService = new GoogleTasksSyncService(repositories, apiClient, config);
+      await tasksService.syncNow();
+    } catch {
+      // Failure is recorded in tasksLastSyncError for visibility in settings.
     }
 
     return buildReturnRedirect(config.redirectUri, returnTo, { google: 'connected' });

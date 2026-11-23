@@ -6,9 +6,11 @@ import {
   Check,
   Copy,
   ExternalLink,
+  ListChecks,
   RefreshCw,
   Unlink,
 } from 'lucide-react';
+import { useBinder } from '@/store';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import {
   disconnectGoogleCalendar,
@@ -50,6 +52,7 @@ function GoogleOAuthQueryBanner() {
 }
 
 export function GoogleCalendarPanel() {
+  const { projects = [] } = useBinder();
   const { value: status, loading, error, refresh } = useAsyncResource(
     'google-calendar:status',
     getGoogleCalendarStatus,
@@ -75,9 +78,14 @@ export function GoogleCalendarPanel() {
     setBanner(null);
     try {
       const res = await syncGoogleCalendar();
+      const tasksInfo = res.tasks
+        ? res.tasks.error
+          ? ` · Tasks 오류: ${res.tasks.error}`
+          : ` · Tasks(${res.tasks.listsSynced}개 목록): 가져옴 ${res.tasks.pulledCreated} · 갱신 ${res.tasks.pulledUpdated} · 삭제 ${res.tasks.pulledDeleted} · 보냄 ${res.tasks.pushedCreated + res.tasks.pushedUpdated}`
+        : '';
       setBanner({
-        kind: 'success',
-        text: `동기화 완료 (${res.calendarsSynced}개 캘린더): 새로 가져옴 ${res.pulledCreated} · 갱신 ${res.pulledUpdated} · 구글 삭제 반영 ${res.pulledDeleted} · 구글로 보냄 ${res.pushedCreated}`,
+        kind: res.tasks?.error ? 'error' : 'success',
+        text: `동기화 완료 (${res.calendarsSynced}개 캘린더): 새로 가져옴 ${res.pulledCreated} · 갱신 ${res.pulledUpdated} · 구글 삭제 반영 ${res.pulledDeleted} · 구글로 보냄 ${res.pushedCreated}${tasksInfo}`,
       });
       await refresh(true);
     } catch (err) {
@@ -116,6 +124,22 @@ export function GoogleCalendarPanel() {
     void patchSettings({ selectedCalendarIds: [...current] });
   };
 
+  const toggleTaskList = (listId: string) => {
+    if (!status?.connection) return;
+    const current = new Set(status.connection.tasksSelectedListIds);
+    if (current.has(listId)) current.delete(listId);
+    else current.add(listId);
+    void patchSettings({ tasksSelectedListIds: [...current] });
+  };
+
+  const setTaskListProjectMapping = (listId: string, projectId: string) => {
+    if (!status?.connection) return;
+    const nextMap: Record<string, string | null> = { ...status.connection.tasksProjectMap };
+    if (projectId) nextMap[listId] = projectId;
+    else nextMap[listId] = null;
+    void patchSettings({ tasksProjectMap: nextMap });
+  };
+
   const handleDisconnect = async () => {
     if (busy) return;
     const message = purgeOnDisconnect
@@ -148,6 +172,7 @@ export function GoogleCalendarPanel() {
   const writableCalendars = (conn?.calendarMeta ?? []).filter(
     c => c.accessRole === 'owner' || c.accessRole === 'writer',
   );
+  const mappableProjects = projects.filter(p => p.status !== 'done');
 
   return (
     <section
@@ -363,6 +388,143 @@ export function GoogleCalendarPanel() {
                     <span>자동 양방향 동기화 활성화 (앱 접속 10분 · 서버 15분 주기)</span>
                   </label>
                 </div>
+              </div>
+
+              <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                      <ListChecks size={15} className="text-emerald-600 dark:text-emerald-400" />
+                      Google Tasks 할 일 양방향 연동
+                    </h3>
+                    <p className="mt-0.5 text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                      수집함과 오늘·일간 할 일(마감일 포함)을 Google Tasks와 양방향으로 동기화하고, 작업 목록별 바인더 프로젝트를 연결합니다.
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    최근 Tasks 동기화:{' '}
+                    {conn.tasksLastSyncedAt
+                      ? new Date(conn.tasksLastSyncedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+                      : '아직 기록 없음'}
+                  </span>
+                </div>
+
+                {conn.tasksLastSyncError && (
+                  <div
+                    role="alert"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+                  >
+                    <span>{conn.tasksLastSyncError}</span>
+                    <a
+                      href="/api/integrations/google/connect?returnTo=/settings"
+                      className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700"
+                    >
+                      계정 다시 연결
+                    </a>
+                  </div>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2 text-xs">
+                    <label className="flex cursor-pointer items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        disabled={busy}
+                        checked={conn.tasksSyncEnabled}
+                        onChange={e => void patchSettings({ tasksSyncEnabled: e.target.checked })}
+                        className="rounded border-zinc-300 text-emerald-600"
+                      />
+                      <span>Google Tasks 양방향 동기화 활성화</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        disabled={busy}
+                        checked={conn.tasksAutoPush}
+                        onChange={e => void patchSettings({ tasksAutoPush: e.target.checked })}
+                        className="rounded border-zinc-300 text-emerald-600"
+                      />
+                      <span>수집함·일간 할 일 생성/완료/수정 시 즉시 반영</span>
+                    </label>
+                  </div>
+
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    기본 Google Tasks 목록 (프로젝트 미연결 할 일)
+                    <select
+                      aria-label="기본 Google Tasks 목록"
+                      disabled={busy || conn.tasksListMeta.length === 0}
+                      value={conn.tasksDefaultListId ?? ''}
+                      onChange={e => void patchSettings({ tasksDefaultListId: e.target.value || null })}
+                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                    >
+                      {conn.tasksListMeta.length === 0 ? (
+                        <option value="">목록 불러오는 중 (동기화 필요)</option>
+                      ) : (
+                        conn.tasksListMeta.map(list => (
+                          <option key={list.id} value={list.id}>
+                            {list.title}{list.isDefault ? ' (기본)' : ''}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                </div>
+
+                {conn.tasksListMeta.length === 0 ? (
+                  <p className="rounded-xl bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+                    Google Tasks 목록이 아직 없습니다. 새 Tasks 권한을 허용하려면 &lsquo;계정 다시 연결&rsquo; 후 지금 동기화를 눌러 주세요.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      동기화할 Google Tasks 목록 및 바인더 프로젝트 연결
+                    </div>
+                    <div className="space-y-1.5">
+                      {conn.tasksListMeta.map(list => {
+                        const checked = conn.tasksSelectedListIds.includes(list.id);
+                        const mappedProjectId = conn.tasksProjectMap?.[list.id] ?? '';
+                        return (
+                          <div
+                            key={list.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs dark:border-zinc-800"
+                          >
+                            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                              <input
+                                type="checkbox"
+                                disabled={busy}
+                                checked={checked}
+                                onChange={() => toggleTaskList(list.id)}
+                                className="rounded border-zinc-300 text-emerald-600"
+                              />
+                              <span className="truncate font-medium text-zinc-800 dark:text-zinc-200">
+                                {list.title}
+                              </span>
+                              {list.isDefault && (
+                                <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                  기본
+                                </span>
+                              )}
+                            </label>
+                            <select
+                              aria-label={`${list.title} 프로젝트 연결`}
+                              disabled={busy}
+                              value={mappedProjectId}
+                              onChange={e => setTaskListProjectMapping(list.id, e.target.value)}
+                              className="min-w-0 max-w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 sm:w-52"
+                            >
+                              <option value="">프로젝트 미연결 (기본 수집함)</option>
+                              {mappableProjects.map(project => (
+                                <option key={project.id} value={project.id}>
+                                  📁 {project.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">

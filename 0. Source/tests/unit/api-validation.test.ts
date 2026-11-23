@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe('mutation request boundary', () => {
-  it.each([null, [], 'body', { ...todo, id: 'injected' }, { ...todo, userId: 'other' }, { ...todo, createdAt: now }, { ...todo, updatedAt: now }, { ...todo, surprise: 1 }, { ...todo, status: 'bad' }, { ...todo, order: 0.5 }, { ...todo, priority: 4 }, { ...todo, scopeKey: '2026-02-30' }])('rejects malformed create payload %# without writing', async body => {
+  it.each([null, [], 'body', { ...todo, id: 'injected' }, { ...todo, userId: 'other' }, { ...todo, createdAt: now }, { ...todo, updatedAt: now }, { ...todo, googleTaskId: 'gt-1' }, { ...todo, googleTaskListId: 'gl-1' }, { ...todo, googleTaskUpdatedAt: now }, { ...todo, surprise: 1 }, { ...todo, status: 'bad' }, { ...todo, order: 0.5 }, { ...todo, priority: 4 }, { ...todo, scopeKey: '2026-02-30' }])('rejects malformed create payload %# without writing', async body => {
     expect((await createTodoRoute(request(body))).status).toBe(400);
     expect(getDb().select().from(schema.todos).all()).toHaveLength(0);
   });
@@ -189,6 +189,11 @@ describe('mutation request boundary', () => {
     // Not connected yet -> 400
     expect((await patchGoogleSettingsRoute(request({ autoPushEvents: false }))).status).toBe(400);
 
+    getDb().insert(schema.projects).values([
+      { id: 'proj-owned', userId: auth.userId, title: '내 프로젝트', status: 'active', order: 0, createdAt: now, updatedAt: now },
+      { id: 'proj-foreign', userId: 'other', title: '남의 프로젝트', status: 'active', order: 0, createdAt: now, updatedAt: now },
+    ]).run();
+
     getDb().insert(schema.googleCalendarConnections).values({
       userId: auth.userId,
       googleEmail: 'user@gmail.com',
@@ -203,6 +208,13 @@ describe('mutation request boundary', () => {
       ],
       syncEnabled: true,
       autoPushEvents: true,
+      tasksListMeta: [
+        { id: 'list-default', title: '내 할 일', isDefault: true },
+        { id: 'list-dev', title: '개발', isDefault: false },
+      ],
+      tasksSelectedListIds: ['list-default'],
+      tasksDefaultListId: 'list-default',
+      tasksProjectMap: {},
       createdAt: now,
       updatedAt: now,
     }).run();
@@ -213,18 +225,40 @@ describe('mutation request boundary', () => {
       { pushCalendarId: 'unknown-cal' },
       { pushCalendarId: 'ro' }, // reader calendar cannot be push target
       { selectedCalendarIds: ['not-in-meta'] },
+      { tasksSelectedListIds: ['unknown-list'] },
+      { tasksDefaultListId: 'unknown-list' },
+      { tasksProjectMap: { 'unknown-list': 'proj-owned' } },
+      { tasksProjectMap: { 'list-dev': 'proj-foreign' } },
+      { tasksProjectMap: { 'list-dev': 'missing-project' } },
     ]) {
       expect((await patchGoogleSettingsRoute(request(badPatch))).status).toBe(400);
     }
 
     const okRes = await patchGoogleSettingsRoute(
-      request({ selectedCalendarIds: ['primary', 'ro'], autoPushEvents: false }),
+      request({
+        selectedCalendarIds: ['primary', 'ro'],
+        autoPushEvents: false,
+        tasksAutoPush: false,
+        tasksSelectedListIds: ['list-default', 'list-dev'],
+        tasksDefaultListId: 'list-dev',
+        tasksProjectMap: { 'list-dev': 'proj-owned' },
+      }),
     );
     expect(okRes.status).toBe(200);
     expect(await okRes.json()).toMatchObject({
       selectedCalendarIds: ['primary', 'ro'],
       autoPushEvents: false,
+      tasksAutoPush: false,
+      tasksSelectedListIds: ['list-default', 'list-dev'],
+      tasksDefaultListId: 'list-dev',
+      tasksProjectMap: { 'list-dev': 'proj-owned' },
     });
+
+    const clearedMapRes = await patchGoogleSettingsRoute(
+      request({ tasksProjectMap: { 'list-dev': null } }),
+    );
+    expect(clearedMapRes.status).toBe(200);
+    expect(await clearedMapRes.json()).toMatchObject({ tasksProjectMap: {} });
   });
 });
 
@@ -247,8 +281,20 @@ describe('backup validation', () => {
   it('accepts an exported backup with SQLite nulls and owned references', async () => {
     await createTodoRoute(request(todo));
     const backup = await (await exportRoute()).json();
+    backup.todos[0] = {
+      ...backup.todos[0],
+      googleTaskId: 'gt-exported',
+      googleTaskListId: 'gl-exported',
+      googleTaskUpdatedAt: now,
+    };
     const response = await importRoute(request({ mode: 'replace', data: backup }));
     expect(response.status).toBe(200);
-    expect(getDb().select().from(schema.todos).get()).toMatchObject({ ...todo, userId: auth.userId });
+    expect(getDb().select().from(schema.todos).get()).toMatchObject({
+      ...todo,
+      userId: auth.userId,
+      googleTaskId: 'gt-exported',
+      googleTaskListId: 'gl-exported',
+      googleTaskUpdatedAt: now,
+    });
   });
 });

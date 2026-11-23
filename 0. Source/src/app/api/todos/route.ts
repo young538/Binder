@@ -1,3 +1,4 @@
+import { createGoogleTasksSyncService } from '@/lib/server/googleCalendar/tasksSyncService';
 import { getUserRepositories } from '@/lib/server/repos';
 import { readMutation } from '@/lib/server/validation';
 import { NextResponse } from 'next/server';
@@ -32,6 +33,7 @@ export const POST = authenticated(async (session, req: Request) => {
   const repositories = getUserRepositories(session.userId);
   const body = await readMutation(req, 'todos', session.userId);
   if (body instanceof Response) return body;
-  const row = await repositories.todos.create(body, req.headers.get('Idempotency-Key') ?? undefined);
+  const created = await repositories.todos.create(body, req.headers.get('Idempotency-Key') ?? undefined);
+  const row = await createGoogleTasksSyncService(repositories, req).pushCreatedTodo(created);
   return NextResponse.json(row, { status: 201 });
 });

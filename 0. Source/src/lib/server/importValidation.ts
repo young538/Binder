@@ -52,8 +52,14 @@ export function validateImport(
       if (name === 'todos') {
         if (fields.completedAt !== undefined && fields.completedAt !== null && !timestamp(fields.completedAt)) fail('Invalid completedAt');
         if (fields.repeatGenerated !== undefined && typeof fields.repeatGenerated !== 'boolean') fail('Invalid repeatGenerated');
+        if (fields.googleTaskListId !== undefined && fields.googleTaskListId !== null && typeof fields.googleTaskListId !== 'string') fail('Invalid googleTaskListId');
+        if (fields.googleTaskId !== undefined && fields.googleTaskId !== null && typeof fields.googleTaskId !== 'string') fail('Invalid googleTaskId');
+        if (fields.googleTaskUpdatedAt !== undefined && fields.googleTaskUpdatedAt !== null && !timestamp(fields.googleTaskUpdatedAt)) fail('Invalid googleTaskUpdatedAt');
         delete fields.completedAt;
         delete fields.repeatGenerated;
+        delete fields.googleTaskListId;
+        delete fields.googleTaskId;
+        delete fields.googleTaskUpdatedAt;
       }
       if (name === 'lifeEvents') {
         if (fields.googleCalendarId !== undefined && fields.googleCalendarId !== null && typeof fields.googleCalendarId !== 'string') fail('Invalid googleCalendarId');

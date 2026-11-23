@@ -25,7 +25,7 @@ import type {
 type Writable<T> = Omit<T, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 export interface MutationPayloads {
   projects: Omit<Writable<Project>, 'completedAt'>;
-  todos: Omit<Writable<Todo>, 'completedAt' | 'repeatGenerated'>;
+  todos: Omit<Writable<Todo>, 'completedAt' | 'repeatGenerated' | 'googleTaskListId' | 'googleTaskId' | 'googleTaskUpdatedAt'>;
   weeklyTemplates: Writable<WeeklyTemplate>;
   weeklyTemplateCreate: { name: string; sourceWeek: string };
   weeklyTemplateApply: { week: string };
@@ -61,6 +61,11 @@ export interface MutationPayloads {
     pushCalendarId?: string;
     syncEnabled?: boolean;
     autoPushEvents?: boolean;
+    tasksSyncEnabled?: boolean;
+    tasksAutoPush?: boolean;
+    tasksSelectedListIds?: string[];
+    tasksDefaultListId?: string | null;
+    tasksProjectMap?: Record<string, string | null>;
   };
   settings: Settings;
   login: { username: string; password: string };
@@ -121,6 +126,7 @@ const sourceRetro: Check = value => object(value) && Object.keys(value).length =
   && oneOf('daily', 'weekly', 'monthly', 'yearly')(value.type) && retroDateOrWeek(value.type, value.dateOrWeek);
 const idList: Check = value => Array.isArray(value) && value.length <= 500 && value.every(identifier);
 const calendarIdList: Check = value => Array.isArray(value) && value.length <= 50 && value.every(identifier);
+const taskProjectMap: Check = value => object(value) && Object.entries(value).length <= 50 && Object.entries(value).every(([k, v]) => identifier(k) && (v === null || identifier(v)));
 const ratingValue: Check = oneOf(1, 2, 3, 4, 5);
 const sleepHoursValue: Check = value => number(value) && (value as number) >= 0 && (value as number) <= 24;
 const nonNegativeNumber: Check = value => number(value) && (value as number) >= 0;
@@ -158,7 +164,20 @@ const rules: Record<MutationKind, Rules> = {
   lifeEvents: { fields: { title: identifier, date: isDate, endDate: nullable(isDate), kind: oneOf('event', 'dday', 'anniversary'), allDay: bool, startMin: nullable(integer(0, 1439)), endMin: nullable(integer(1, 1440)), color: nullable(color), personId: optionalId, projectId: optionalId, goalId: optionalId, externalUid: optionalText, note: optionalText }, required: ['title', 'date', 'kind', 'allDay'] },
   subscriptions: { fields: { name: identifier, amount: nonNegativeNumber, currency: oneOf('KRW', 'USD', 'JPY', 'EUR'), billingCycle: oneOf('monthly', 'yearly', 'weekly', 'quarterly'), billingDay: nullable(integer(1, 31)), nextBillingDate: nullable(isDate), status: oneOf('active', 'paused', 'cancelled'), category: optionalText, paymentMethod: optionalText, autoRenew: bool, url: nullable(url), note: optionalText, order: integer(0) }, required: ['name', 'amount', 'currency', 'billingCycle', 'status', 'autoRenew', 'order'] },
   icsImport: { fields: { icsText: optionalText, url: nullable(url) }, required: [] },
-  googleCalendarSettings: { fields: { selectedCalendarIds: calendarIdList, pushCalendarId: identifier, syncEnabled: bool, autoPushEvents: bool }, required: [] },
+  googleCalendarSettings: {
+    fields: {
+      selectedCalendarIds: calendarIdList,
+      pushCalendarId: identifier,
+      syncEnabled: bool,
+      autoPushEvents: bool,
+      tasksSyncEnabled: bool,
+      tasksAutoPush: bool,
+      tasksSelectedListIds: calendarIdList,
+      tasksDefaultListId: optionalId,
+      tasksProjectMap: taskProjectMap,
+    },
+    required: [],
+  },
   settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark') }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },
   changePassword: { fields: { currentPassword: identifier, newPassword: value => typeof value === 'string' && value.length >= 8 && value.length <= 128 }, required: ['currentPassword', 'newPassword'] },

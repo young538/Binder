@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 import { PENDING_ADMIN_USER_ID } from './constants';
-import type { GoogleCalendarInfo, Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
+import type { GoogleCalendarInfo, GoogleTaskListInfo, Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
 
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
@@ -67,6 +67,9 @@ export const todos = sqliteTable(
     sourceRetro: text('source_retro', { mode: 'json' }).$type<RetroSource>(),
     completedAt: text('completed_at'),
     repeatGenerated: integer('repeat_generated', { mode: 'boolean' }).notNull().default(false),
+    googleTaskListId: text('google_task_list_id'),
+    googleTaskId: text('google_task_id'),
+    googleTaskUpdatedAt: text('google_task_updated_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -75,6 +78,7 @@ export const todos = sqliteTable(
     parentIdx: index('todos_parent_idx').on(t.parentGoalId),
     projectIdx: index('todos_project_idx').on(t.projectId),
     userIdx: index('todos_user_idx').on(t.userId),
+    googleTaskIdx: index('todos_user_google_task_idx').on(t.userId, t.googleTaskListId, t.googleTaskId),
   })
 );
 
@@ -457,6 +461,14 @@ export const googleCalendarConnections = sqliteTable('google_calendar_connection
   autoPushEvents: integer('auto_push_events', { mode: 'boolean' }).notNull().default(true),
   lastSyncedAt: text('last_synced_at'),
   lastSyncError: text('last_sync_error'),
+  tasksSyncEnabled: integer('tasks_sync_enabled', { mode: 'boolean' }).notNull().default(true),
+  tasksAutoPush: integer('tasks_auto_push', { mode: 'boolean' }).notNull().default(true),
+  tasksSelectedListIds: text('tasks_selected_list_ids', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  tasksDefaultListId: text('tasks_default_list_id'),
+  tasksListMeta: text('tasks_list_meta', { mode: 'json' }).$type<GoogleTaskListInfo[]>().notNull().default([]),
+  tasksProjectMap: text('tasks_project_map', { mode: 'json' }).$type<Record<string, string>>().notNull().default({}),
+  tasksLastSyncedAt: text('tasks_last_synced_at'),
+  tasksLastSyncError: text('tasks_last_sync_error'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

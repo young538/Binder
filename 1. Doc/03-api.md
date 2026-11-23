@@ -172,14 +172,14 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | GET `/api/integrations/google/status` | 없음 | `{configured, connected, redirectUri, connection}` (토큰 제외) |
 | GET `/api/integrations/google/connect` | 쿼리 `returnTo?` | 서명된 state 쿠키 발급 후 Google OAuth 동의 화면으로 302 리다이렉트(미설정 시 400) |
 | GET `/api/integrations/google/callback` | Google OAuth `code`, `state` | 토큰 암호화 저장·초기 동기화 후 `returnTo?google=connected\|error` 리다이렉트 |
-| PATCH `/api/integrations/google/settings` | `selectedCalendarIds?`, `pushCalendarId?`, `syncEnabled?`, `autoPushEvents?` | 갱신된 `GoogleCalendarConnectionSummary`; 읽기 전용 캘린더 푸시 지정은 400 |
-| POST `/api/integrations/google/sync` | `{mode?:"manual"\|"auto"}` (생략 시 `manual`) | `manual`: `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt}`; `auto`: 쿨다운 내 스킵 시 `{skipped:true, reason}`, 실행 시 `{skipped:false, ...결과}` |
+| PATCH `/api/integrations/google/settings` | `selectedCalendarIds?`, `pushCalendarId?`, `syncEnabled?`, `autoPushEvents?`, `tasksSyncEnabled?`, `tasksAutoPush?`, `tasksSelectedListIds?`, `tasksDefaultListId?`, `tasksProjectMap?` | 갱신된 `GoogleCalendarConnectionSummary`; 읽기 전용 캘린더 푸시 지정이나 소유하지 않은 프로젝트·목록 매핑은 400 |
+| POST `/api/integrations/google/sync` | `{mode?:"manual"\|"auto"}` (생략 시 `manual`) | `manual`: `{pulledCreated, pulledUpdated, pulledDeleted, pushedCreated, calendarsSynced, syncedAt, tasks?}`; `auto`: 쿨다운 내 스킵 시 `{skipped:true, reason}`, 실행 시 `{skipped:false, ...결과}` |
 | GET `/api/dashboard?date=2026-11-20` | 기준 날짜(선택, 기본 오늘) | `DashboardSnapshot` (오늘 일정·7일 예정·오늘 할 일·프로젝트 진행·구독 요약·지표 스파크라인·주의 항목) |
 | GET `/api/retrospectives/coach` | 없음 | `{configuredProviders, defaultProvider, models}` (OpenAI/Gemini 설정 여부; API 키 미노출) |
 | POST `/api/retrospectives/coach` | `{mode:"weekly"\|"monthly", period, provider?}` | `RetroCoachResponse` (카테고리별 계획/실제, 인사이트, 초안 `good/bad/nextStep`, AI 프롬프트; `provider`: `auto`\|`openai`\|`gemini`\|`local`, 미설정/장애 시 로컬 자동 폴백) |
 | DELETE `/api/integrations/google/disconnect` | 쿼리 `purgeEvents=true\|false` | `{ok:true, deletedEvents}`; best-effort 토큰 폐기 및 연결 해제(옵션 시 Google 동기화 일정 삭제) |
 
-Google 캘린더가 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화되면 `POST /api/events`, `PATCH /api/events/[id]`, `DELETE /api/events/[id]` 시 일반 일정(`kind='event'`) 변경을 Google 캘린더에도 실시간 반영합니다(외부 일시 오류는 `lastSyncError`에 기록하고 로컬 저장은 유지합니다). `googleCalendarId`·`googleEventId`·`googleUpdatedAt`는 서버 관리 필드이므로 클라이언트 직접 수정은 400으로 거절합니다.
+Google 계정이 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화되면 `POST /api/events`, `PATCH /api/events/[id]`, `DELETE /api/events/[id]` 시 일반 일정(`kind='event'`) 변경을 Google 캘린더에도 실시간 반영합니다(외부 일시 오류는 `lastSyncError`에 기록하고 로컬 저장은 유지합니다). `googleCalendarId`·`googleEventId`·`googleUpdatedAt`는 서버 관리 필드이므로 클라이언트 직접 수정은 400으로 거절합니다. 마찬가지로 `tasksSyncEnabled`/`tasksAutoPush`가 활성화되면 `POST /api/todos`, `PATCH /api/todos/[id]`, `POST /api/todos/[id]/toggle-done`, `POST /api/todos/rollover`, `POST /api/todos/[id]/restore`, `DELETE /api/todos/[id]` 시 `inbox`/`day` 할 일 변경을 Google Tasks에 실시간 반영하며(목록-프로젝트 매핑 이동 포함), `googleTaskListId`·`googleTaskId`·`googleTaskUpdatedAt`의 클라이언트 직접 수정은 400으로 거절합니다. Google Tasks API 오류는 캘린더 동기화와 격리되어 `tasksLastSyncError`에만 기록됩니다.
 
 수집함 조회는 `/api/todos?scope=inbox&scopeKey=inbox`입니다. 회고 연결·반복 생성은 기존 TODO POST/PATCH와 상태 토글 경로를 사용합니다. 선택 필드 `sourceRetro={type,dateOrWeek}`와 `repeatRule={unit,interval,basis}`를 허용합니다. 두 필드의 null은 해제입니다. `completedAt`·`repeatGenerated`는 일반 POST/PATCH에서 거절하며 서버 응답·백업에는 포함합니다. 회고 생성 요청은 같은 원본·제목·기간의 기존 항목이 있으면 이를 반환합니다. 일반 TODO는 제목 중복을 허용합니다.
 

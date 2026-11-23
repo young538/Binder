@@ -2,29 +2,47 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { addDays } from 'date-fns';
 import { Plus } from 'lucide-react';
 import { createNote } from '@/lib/repo/notes';
 import { createTodo } from '@/lib/repo/todos';
-import type { NoteKind } from '@/lib/types';
+import type { NoteKind, TodoPriority, TodoScope } from '@/lib/types';
+import { toIsoDate } from '@/lib/utils/date';
+import { useBinder } from '@/store';
 import { TodoCreateInput } from '@/components/common/TodoCreateInput';
 import { Dialog, actionClass, fieldClass } from '@/components/common/Dialog';
 
+type QuickWhen = 'inbox' | 'today' | 'tomorrow' | 'date';
+
 export function QuickCapture() {
   const path = usePathname();
+  const { projects = [] } = useBinder();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'todo' | 'note'>('todo');
+  const [captureWhen, setCaptureWhen] = useState<QuickWhen>('inbox');
+  const [customDate, setCustomDate] = useState(() => toIsoDate(new Date()));
+  const [captureProjectId, setCaptureProjectId] = useState('');
+  const [capturePriority, setCapturePriority] = useState('');
   const [noteKind, setNoteKind] = useState<NoteKind>('insight');
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteError, setNoteError] = useState('');
 
+  const openModal = () => {
+    setMode('todo');
+    setCaptureWhen('inbox');
+    setCustomDate(toIsoDate(new Date()));
+    setCaptureProjectId('');
+    setCapturePriority('');
+    setOpen(true);
+  };
+
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
       if (event.altKey && event.key.toLowerCase() === 'n') {
         event.preventDefault();
-        setMode('todo');
-        setOpen(true);
+        openModal();
       }
     };
     window.addEventListener('keydown', shortcut);
@@ -62,14 +80,24 @@ export function QuickCapture() {
     }
   };
 
+  const activeProjects = projects.filter(p => p.status !== 'done');
+  const todayIso = toIsoDate(new Date());
+  const tomorrowIso = toIsoDate(addDays(new Date(), 1));
+  const resolvedScope: TodoScope = captureWhen === 'inbox' ? 'inbox' : 'day';
+  const resolvedScopeKey =
+    captureWhen === 'inbox'
+      ? 'inbox'
+      : captureWhen === 'today'
+        ? todayIso
+        : captureWhen === 'tomorrow'
+          ? tomorrowIso
+          : customDate || todayIso;
+
   return (
     <>
       <button
         type="button"
-        onClick={() => {
-          setMode('todo');
-          setOpen(true);
-        }}
+        onClick={openModal}
         title="빠른 메모 (Alt+N)"
         className={`fixed ${path.startsWith('/week/') ? 'bottom-40' : 'bottom-24'} right-4 z-30 flex items-center gap-1 rounded-full bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg lg:bottom-6`}
       >
@@ -109,11 +137,87 @@ export function QuickCapture() {
 
           {mode === 'todo' ? (
             <>
-              <p className="mb-4 text-sm text-zinc-500">떠오른 생각을 수집함에 담고, 나중에 날짜와 목표를 정하세요.</p>
+              <p className="mb-3 text-sm text-zinc-500">
+                수집함에 빠르게 담거나, 오늘·내일·프로젝트를 바로 지정할 수 있어요.
+              </p>
+              <div className="mb-3 space-y-2">
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="실행 시점">
+                  {(
+                    [
+                      { id: 'inbox', label: '수집함' },
+                      { id: 'today', label: '오늘' },
+                      { id: 'tomorrow', label: '내일' },
+                      { id: 'date', label: '날짜 선택' },
+                    ] as const
+                  ).map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCaptureWhen(opt.id)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        captureWhen === opt.id
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                          : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {captureWhen === 'date' && (
+                  <input
+                    type="date"
+                    aria-label="실행 날짜"
+                    value={customDate}
+                    onChange={e => setCustomDate(e.target.value)}
+                    className={fieldClass}
+                  />
+                )}
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <select
+                    aria-label="빠른 입력 프로젝트"
+                    value={captureProjectId}
+                    onChange={e => setCaptureProjectId(e.target.value)}
+                    className={fieldClass}
+                  >
+                    <option value="">프로젝트 미지정</option>
+                    {activeProjects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        📁 {project.title}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="빠른 입력 우선순위"
+                    value={capturePriority}
+                    onChange={e => setCapturePriority(e.target.value)}
+                    className={fieldClass}
+                  >
+                    <option value="">우선순위 미지정</option>
+                    <option value="1">P1 높음</option>
+                    <option value="2">P2 보통</option>
+                    <option value="3">P3 낮음</option>
+                  </select>
+                </div>
+              </div>
+
               <TodoCreateInput
-                submitLabel="수집함에 저장"
+                submitLabel={captureWhen === 'inbox' ? '수집함에 저장' : '할 일 저장'}
                 onCreate={(title, key) =>
-                  createTodo({ title, scope: 'inbox', scopeKey: 'inbox', status: 'pending', order: 0 }, key)
+                  createTodo(
+                    {
+                      title,
+                      scope: resolvedScope,
+                      scopeKey: resolvedScopeKey,
+                      status: 'pending',
+                      order: 0,
+                      projectId: captureProjectId || null,
+                      priority: capturePriority ? (Number(capturePriority) as TodoPriority) : null,
+                    },
+                    key,
+                  )
                 }
                 onDone={() => setOpen(false)}
                 className={fieldClass}

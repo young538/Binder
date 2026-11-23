@@ -72,6 +72,17 @@ function createMockApiClient(): GoogleCalendarApiClient {
       updated: '2026-11-20T09:10:00.000Z',
     })),
     deleteEvent: vi.fn(async () => undefined),
+    listTaskLists: vi.fn(async () => []),
+    listTasks: vi.fn(async () => []),
+    createTask: vi.fn(async (_tok: string, _listId: string, body: { title: string }) => ({
+      id: `task-${body.title}`,
+      updated: '2026-11-20T09:05:00.000Z',
+    })),
+    updateTask: vi.fn(async (_tok: string, _listId: string, taskId: string) => ({
+      id: taskId,
+      updated: '2026-11-20T09:10:00.000Z',
+    })),
+    deleteTask: vi.fn(async () => undefined),
     revokeToken: vi.fn(async () => undefined),
   } as unknown as GoogleCalendarApiClient;
 }

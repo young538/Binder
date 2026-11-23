@@ -54,6 +54,9 @@ export const toggleDone = async (id: string): Promise<void> => {
   notifyMutation('todos');
 };
 
+export const listAllTodos = (): Promise<Todo[]> =>
+  http.get<Todo[]>('/api/todos');
+
 export const listByScope = (scope: TodoScope, scopeKey: string): Promise<Todo[]> =>
   http.get<Todo[]>(
     `/api/todos?scope=${encodeURIComponent(scope)}&scopeKey=${encodeURIComponent(scopeKey)}`

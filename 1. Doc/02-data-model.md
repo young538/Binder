@@ -148,4 +148,6 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 0006 마이그레이션은 `todo_create_requests`(user_id+request_key 복합 PK, 본문 해시·최초 응답·생성 시각)와 `todo_trash`(TODO ID PK, 소유자·스냅샷·만료 시각)를 추가합니다. 요청 기록은 삭제 이후의 지연 재요청도 새 항목을 만들지 않도록 유지합니다. 휴지통은 30초 후 복원이 차단되고 다음 TODO 삭제 시 만료 행을 정리합니다.
 
+0012 마이그레이션은 `todos`에 Google Tasks 동기화 식별자(`google_task_list_id`, `google_task_id`, `google_task_updated_at` 및 `(user_id, google_task_list_id, google_task_id)` 인덱스)를, `google_calendar_connections`에 Google Tasks 설정·매핑 열(`tasks_sync_enabled`, `tasks_auto_push`, `tasks_selected_list_ids`, `tasks_default_list_id`, `tasks_list_meta`, `tasks_project_map`, `tasks_last_synced_at`, `tasks_last_sync_error`)을 추가합니다. `todos.google_task_*` 열은 서버 동기화 전용이므로 일반 TODO API 입력으로는 직접 수정할 수 없으며 JSON 백업에서는 형식 검증 후 보존합니다.
+
 운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections` 역시 `SESSION_SECRET` 기반 AES-256-GCM 암호화 토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않으며, CLI 계정 삭제 시 함께 제거합니다.
