@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AutosaveQueue } from '@/lib/autosave/queue';
 import { useAutosaveRecord } from '@/lib/autosave/useAutosaveRecord';
+import { notifyMutation } from '@/lib/repo/events';
 import { useBinder } from '@/store';
 
 const deferred = () => {
@@ -119,6 +120,73 @@ describe('autosave editor lifecycle', () => {
     expect(result.current.loaded).toBe(false);
     act(() => result.current.patch('must not write'));
     expect(save).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('reloads on matching dirty notifications, merges pending drafts, and discards stale reloads after user edits', async () => {
+    let serverData: Record<string, string> = { good: 'initial', bad: '' };
+    let deferredLoad: ReturnType<typeof deferred> | null = null;
+    const load = vi.fn(async () => {
+      if (deferredLoad) {
+        const pending = deferredLoad;
+        deferredLoad = null;
+        await pending.promise;
+      }
+      return { ...serverData };
+    });
+    const save = vi.fn().mockResolvedValue(undefined);
+    const merge = (prev: Record<string, string>, next: Record<string, string>) => ({ ...prev, ...next });
+
+    const { result, unmount } = renderHook(() =>
+      useAutosaveRecord<Record<string, string>>({
+        recordKey: 'retrospective:daily:2026-11-23',
+        initial: {},
+        load,
+        save,
+        merge,
+        dirty: ['retrospectives'],
+      }),
+    );
+
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.value).toEqual({ good: 'initial', bad: '' });
+
+    // External save updates the editor without page reload
+    serverData = { good: 'shutdown good', bad: 'shutdown bad' };
+    act(() => notifyMutation('retrospectives'));
+    await waitFor(() => expect(result.current.value).toEqual({ good: 'shutdown good', bad: 'shutdown bad' }));
+
+    // Unrelated resource mutations do not reload
+    const callsAfterMatch = load.mock.calls.length;
+    act(() => notifyMutation('todos'));
+    await Promise.resolve();
+    expect(load).toHaveBeenCalledTimes(callsAfterMatch);
+
+    // Unsaved pending local edits survive external reloads
+    act(() => result.current.patch({ freeText: 'unsaved memo' }));
+    serverData = { good: 'shutdown good', bad: 'updated bad' };
+    act(() => notifyMutation('retrospectives'));
+    await waitFor(() =>
+      expect(result.current.value).toEqual({
+        good: 'shutdown good',
+        bad: 'updated bad',
+        freeText: 'unsaved memo',
+      }),
+    );
+
+    // An in-flight background reload started before user typing must not clobber newer keystrokes
+    const inFlight = deferred();
+    deferredLoad = inFlight;
+    serverData = { good: 'stale external', bad: 'updated bad' };
+    act(() => notifyMutation('retrospectives'));
+    act(() => result.current.patch({ good: 'live typing' }));
+    await act(async () => {
+      inFlight.resolve();
+      await inFlight.promise;
+      await Promise.resolve();
+    });
+    expect(result.current.value.good).toBe('live typing');
+
     unmount();
   });
 });

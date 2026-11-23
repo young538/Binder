@@ -87,13 +87,27 @@ for (const width of [1280, 390]) {
     await shutdownDialog.getByRole('button', { name: '내일로', exact: true }).click();
     await expect(shutdownDialog.getByRole('tab', { name: /2\. 남은 할 일 \(0\)/ })).toBeVisible();
     await shutdownDialog.getByRole('button', { name: '다음 단계 →' }).click();
+    await shutdownDialog.getByRole('button', { name: '🙂', exact: true }).click();
+    await shutdownDialog.getByLabel('✓ 오늘 좋았던 것').fill('마감에서 남긴 좋았던 일');
+    await shutdownDialog.getByLabel('✗ 아쉬운 것').fill('마감에서 남긴 아쉬운 점');
+    await shutdownDialog.getByLabel('→ 내일 1가지').fill('마감에서 정한 내일 행동');
     await shutdownDialog.getByRole('button', { name: '하루 마감 완료' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(shutdownBanner).toContainText('하루 마감 완료');
 
+    const dailyRecord = page.locator('#daily-record');
+    await expect(dailyRecord.getByRole('button', { name: '🙂', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dailyRecord.getByLabel('✓ 좋았던 것')).toHaveValue('마감에서 남긴 좋았던 일');
+    await expect(dailyRecord.getByLabel('✗ 아쉬운 것')).toHaveValue('마감에서 남긴 아쉬운 점');
+    await expect(dailyRecord.getByLabel('→ 내일/다음주 1가지')).toHaveValue('마감에서 정한 내일 행동');
+
     await page.reload();
     await expect(page.getByLabel('수면 시간', { exact: true })).toHaveValue('7.5');
     await expect(page.getByRole('button', { name: '에너지 4', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dailyRecord.getByRole('button', { name: '🙂', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dailyRecord.getByLabel('✓ 좋았던 것')).toHaveValue('마감에서 남긴 좋았던 일');
+    await expect(dailyRecord.getByLabel('✗ 아쉬운 것')).toHaveValue('마감에서 남긴 아쉬운 점');
+    await expect(dailyRecord.getByLabel('→ 내일/다음주 1가지')).toHaveValue('마감에서 정한 내일 행동');
 
     // 4) Retro navigation + monthly/yearly + promote to principle
     await page.goto('/retrospective/week/2026-W47');

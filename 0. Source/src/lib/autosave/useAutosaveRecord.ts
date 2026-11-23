@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBinder } from '@/store';
 import { useLatest } from '@/lib/hooks/useLatest';
+import { onDirty, type MutationResource } from '@/lib/repo/events';
 import { AutosaveQueue, SaveStatus } from './queue';
 
 const queues = new Map<string, object>();
@@ -13,21 +14,24 @@ interface Options<T> {
   load: () => Promise<T>;
   save: (patch: T) => Promise<unknown>;
   merge: (previous: T, patch: T) => T;
+  dirty?: MutationResource[];
 }
 
 export function useAutosaveRecord<T>(options: Options<T>) {
   const userId = useBinder(state => state.me?.userId);
   const key = userId ? `binder:draft:${userId}:${options.recordKey}` : '';
+  const dirtyKey = options.dirty?.join(',') ?? '';
   const [state, setState] = useState({ key: '', value: options.initial, loaded: false, loadError: false });
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [attempt, setAttempt] = useState(0);
   const currentOptions = useLatest(options);
   const controller = useRef<{ key: string; queue: AutosaveQueue<T> } | undefined>(undefined);
+  const versionRef = useRef(0);
 
   useEffect(() => {
     if (!key) return;
     let cancelled = false;
-    const { initial, load, save, merge } = currentOptions.current;
+    const { save, merge } = currentOptions.current;
     let queue = queues.get(key) as AutosaveQueue<T> | undefined;
     if (!queue) {
       queue = new AutosaveQueue(save, merge, draft => {
@@ -47,20 +51,47 @@ export function useAutosaveRecord<T>(options: Options<T>) {
     const unsubscribe = activeQueue.subscribe(() => {
       if (!cancelled) setStatus(activeQueue.status);
     });
-    void (async () => {
-      // A remounted editor must read after the previous editor's pending write.
-      await activeQueue.flush();
-      if (cancelled) return;
+
+    const loadRecord = async (flushFirst: boolean) => {
+      const version = ++versionRef.current;
+      if (flushFirst) {
+        // A remounted editor must read after the previous editor's pending write.
+        await activeQueue.flush();
+        if (cancelled || version !== versionRef.current) return;
+      }
       setStatus(activeQueue.status);
       try {
-        const loaded = await load();
-        if (cancelled) return;
+        const loaded = await currentOptions.current.load();
+        if (cancelled || version !== versionRef.current) return;
         const draft = activeQueue.draft();
-        setState({ key, value: draft === undefined ? loaded : merge(loaded, draft), loaded: true, loadError: false });
+        setState({
+          key,
+          value: draft === undefined ? loaded : currentOptions.current.merge(loaded, draft),
+          loaded: true,
+          loadError: false,
+        });
       } catch {
-        if (!cancelled) setState({ key, value: initial, loaded: false, loadError: true });
+        if (!cancelled && version === versionRef.current) {
+          setState(previous =>
+            previous.key === key && previous.loaded
+              ? previous
+              : { key, value: currentOptions.current.initial, loaded: false, loadError: true },
+          );
+        }
       }
-    })();
+    };
+
+    void loadRecord(true);
+    const dirtyNames = dirtyKey ? dirtyKey.split(',') : [];
+    const unsubscribeDirty =
+      dirtyNames.length > 0
+        ? onDirty(resource => {
+            if (dirtyNames.includes(resource ?? '')) {
+              void loadRecord(false);
+            }
+          })
+        : () => {};
+
     const flush = () => { void activeQueue.flush(); };
     const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -75,13 +106,14 @@ export function useAutosaveRecord<T>(options: Options<T>) {
     return () => {
       cancelled = true;
       unsubscribe();
+      unsubscribeDirty();
       window.removeEventListener('pagehide', flush);
       window.removeEventListener('beforeunload', onBeforeUnload);
       document.removeEventListener('visibilitychange', onVisibility);
       // Route changes and closing sheets dispatch their final edit immediately.
       flush();
     };
-  }, [key, attempt, currentOptions]);
+  }, [key, attempt, dirtyKey, currentOptions]);
 
   const loaded = state.key === key && state.loaded;
   return {
@@ -91,6 +123,7 @@ export function useAutosaveRecord<T>(options: Options<T>) {
     status,
     patch: (patch: T) => {
       if (!loaded || controller.current?.key !== key) return;
+      versionRef.current++;
       const merge = currentOptions.current.merge;
       setState(previous => ({ ...previous, value: merge(previous.value, patch) }));
       controller.current.queue.enqueue(patch);

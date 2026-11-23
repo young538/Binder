@@ -19,6 +19,7 @@ export const useRetrospectiveEditor = (type: RetroType, dateOrWeek: string) =>
     load: async () => (await getRetrospective(type, dateOrWeek)) ?? { template: {} },
     save: patch => upsertRetrospective(type, dateOrWeek, patch),
     merge: mergeRetroPatch,
+    dirty: ['retrospectives'],
   });
 
 export const useFocusEditor = (scope: FocusScope, scopeKey: string) =>
@@ -28,4 +29,5 @@ export const useFocusEditor = (scope: FocusScope, scopeKey: string) =>
     load: async () => (await getFocus(scope, scopeKey))?.text ?? '',
     save: text => upsertFocus(scope, scopeKey, text),
     merge: (_previous, next) => next,
+    dirty: ['focusNotes'],
   });
