@@ -29,7 +29,7 @@ SQLite는 서버 파일에 저장하며 WAL 모드입니다. 식별자는 ULID �
 | weekly_templates | name, blocks(JSON), 시각 | 요일별 계획 시간표 스냅샷 |
 | retrospectives | type, dateOrWeek, rating, template, freeText, 시각 | 일·주·월·연 회고, 일일 독서 |
 | time_blocks | date, startMin, endMin, text, kind, categoryId, goalId, projectId, todoId, 시각 | 일일·주간 시간표, 회고 통계 |
-| settings | userId, firstDayOfWeek, gridMinutes, dayStartHour, dayEndHour, theme | 공통 표시 설정 |
+| settings | userId, firstDayOfWeek, gridMinutes, dayStartHour, dayEndHour, theme, financeCycleStartDay | 공통 표시·가계부 기준일 설정 |
 | daily_checkins | date, sleepHours, energy, stress, mood, 시각 | 일일 10초 컨디션 바, 월·연 회고 평균 |
 | metrics | name, unit, direction, targetValue, goalId, color, order, 시각 | 상태 지표 트래커, 검색 |
 | metric_entries | metricId, date, value, note, 시각 | 상태 지표 스파크라인·델타 |
@@ -153,5 +153,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 0013 마이그레이션은 가계부 테이블 `finance_transactions`(날짜, 시간, `expense`/`income`/`transfer` 구분, 금액·통화, 대·소분류, 가맹점, 결제수단, 합계 제외 `excluded`, 출처 `source`, 중복 방지 `external_hash`, `subscription_id` 연결)와 `finance_budgets`(`default` 기본 예산 및 `YYYY-MM` 월별 총·카테고리 예산)를 추가합니다. `external_hash`는 서버가 생성·검증하는 중복 방지 키이므로 일반 거래 생성/수정 API에서는 직접 입력을 차단합니다. 금액(`amount`)은 0이 아닌 실수이며, `expense`/`income`의 음수는 결제 취소·환불 차감을, `transfer`의 양수/음수는 이체 입금/이체 출금 방향을 나타냅니다.
 
 0014 마이그레이션은 Gmail 예약 에이전트 외부 자동 가져오기 설정을 저장하는 `finance_automation_configs`(SHA-256 해시 토큰 `token_hash` 및 접두어 `token_prefix`, `enabled`, `SESSION_SECRET` AES-256-GCM 암호화 고정 엑셀 비밀번호 `excel_password_enc`, 최근 실행 상태·파일명·요약·오류)를 추가합니다.
+
+0015 마이그레이션은 `settings` 테이블에 `finance_cycle_start_day`(기본 `1`, 범위 `1~31`)를 추가해 월급날 기준 가계부·대시보드·구독 고정비·월간 회고 주기를 사용자별로 설정할 수 있게 합니다(누락된 구버전 JSON 백업은 기본 `1`로 복원).
 
 운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections`와 `finance_automation_configs` 역시 `SESSION_SECRET` 기반 암호화 비밀번호·토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않습니다(`google_calendar_connections`는 CLI 계정 삭제 시 함께 제거합니다).

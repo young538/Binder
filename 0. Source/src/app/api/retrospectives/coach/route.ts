@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { endOfMonth, parseISO } from 'date-fns';
-import { prevMonthKey, summarizeMonthFinance } from '@/lib/finance';
+import { getFinanceCycleRange, summarizeMonthFinance } from '@/lib/finance';
 import { buildRetroCoachSummary } from '@/lib/retroCoach';
 import { enrichRetroCoach, getPublicAiCoachStatus } from '@/lib/server/aiCoach';
 import { authenticated } from '@/lib/server/http';
@@ -59,18 +59,20 @@ export const POST = authenticated(async (session, req: Request) => {
   const financeSummary =
     body.mode === 'monthly'
       ? (() => {
-          const prevPeriod = prevMonthKey(body.period);
+          const cycleStartDay = repositories.settings.get().financeCycleStartDay;
+          const range = getFinanceCycleRange(body.period, cycleStartDay);
           const txs = repositories.finance.listTransactions({
-            startDate: `${prevPeriod}-01`,
-            endDate,
+            startDate: range.prevStartDate,
+            endDate: range.endDate,
           });
           const budgets = repositories.finance.listBudgets(body.period);
           return summarizeMonthFinance(
-            txs.filter(t => t.date.startsWith(body.period)),
+            txs.filter(t => t.date >= range.startDate && t.date <= range.endDate),
             budgets,
-            txs.filter(t => t.date.startsWith(prevPeriod)),
+            txs.filter(t => t.date >= range.prevStartDate && t.date <= range.prevEndDate),
             body.period,
-            endDate,
+            range.endDate,
+            cycleStartDay,
           );
         })()
       : null;

@@ -15,7 +15,7 @@ export class SettingsRepository {
     if (!row) return { ...DEFAULT_SETTINGS };
     const { userId, ...values } = row;
     void userId;
-    return values as Settings;
+    return { ...DEFAULT_SETTINGS, ...values } as Settings;
   }
 
   update(patch: Partial<Settings>): Settings {

@@ -210,7 +210,7 @@ const rules: Record<MutationKind, Rules> = {
     },
     required: [],
   },
-  settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark') }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
+  settings: { fields: { firstDayOfWeek: oneOf('mon', 'sun'), gridMinutes: oneOf(30, 60), dayStartHour: integer(0, 23), dayEndHour: integer(1, 24), theme: oneOf('light', 'dark'), financeCycleStartDay: integer(1, 31) }, required: ['firstDayOfWeek', 'gridMinutes', 'dayStartHour', 'dayEndHour', 'theme'] },
   login: { fields: { username: identifier, password: identifier }, required: ['username', 'password'] },
   changePassword: { fields: { currentPassword: identifier, newPassword: value => typeof value === 'string' && value.length >= 8 && value.length <= 128 }, required: ['currentPassword', 'newPassword'] },
   retroCoach: { fields: { mode: oneOf('weekly', 'monthly'), period: identifier, provider: oneOf('auto', 'openai', 'gemini', 'local') }, required: ['mode', 'period'] },

@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `finance_cycle_start_day` integer DEFAULT 1 NOT NULL;

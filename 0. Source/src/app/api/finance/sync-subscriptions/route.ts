@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getFinanceCycleKeyForDate } from '@/lib/finance';
 import { authenticated } from '@/lib/server/http';
 import { getUserRepositories } from '@/lib/server/repos';
 import { isMonth } from '@/lib/server/validation';
 
-function currentSeoulMonth(): string {
+function currentSeoulDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: '2-digit',
+    day: '2-digit',
   }).format(new Date());
 }
 
@@ -20,15 +22,17 @@ export const POST = authenticated(async (session, req: Request) => {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  const repositories = getUserRepositories(session.userId);
+  const cycleStartDay = repositories.settings.get().financeCycleStartDay;
+
   const yyyymm =
     typeof body.yyyymm === 'string' && body.yyyymm.trim()
       ? body.yyyymm.trim()
-      : currentSeoulMonth();
+      : getFinanceCycleKeyForDate(currentSeoulDate(), cycleStartDay);
   if (!isMonth(yyyymm)) {
     return NextResponse.json({ error: 'Invalid yyyymm' }, { status: 400 });
   }
 
-  const repositories = getUserRepositories(session.userId);
-  const res = repositories.finance.syncSubscriptionsForMonth(yyyymm);
+  const res = repositories.finance.syncSubscriptionsForMonth(yyyymm, cycleStartDay);
   return NextResponse.json({ yyyymm, ...res });
 });

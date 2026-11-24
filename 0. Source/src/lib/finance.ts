@@ -1,4 +1,13 @@
-import { endOfMonth, format, getDaysInMonth, parseISO, subMonths } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  endOfMonth,
+  format,
+  getDaysInMonth,
+  parseISO,
+  subDays,
+  subMonths,
+} from 'date-fns';
 import { formatCurrency, type CurrencyTotal } from './subscriptions';
 import type {
   FinanceBudget,
@@ -61,8 +70,23 @@ export interface FinanceDailyTotal {
   amount: number;
 }
 
+export interface FinanceCycleRange {
+  yyyymm: string;
+  cycleStartDay: number;
+  startDate: string;
+  endDate: string;
+  prevYyyymm: string;
+  prevStartDate: string;
+  prevEndDate: string;
+  daysCount: number;
+  shortLabel: string;
+}
+
 export interface FinanceMonthlySummary {
   yyyymm: string;
+  cycleStartDay: number;
+  startDate: string;
+  endDate: string;
   totalExpense: number;
   totalIncome: number;
   netSavings: number;
@@ -123,6 +147,67 @@ export function nextMonthKey(yyyymm: string): string {
   const m = Number(mStr);
   if (m === 12) return `${y + 1}-01`;
   return `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+export function normalizeFinanceCycleStartDay(day?: number | null): number {
+  if (typeof day !== 'number' || !Number.isFinite(day)) return 1;
+  return Math.max(1, Math.min(31, Math.trunc(day)));
+}
+
+function clampDayInMonth(yyyymm: string, day: number): string {
+  const daysInMonth = getDaysInMonth(parseISO(`${yyyymm}-01`));
+  const clamped = Math.max(1, Math.min(daysInMonth, day));
+  return `${yyyymm}-${String(clamped).padStart(2, '0')}`;
+}
+
+export function formatShortCycleRange(startDate: string, endDate: string): string {
+  return `${Number(startDate.slice(5, 7))}.${startDate.slice(8, 10)} ~ ${Number(endDate.slice(5, 7))}.${endDate.slice(8, 10)}`;
+}
+
+export function getFinanceCycleRange(yyyymm: string, cycleStartDay = 1): FinanceCycleRange {
+  const startDay = normalizeFinanceCycleStartDay(cycleStartDay);
+  const prevYyyymm = prevMonthKey(yyyymm);
+  let startDate: string;
+  let endDate: string;
+  let prevStartDate: string;
+  let prevEndDate: string;
+
+  if (startDay <= 1) {
+    startDate = `${yyyymm}-01`;
+    endDate = monthEndDate(yyyymm);
+    prevStartDate = `${prevYyyymm}-01`;
+    prevEndDate = monthEndDate(prevYyyymm);
+  } else {
+    startDate = clampDayInMonth(prevYyyymm, startDay);
+    const nextStartDate = clampDayInMonth(yyyymm, startDay);
+    endDate = format(subDays(parseISO(nextStartDate), 1), 'yyyy-MM-dd');
+    const prevPrevYyyymm = prevMonthKey(prevYyyymm);
+    prevStartDate = clampDayInMonth(prevPrevYyyymm, startDay);
+    prevEndDate = format(subDays(parseISO(startDate), 1), 'yyyy-MM-dd');
+  }
+
+  const daysCount = differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
+  const shortLabel = formatShortCycleRange(startDate, endDate);
+
+  return {
+    yyyymm,
+    cycleStartDay: startDay,
+    startDate,
+    endDate,
+    prevYyyymm,
+    prevStartDate,
+    prevEndDate,
+    daysCount,
+    shortLabel,
+  };
+}
+
+export function getFinanceCycleKeyForDate(dateIso: string, cycleStartDay = 1): string {
+  const startDay = normalizeFinanceCycleStartDay(cycleStartDay);
+  const calMonth = dateIso.slice(0, 7);
+  if (startDay <= 1) return calMonth;
+  const thisMonthStart = clampDayInMonth(calMonth, startDay);
+  return dateIso >= thisMonthStart ? nextMonthKey(calMonth) : calMonth;
 }
 
 export function formatFinanceAmount(amount: number, currency: SubscriptionCurrency = 'KRW'): string {
@@ -201,10 +286,10 @@ export function summarizeMonthFinance(
   prevMonthTransactions: FinanceTransaction[],
   yyyymm: string,
   todayIso: string,
+  cycleStartDay = 1,
 ): FinanceMonthlySummary {
-  const monthStart = `${yyyymm}-01`;
-  const monthEndDate = endOfMonth(parseISO(monthStart));
-  const daysInMonth = getDaysInMonth(monthEndDate);
+  const range = getFinanceCycleRange(yyyymm, cycleStartDay);
+  const rangeStartObj = parseISO(range.startDate);
 
   let totalExpense = 0;
   let totalIncome = 0;
@@ -256,9 +341,8 @@ export function summarizeMonthFinance(
     totalBudget !== null && totalBudget > 0 ? Math.max(0, Math.round((totalExpense / totalBudget) * 100)) : null;
 
   let dailyAllowance: number | null = null;
-  if (remainingBudget !== null && todayIso.slice(0, 7) === yyyymm) {
-    const todayDay = Math.max(1, Math.min(daysInMonth, Number(todayIso.slice(8, 10))));
-    const daysRemaining = Math.max(1, daysInMonth - todayDay + 1);
+  if (remainingBudget !== null && todayIso >= range.startDate && todayIso <= range.endDate) {
+    const daysRemaining = Math.max(1, differenceInCalendarDays(parseISO(range.endDate), parseISO(todayIso)) + 1);
     dailyAllowance = Math.round(remainingBudget / daysRemaining);
   }
 
@@ -282,12 +366,11 @@ export function summarizeMonthFinance(
     })
     .sort((a, b) => b.amount - a.amount || (b.budget ?? 0) - (a.budget ?? 0) || a.category.localeCompare(b.category));
 
-  const byDay: FinanceDailyTotal[] = Array.from({ length: daysInMonth }, (_, idx) => {
-    const day = idx + 1;
-    const date = `${yyyymm}-${String(day).padStart(2, '0')}`;
+  const byDay: FinanceDailyTotal[] = Array.from({ length: range.daysCount }, (_, idx) => {
+    const date = format(addDays(rangeStartObj, idx), 'yyyy-MM-dd');
     return {
       date,
-      day,
+      day: Number(date.slice(8, 10)),
       amount: dayTotals.get(date) ?? 0,
     };
   });
@@ -301,6 +384,9 @@ export function summarizeMonthFinance(
 
   return {
     yyyymm,
+    cycleStartDay: range.cycleStartDay,
+    startDate: range.startDate,
+    endDate: range.endDate,
     totalExpense,
     totalIncome,
     netSavings: totalIncome - totalExpense,

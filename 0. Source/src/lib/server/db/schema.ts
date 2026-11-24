@@ -303,6 +303,7 @@ export const settings = sqliteTable('settings', {
   dayStartHour: integer('day_start_hour').notNull(),
   dayEndHour: integer('day_end_hour').notNull(),
   theme: text('theme').notNull(), // 'light' | 'dark'
+  financeCycleStartDay: integer('finance_cycle_start_day').notNull().default(1),
 });
 
 

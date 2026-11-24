@@ -357,6 +357,15 @@ describe('mutation request boundary', () => {
     const okByTitle = await linkBookDailyRoute(request({ matchTitle: '테스트 책' }), ctx(createdBook.id));
     expect(okByTitle.status).toBe(200);
   });
+
+  it('validates settings financeCycleStartDay range 1..31 cleanly', async () => {
+    for (const badDay of [0, -1, 32, 1.5, '25']) {
+      expect((await patchSettingsRoute(request({ financeCycleStartDay: badDay }))).status).toBe(400);
+    }
+    const okRes = await patchSettingsRoute(request({ financeCycleStartDay: 25 }));
+    expect(okRes.status).toBe(200);
+    expect(await okRes.json()).toMatchObject({ financeCycleStartDay: 25 });
+  });
 });
 
 describe('backup validation', () => {

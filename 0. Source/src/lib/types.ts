@@ -178,6 +178,7 @@ export interface Settings {
   dayStartHour: number;
   dayEndHour: number;
   theme: 'light' | 'dark';
+  financeCycleStartDay: number;
 }
 
 export interface AnnualGoal {

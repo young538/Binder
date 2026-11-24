@@ -7,8 +7,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   formatFinanceAmount,
   formatFinanceTransactionAmount,
+  getFinanceCycleKeyForDate,
+  getFinanceCycleRange,
   getFinanceTransactionKindLabel,
   nextMonthKey,
+  normalizeFinanceCycleStartDay,
   prevMonthKey,
   resolveEffectiveBudgets,
   summarizeMonthFinance,
@@ -336,5 +339,149 @@ describe('finance parser, repository, budgets & Life OS integration', () => {
     expect(reposB.finance.listBudgets()).toHaveLength(0);
     expect(new SearchRepository(db, 'user-b').search('김밥천국').items).toHaveLength(0);
     expect(fixedNow.toISOString()).toBe('2026-11-23T09:00:00.000Z');
+  });
+
+  it('calculates payday cycle ranges, dailyAllowance, subscription placement, and dashboard/coach sync cleanly', async () => {
+    expect(normalizeFinanceCycleStartDay(undefined)).toBe(1);
+    expect(normalizeFinanceCycleStartDay(0)).toBe(1);
+    expect(normalizeFinanceCycleStartDay(99)).toBe(31);
+    expect(normalizeFinanceCycleStartDay(25)).toBe(25);
+
+    const novRange = getFinanceCycleRange('2026-11', 25);
+    expect(novRange).toEqual({
+      yyyymm: '2026-11',
+      cycleStartDay: 25,
+      startDate: '2026-10-25',
+      endDate: '2026-11-24',
+      prevYyyymm: '2026-10',
+      prevStartDate: '2026-09-25',
+      prevEndDate: '2026-10-24',
+      daysCount: 31,
+      shortLabel: '10.25 ~ 11.24',
+    });
+    expect(getFinanceCycleRange('2026-12', 25)).toMatchObject({
+      startDate: '2026-11-25',
+      endDate: '2026-12-24',
+      daysCount: 30,
+    });
+    expect(getFinanceCycleRange('2027-01', 25)).toMatchObject({
+      startDate: '2026-12-25',
+      endDate: '2027-01-24',
+      daysCount: 31,
+    });
+
+    // Month-end clamping (31st across February) stays contiguous with zero gaps
+    const febRange = getFinanceCycleRange('2026-02', 31);
+    const marRange = getFinanceCycleRange('2026-03', 31);
+    expect(febRange).toMatchObject({ startDate: '2026-01-31', endDate: '2026-02-27' });
+    expect(marRange).toMatchObject({ startDate: '2026-02-28', endDate: '2026-03-30' });
+
+    expect(getFinanceCycleKeyForDate('2026-11-24', 25)).toBe('2026-11');
+    expect(getFinanceCycleKeyForDate('2026-11-25', 25)).toBe('2026-12');
+    expect(getFinanceCycleKeyForDate('2026-12-26', 25)).toBe('2027-01');
+    expect(getFinanceCycleKeyForDate('2026-02-28', 31)).toBe('2026-03');
+
+    const db = connection.get();
+    const repos = new UserRepositories(db, 'payday-user');
+    repos.settings.update({ financeCycleStartDay: 25 });
+
+    // Previous cycle expense (2026-10-24, outside 2026-11 cycle) vs current cycle (2026-10-25 & 2026-11-10)
+    repos.finance.createTransaction({
+      date: '2026-10-24',
+      time: null,
+      kind: 'expense',
+      amount: 10000,
+      currency: 'KRW',
+      category: '식비',
+      subCategory: null,
+      merchant: '지난주기 저녁',
+      paymentMethod: null,
+      note: null,
+      excluded: false,
+      source: 'manual',
+      subscriptionId: null,
+    });
+    repos.finance.createTransaction({
+      date: '2026-10-25',
+      time: null,
+      kind: 'expense',
+      amount: 20000,
+      currency: 'KRW',
+      category: '식비',
+      subCategory: null,
+      merchant: '월급날 식사',
+      paymentMethod: null,
+      note: null,
+      excluded: false,
+      source: 'manual',
+      subscriptionId: null,
+    });
+    repos.finance.createTransaction({
+      date: '2026-11-10',
+      time: null,
+      kind: 'expense',
+      amount: 30000,
+      currency: 'KRW',
+      category: '생활',
+      subCategory: null,
+      merchant: '생필품',
+      paymentMethod: null,
+      note: null,
+      excluded: false,
+      source: 'manual',
+      subscriptionId: null,
+    });
+    repos.finance.upsertBudget({ yyyymm: 'default', category: '__total__', amount: 500000 });
+
+    await repos.subscriptions.create({
+      name: '월말 구독',
+      amount: 10000,
+      currency: 'KRW',
+      billingCycle: 'monthly',
+      status: 'active',
+      billingDay: 28,
+      autoRenew: true,
+      order: 0,
+    });
+    await repos.subscriptions.create({
+      name: '월초 구독',
+      amount: 5000,
+      currency: 'KRW',
+      billingCycle: 'monthly',
+      status: 'active',
+      billingDay: 5,
+      autoRenew: true,
+      order: 1,
+    });
+
+    const synced = repos.finance.syncSubscriptionsForMonth('2026-11', 25);
+    expect(synced).toEqual({ created: 2, skipped: 0 });
+    const allTxs = repos.finance.listTransactions();
+    expect(allTxs.find(t => t.merchant === '월말 구독')?.date).toBe('2026-10-28');
+    expect(allTxs.find(t => t.merchant === '월초 구독')?.date).toBe('2026-11-05');
+
+    const cycleTxs = allTxs.filter(t => t.date >= novRange.startDate && t.date <= novRange.endDate);
+    const prevTxs = allTxs.filter(t => t.date >= novRange.prevStartDate && t.date <= novRange.prevEndDate);
+    const cycleSummary = summarizeMonthFinance(cycleTxs, repos.finance.listBudgets('2026-11'), prevTxs, '2026-11', '2026-11-20', 25);
+    expect(cycleSummary.cycleStartDay).toBe(25);
+    expect(cycleSummary.startDate).toBe('2026-10-25');
+    expect(cycleSummary.endDate).toBe('2026-11-24');
+    expect(cycleSummary.totalExpense).toBe(65000);
+    expect(cycleSummary.prevMonthExpense).toBe(10000);
+    expect(cycleSummary.dailyAllowance).toBe(Math.round((500000 - 65000) / 5)); // 11/20..11/24 = 5 days
+    expect(cycleSummary.byDay).toHaveLength(31);
+    expect(cycleSummary.byDay[0].date).toBe('2026-10-25');
+    expect(cycleSummary.byDay[30].date).toBe('2026-11-24');
+
+    const dash = repos.dashboard.snapshot('2026-11-24');
+    expect(dash.monthFinance.yyyymm).toBe('2026-11');
+    expect(dash.monthFinance.totalExpense).toBe(65000);
+    expect(dash.monthFinance.dailyAllowance).toBe(500000 - 65000);
+
+    const nextDash = repos.dashboard.snapshot('2026-11-25');
+    expect(nextDash.monthFinance.yyyymm).toBe('2026-12');
+    expect(nextDash.monthFinance.startDate).toBe('2026-11-25');
+    expect(nextDash.monthFinance.endDate).toBe('2026-12-24');
+    expect(nextDash.monthFinance.totalExpense).toBe(0);
   });
 });

@@ -8,7 +8,12 @@ import type {
   DashboardTodayEvent,
   DashboardUpcomingItem,
 } from '@/lib/dashboard';
-import { monthEndDate, prevMonthKey, summarizeMonthFinance } from '@/lib/finance';
+import {
+  getFinanceCycleKeyForDate,
+  getFinanceCycleRange,
+  normalizeFinanceCycleStartDay,
+  summarizeMonthFinance,
+} from '@/lib/finance';
 import { annualOccurrenceForYear, describeEventDday, isContactDue, nextAnnualOccurrence } from '@/lib/lifeEvents';
 import { sortMetricEntries, summarizeMetric } from '@/lib/metrics';
 import { buildProjectOverview } from '@/lib/projects';
@@ -46,6 +51,7 @@ import {
   metrics,
   people,
   projects,
+  settings,
   subscriptions,
   timeBlocks,
   todos,
@@ -356,14 +362,22 @@ export class DashboardRepository {
         .where(eq(googleCalendarConnections.userId, this.userId))
         .get();
 
-      const prevYyyymm = prevMonthKey(yyyymm);
+      const settingsRow = tx
+        .select()
+        .from(settings)
+        .where(eq(settings.userId, this.userId))
+        .get();
+      const financeCycleStartDay = normalizeFinanceCycleStartDay(settingsRow?.financeCycleStartDay);
+      const financeYyyymm = getFinanceCycleKeyForDate(date, financeCycleStartDay);
+      const financeRange = getFinanceCycleRange(financeYyyymm, financeCycleStartDay);
+
       const financeTxRows = tx
         .select()
         .from(financeTransactions)
         .where(
           and(
             eq(financeTransactions.userId, this.userId),
-            between(financeTransactions.date, `${prevYyyymm}-01`, monthEndDate(yyyymm)),
+            between(financeTransactions.date, financeRange.prevStartDate, financeRange.endDate),
           ),
         )
         .all() as FinanceTransaction[];
@@ -374,17 +388,18 @@ export class DashboardRepository {
         .where(
           and(
             eq(financeBudgets.userId, this.userId),
-            or(eq(financeBudgets.yyyymm, 'default'), eq(financeBudgets.yyyymm, yyyymm)),
+            or(eq(financeBudgets.yyyymm, 'default'), eq(financeBudgets.yyyymm, financeYyyymm)),
           ),
         )
         .all() as FinanceBudget[];
 
       const monthFinance = summarizeMonthFinance(
-        financeTxRows.filter(t => t.date.startsWith(yyyymm)),
+        financeTxRows.filter(t => t.date >= financeRange.startDate && t.date <= financeRange.endDate),
         financeBudgetRows,
-        financeTxRows.filter(t => t.date.startsWith(prevYyyymm)),
-        yyyymm,
+        financeTxRows.filter(t => t.date >= financeRange.prevStartDate && t.date <= financeRange.prevEndDate),
+        financeYyyymm,
         date,
+        financeCycleStartDay,
       );
 
       const countableTodayTodos = todayTodoRows.filter(t => t.status !== 'cancelled');

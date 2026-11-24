@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { endOfMonth, parseISO } from 'date-fns';
 import {
   formatFinanceAmount,
-  prevMonthKey,
+  formatShortCycleRange,
+  getFinanceCycleRange,
+  normalizeFinanceCycleStartDay,
   summarizeMonthFinance,
   type FinanceMonthlySummary,
 } from '@/lib/finance';
@@ -26,13 +28,14 @@ import { RetroPeriodHeader } from './RetroPeriodHeader';
 import { RetroTemplate } from './RetroTemplate';
 
 export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
-  const { categories, projects } = useBinder();
+  const { categories, projects, settings } = useBinder();
   const editor = useRetrospectiveEditor('monthly', yyyymm);
   const year = yyyymm.slice(0, 4);
+  const cycleStartDay = normalizeFinanceCycleStartDay(settings?.financeCycleStartDay);
+  const financeRange = getFinanceCycleRange(yyyymm, cycleStartDay);
 
-  const prevYyyymm = prevMonthKey(yyyymm);
   const { value } = useAsyncResource(
-    `retro:monthly:${yyyymm}`,
+    `retro:monthly:${yyyymm}:c${cycleStartDay}`,
     async () => {
       const startObj = parseISO(`${yyyymm}-01`);
       const endObj = endOfMonth(startObj);
@@ -46,15 +49,16 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
         listLogsForRange(start, end),
         listBooksByYear(year),
         listDailyCheckinsInRange(start, end),
-        listFinanceTransactions({ startDate: `${prevYyyymm}-01`, endDate: end }),
+        listFinanceTransactions({ startDate: financeRange.prevStartDate, endDate: financeRange.endDate }),
         listFinanceBudgets(yyyymm),
       ]);
       const financeSummary: FinanceMonthlySummary | null = summarizeMonthFinance(
-        financeTxRange.filter(t => t.date.startsWith(yyyymm)),
+        financeTxRange.filter(t => t.date >= financeRange.startDate && t.date <= financeRange.endDate),
         financeBudgets,
-        financeTxRange.filter(t => t.date.startsWith(prevYyyymm)),
+        financeTxRange.filter(t => t.date >= financeRange.prevStartDate && t.date <= financeRange.prevEndDate),
         yyyymm,
         toIsoDate(new Date()),
+        cycleStartDay,
       );
       return {
         blocks,
@@ -73,7 +77,7 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
       checkins: [],
       financeSummary: null as FinanceMonthlySummary | null,
     },
-    ['timeBlocks', 'todos', 'habits', 'habitLogs', 'books', 'dailyCheckins', 'financeTransactions', 'financeBudgets'],
+    ['timeBlocks', 'todos', 'habits', 'habitLogs', 'books', 'dailyCheckins', 'financeTransactions', 'financeBudgets', 'settings'],
   );
 
   const actualMin = value.blocks
@@ -127,7 +131,12 @@ export function MonthlyRetroPage({ yyyymm }: { yyyymm: string }) {
         {value.financeSummary && (value.financeSummary.totalExpense > 0 || value.financeSummary.totalIncome > 0) && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-wrap items-center gap-3 text-zinc-700 dark:text-zinc-300">
-              <strong className="text-zinc-900 dark:text-zinc-100">월간 가계부</strong>
+              <strong className="text-zinc-900 dark:text-zinc-100">
+                월간 가계부
+                {value.financeSummary.cycleStartDay > 1
+                  ? ` (${formatShortCycleRange(value.financeSummary.startDate, value.financeSummary.endDate)})`
+                  : ''}
+              </strong>
               <span>지출 {formatFinanceAmount(value.financeSummary.totalExpense)}</span>
               <span>수입 {formatFinanceAmount(value.financeSummary.totalIncome)}</span>
               {value.financeSummary.budgetPercent !== null && (

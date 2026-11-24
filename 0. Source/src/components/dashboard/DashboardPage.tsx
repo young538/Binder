@@ -512,9 +512,12 @@ export function DashboardPage() {
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             <Wallet size={16} className="text-emerald-600 dark:text-emerald-400" />
-            이번 달 가계부 ({data.yyyymm})
+            이번 달 가계부 ({data.monthFinance.yyyymm}
+            {data.monthFinance.cycleStartDay > 1
+              ? ` · ${Number(data.monthFinance.startDate.slice(5, 7))}.${data.monthFinance.startDate.slice(8, 10)} ~ ${Number(data.monthFinance.endDate.slice(5, 7))}.${data.monthFinance.endDate.slice(8, 10)}`
+              : ''})
           </h2>
-          <Link href={`/finance?month=${data.yyyymm}`} className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+          <Link href={`/finance?month=${data.monthFinance.yyyymm}`} className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
             가계부 열기
           </Link>
         </div>

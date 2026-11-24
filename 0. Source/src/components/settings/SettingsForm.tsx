@@ -75,6 +75,27 @@ export const SettingsForm = () => {
           <option value="dark">다크</option>
         </select>
       </label>
+      <div className="space-y-1">
+        <label className="flex items-center gap-3">
+          <span className="w-32 text-sm text-zinc-700 dark:text-zinc-300">가계부 기준일</span>
+          <select
+            aria-label="가계부 기준일"
+            value={settings.financeCycleStartDay ?? 1}
+            onChange={(e) => patch({ financeCycleStartDay: Number(e.target.value) })}
+            className={inputCls}
+          >
+            <option value={1}>매월 1일 (달력 기준)</option>
+            {Array.from({ length: 30 }, (_, idx) => idx + 2).map((day) => (
+              <option key={day} value={day}>
+                매월 {day}일
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="pl-35 text-xs text-zinc-500 dark:text-zinc-400">
+          예: 25일 설정 시 전월 25일 ~ 당월 24일(종료월 기준, 주말·공휴일 무관 고정)로 집계됩니다.
+        </p>
+      </div>
     </section>
   );
 };

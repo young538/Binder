@@ -262,4 +262,54 @@ for (const width of [1280, 390]) {
     await expect(refreshedDialog).toContainText('중복 2건 건너뜀');
     await checkNoHorizontalOverflow(page);
   });
+
+  test(`finance payday cycle start day filters cross-month dates and persists at ${width}px`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page, width, 'payday');
+    const now = new Date();
+    const calMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const cycleMonth =
+      now.getDate() >= 25
+        ? now.getMonth() === 11
+          ? `${now.getFullYear() + 1}-01`
+          : `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}`
+        : calMonth;
+    const [cy, cm] = cycleMonth.split('-').map(Number);
+    const prevCycleMonth =
+      cm === 1 ? `${cy - 1}-12` : `${cy}-${String(cm - 1).padStart(2, '0')}`;
+
+    const addTx = async (date: string, merchant: string, amount: number) => {
+      const res = await page.request.post('/api/finance/transactions', {
+        data: {
+          date,
+          kind: 'expense',
+          amount,
+          currency: 'KRW',
+          category: '식비',
+          merchant,
+          excluded: false,
+          source: 'manual',
+        },
+      });
+      expect(res.status()).toBe(201);
+    };
+
+    await addTx(`${prevCycleMonth}-25`, '월급날 당일 식사', 15000);
+    await addTx(`${prevCycleMonth}-24`, '전달 마지막날 커피', 7000);
+
+    await page.goto('/finance');
+    await page.getByLabel('가계부 기준일').selectOption('25');
+    await expect(page.getByRole('status')).toContainText('가계부 기준일을 매월 25일로 변경했어요.');
+    const shortRange = `${Number(prevCycleMonth.slice(5))}.25 ~ ${Number(cycleMonth.slice(5))}.24`;
+    await expect(page.getByText(shortRange).first()).toBeVisible();
+    await expect(page.getByText('월급날 당일 식사')).toBeVisible();
+    await expect(page.getByText('전달 마지막날 커피')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: '이번 달 재무 요약' })).toContainText('₩15,000');
+
+    await page.reload();
+    await expect(page.getByLabel('가계부 기준일')).toHaveValue('25');
+    await expect(page.getByText('월급날 당일 식사')).toBeVisible();
+    await expect(page.getByText('전달 마지막날 커피')).toHaveCount(0);
+    await checkNoHorizontalOverflow(page);
+  });
 }

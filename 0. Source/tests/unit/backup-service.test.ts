@@ -101,7 +101,7 @@ describe('backup service transactions and account boundaries', () => {
     expect(backups.exportFor('a').todos).toHaveLength(0);
   });
 
-  it('settings updates validate the merged interval and preserve other accounts', () => {
+  it('settings updates validate the merged interval, default financeCycleStartDay on legacy backups, and preserve other accounts', () => {
     const mine = new SettingsRepository(connection.get(), 'a');
     const other = new SettingsRepository(connection.get(), 'b');
     expect(mine.get()).toEqual(DEFAULT_SETTINGS);
@@ -109,6 +109,17 @@ describe('backup service transactions and account boundaries', () => {
     mine.update({ dayStartHour: 12, theme: 'dark' });
     expect(() => mine.update({ dayEndHour: 10 })).toThrow('dayStartHour');
     expect(mine.get().dayEndHour).toBe(23);
+    expect(mine.get().financeCycleStartDay).toBe(1);
     expect(other.get()).toEqual(DEFAULT_SETTINGS);
+
+    const legacySettings = { firstDayOfWeek: 'sun', gridMinutes: 60, dayStartHour: 8, dayEndHour: 22, theme: 'dark' };
+    backups.importFor('a', { mode: 'replace', data: { settings: legacySettings } });
+    expect(backups.exportFor('a').settings).toEqual({ ...legacySettings, financeCycleStartDay: 1 });
+
+    backups.importFor('a', {
+      mode: 'replace',
+      data: { ...fixture(), settings: { ...DEFAULT_SETTINGS, financeCycleStartDay: 25 } },
+    });
+    expect(backups.exportFor('a').settings?.financeCycleStartDay).toBe(25);
   });
 });

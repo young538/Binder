@@ -23,15 +23,19 @@ import {
   TOTAL_BUDGET_CATEGORY,
   formatFinanceAmount,
   formatFinanceTransactionAmount,
+  getFinanceCycleKeyForDate,
+  getFinanceCycleRange,
   getFinanceTransactionKindLabel,
-  monthEndDate,
   nextMonthKey,
+  normalizeFinanceCycleStartDay,
   prevMonthKey,
   resolveEffectiveBudgets,
   summarizeMonthFinance,
   type FinanceImportCommitResult,
 } from '@/lib/finance';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { updateSettings } from '@/lib/repo/settings';
+import { useBinder } from '@/store';
 import {
   deleteFinanceBudget,
   deleteFinanceTransaction,
@@ -68,20 +72,22 @@ const KIND_BADGE_CLASS: Record<FinanceTransactionKind, string> = {
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
-function currentSeoulMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
 export function FinancePage() {
   const sp = useSearchParams();
+  const { settings, reload: reloadStore } = useBinder();
   const todayIso = toIsoDate(new Date());
-  const defaultMonth = currentSeoulMonth();
+  const cycleStartDay = normalizeFinanceCycleStartDay(settings?.financeCycleStartDay);
+  const defaultMonth = getFinanceCycleKeyForDate(todayIso, cycleStartDay);
   const paramMonth = sp.get('month');
-  const initialMonth =
-    paramMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(paramMonth) ? paramMonth : defaultMonth;
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(() =>
+    paramMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(paramMonth) ? paramMonth : null,
+  );
+  const month = selectedMonth ?? defaultMonth;
+  const cycleRange = useMemo(
+    () => getFinanceCycleRange(month, cycleStartDay),
+    [cycleStartDay, month],
+  );
 
-  const [month, setMonth] = useState(initialMonth);
   const [activeTab, setActiveTab] = useState<'transactions' | 'budgets'>('transactions');
   const [searchQuery, setSearchQuery] = useState(() => sp.get('q') ?? '');
   const [kindFilter, setKindFilter] = useState<'all' | FinanceTransactionKind>('all');
@@ -93,13 +99,16 @@ export function FinancePage() {
   const [automationDialogOpen, setAutomationDialogOpen] = useState(false);
 
   const [syncingSubs, setSyncingSubs] = useState(false);
+  const [cycleBusy, setCycleBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
-  const prevMonth = prevMonthKey(month);
-
   const { value: rangeTransactions, refresh: refreshTx } = useAsyncResource(
-    `finance:tx:${month}`,
-    () => listFinanceTransactions({ startDate: `${prevMonth}-01`, endDate: monthEndDate(month) }),
+    `finance:tx:${month}:d${cycleStartDay}`,
+    () =>
+      listFinanceTransactions({
+        startDate: cycleRange.prevStartDate,
+        endDate: cycleRange.endDate,
+      }),
     [],
     ['financeTransactions'],
   );
@@ -131,18 +140,32 @@ export function FinancePage() {
   }, [refreshAutomation, refreshBudgets, refreshTx]);
 
   const monthTransactions = useMemo(
-    () => rangeTransactions.filter(t => t.date.startsWith(month)),
-    [month, rangeTransactions],
+    () =>
+      rangeTransactions.filter(
+        t => t.date >= cycleRange.startDate && t.date <= cycleRange.endDate,
+      ),
+    [cycleRange.endDate, cycleRange.startDate, rangeTransactions],
   );
 
   const prevTransactions = useMemo(
-    () => rangeTransactions.filter(t => t.date.startsWith(prevMonth)),
-    [prevMonth, rangeTransactions],
+    () =>
+      rangeTransactions.filter(
+        t => t.date >= cycleRange.prevStartDate && t.date <= cycleRange.prevEndDate,
+      ),
+    [cycleRange.prevEndDate, cycleRange.prevStartDate, rangeTransactions],
   );
 
   const summary = useMemo(
-    () => summarizeMonthFinance(monthTransactions, budgets, prevTransactions, month, todayIso),
-    [budgets, month, monthTransactions, prevTransactions, todayIso],
+    () =>
+      summarizeMonthFinance(
+        monthTransactions,
+        budgets,
+        prevTransactions,
+        month,
+        todayIso,
+        cycleStartDay,
+      ),
+    [budgets, cycleStartDay, month, monthTransactions, prevTransactions, todayIso],
   );
 
   const effectiveBudgets = useMemo(
@@ -194,7 +217,32 @@ export function FinancePage() {
     });
   }, [filteredTransactions]);
 
-  const defaultTxDate = month === defaultMonth ? todayIso : `${month}-01`;
+  const defaultTxDate =
+    todayIso >= cycleRange.startDate && todayIso <= cycleRange.endDate
+      ? todayIso
+      : cycleRange.startDate;
+
+  const handleCycleStartDayChange = async (nextDay: number) => {
+    if (cycleBusy || nextDay === cycleStartDay) return;
+    setCycleBusy(true);
+    setNotice(null);
+    try {
+      await updateSettings({ financeCycleStartDay: nextDay });
+      await reloadStore();
+      setSelectedMonth(null);
+      setNotice({
+        kind: 'success',
+        text:
+          nextDay === 1
+            ? '가계부 기준일을 매월 1일(달력 기준)로 변경했어요.'
+            : `가계부 기준일을 매월 ${nextDay}일로 변경했어요.`,
+      });
+    } catch {
+      setNotice({ kind: 'error', text: '가계부 기준일을 변경하지 못했어요.' });
+    } finally {
+      setCycleBusy(false);
+    }
+  };
 
   const handleToggleExcluded = async (tx: FinanceTransaction) => {
     await updateFinanceTransaction(tx.id, { excluded: !tx.excluded });
@@ -300,13 +348,13 @@ export function FinancePage() {
     <div className="mx-auto max-w-6xl space-y-5 p-4 pb-24 md:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">가계부</h1>
             <div className="inline-flex items-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
               <button
                 type="button"
                 aria-label="이전 달"
-                onClick={() => setMonth(prevMonthKey(month))}
+                onClick={() => setSelectedMonth(prevMonthKey(month))}
                 className="p-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 <ChevronLeft size={16} />
@@ -317,16 +365,35 @@ export function FinancePage() {
               <button
                 type="button"
                 aria-label="다음 달"
-                onClick={() => setMonth(nextMonthKey(month))}
+                onClick={() => setSelectedMonth(nextMonthKey(month))}
                 className="p-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
+            {cycleStartDay > 1 && (
+              <span className="rounded-lg bg-zinc-100 px-2 py-1 text-xs font-medium tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                {cycleRange.shortLabel}
+              </span>
+            )}
+            <select
+              aria-label="가계부 기준일"
+              value={cycleStartDay}
+              disabled={cycleBusy}
+              onChange={e => void handleCycleStartDayChange(Number(e.target.value))}
+              className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              <option value={1}>기준일: 1일 (달력)</option>
+              {Array.from({ length: 30 }, (_, idx) => idx + 2).map(day => (
+                <option key={day} value={day}>
+                  기준일: 매월 {day}일
+                </option>
+              ))}
+            </select>
             {month !== defaultMonth && (
               <button
                 type="button"
-                onClick={() => setMonth(defaultMonth)}
+                onClick={() => setSelectedMonth(null)}
                 className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 이번 달
@@ -569,7 +636,7 @@ export function FinancePage() {
 
           {groupedByDate.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-              {month}에 기록된 거래 내역이 없습니다. <strong>+ 거래 추가</strong>나{' '}
+              {month} ({cycleRange.shortLabel})에 기록된 거래 내역이 없습니다. <strong>+ 거래 추가</strong>나{' '}
               <strong>뱅크샐러드 엑셀 가져오기</strong>로 내역을 채워보세요.
             </div>
           ) : (
@@ -869,19 +936,26 @@ export function FinancePage() {
                 <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                   일별 지출 추이
                 </h2>
-                <span className="text-[11px] text-zinc-500">1일 ~ {summary.byDay.length}일</span>
+                <span className="text-[11px] tabular-nums text-zinc-500">
+                  {cycleRange.cycleStartDay > 1
+                    ? cycleRange.shortLabel
+                    : `1일 ~ ${summary.byDay.length}일`}
+                </span>
               </div>
               <div
                 aria-label={`${month} 일별 지출 그래프`}
                 className="flex h-28 items-end gap-0.5 rounded-xl bg-zinc-50 px-2 py-2 dark:bg-zinc-950"
               >
-                {summary.byDay.map(d => {
+                {summary.byDay.map((d, idx) => {
                   const pct = d.amount > 0 ? Math.max(6, Math.round((d.amount / maxDailySpend) * 100)) : 0;
+                  const monthBoundary = cycleRange.cycleStartDay > 1 && idx > 0 && d.day === 1;
                   return (
                     <div
                       key={d.date}
                       title={`${d.date}: ${formatFinanceAmount(d.amount)}`}
-                      className="flex h-full flex-1 flex-col justify-end"
+                      className={`flex h-full flex-1 flex-col justify-end ${
+                        monthBoundary ? 'border-l border-zinc-300/80 pl-0.5 dark:border-zinc-700' : ''
+                      }`}
                     >
                       <div
                         className={`w-full rounded-t ${
@@ -893,6 +967,13 @@ export function FinancePage() {
                   );
                 })}
               </div>
+              {cycleRange.cycleStartDay > 1 && (
+                <div className="flex justify-between text-[10px] tabular-nums text-zinc-400">
+                  <span>{cycleRange.startDate.slice(5).replace('-', '/')}</span>
+                  <span>{month.slice(5)}/01</span>
+                  <span>{cycleRange.endDate.slice(5).replace('-', '/')}</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

@@ -2,7 +2,7 @@ import 'server-only';
 import { endOfMonth, getDaysInMonth, parseISO } from 'date-fns';
 import { and, asc, between, desc, eq, inArray, or } from 'drizzle-orm';
 import { ulid } from 'ulid';
-import { monthEndDate, type FinanceImportRow } from '@/lib/finance';
+import { getFinanceCycleRange, monthEndDate, type FinanceImportRow } from '@/lib/finance';
 import { toMonthlyAmount } from '@/lib/subscriptions';
 import type { FinanceBudget, FinanceTransaction, FinanceTransactionKind } from '@/lib/types';
 import type { BinderDatabase } from '../db/connection';
@@ -283,10 +283,9 @@ export class FinanceRepository {
     return { ok: true };
   }
 
-  syncSubscriptionsForMonth(yyyymm: string): { created: number; skipped: number } {
+  syncSubscriptionsForMonth(yyyymm: string, cycleStartDay = 1): { created: number; skipped: number } {
     const timestamp = this.now().toISOString();
-    const monthStart = `${yyyymm}-01`;
-    const daysInMonth = getDaysInMonth(endOfMonth(parseISO(monthStart)));
+    const range = getFinanceCycleRange(yyyymm, cycleStartDay);
 
     return this.database.transaction(tx => {
       const activeSubs = tx
@@ -354,8 +353,18 @@ export class FinanceRepository {
         const billingDayRaw =
           sub.billingDay ??
           (sub.nextBillingDate ? Number(sub.nextBillingDate.slice(8, 10)) : 1);
-        const day = Math.max(1, Math.min(daysInMonth, Number.isFinite(billingDayRaw) ? billingDayRaw : 1));
-        const date = `${yyyymm}-${String(day).padStart(2, '0')}`;
+        const rawDay = Number.isFinite(billingDayRaw) ? Math.trunc(billingDayRaw) : 1;
+        const targetMonth =
+          range.cycleStartDay > 1 && rawDay >= range.cycleStartDay ? range.prevYyyymm : yyyymm;
+        const daysInTarget = getDaysInMonth(endOfMonth(parseISO(`${targetMonth}-01`)));
+        const clampedDay = Math.max(1, Math.min(daysInTarget, rawDay));
+        const candidate = `${targetMonth}-${String(clampedDay).padStart(2, '0')}`;
+        const date =
+          candidate < range.startDate
+            ? range.startDate
+            : candidate > range.endDate
+              ? range.endDate
+              : candidate;
 
         toInsert.push({
           id: newId(),

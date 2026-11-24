@@ -1,6 +1,7 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import type { BackupCollection } from '@/lib/backup';
+import { DEFAULT_SETTINGS } from '@/lib/settings';
 import type { DatabaseSession } from '../db/connection';
 import * as schema from '../db/schema';
 import { actualAdjustments, automaticMonthlyActuals, preserveAnnualActualBaseline, projectAnnualGoal, syncAnnualTargets } from '../repos/annualGoalAggregates';
@@ -39,6 +40,7 @@ export class UserBackupRepository implements BackupLookup {
     const settingsOut = settings ? {
       firstDayOfWeek: settings.firstDayOfWeek, gridMinutes: settings.gridMinutes,
       dayStartHour: settings.dayStartHour, dayEndHour: settings.dayEndHour, theme: settings.theme,
+      financeCycleStartDay: settings.financeCycleStartDay ?? DEFAULT_SETTINGS.financeCycleStartDay,
     } : null;
     return {
       goals: this.list('goals'), categories: this.list('categories'), projects: this.list('projects'),
@@ -81,7 +83,7 @@ export class UserBackupRepository implements BackupLookup {
   }
 
   saveSettings(values: Record<string, unknown>): void {
-    const row = { ...values, userId: this.userId } as typeof schema.settings.$inferInsert;
+    const row = { ...DEFAULT_SETTINGS, ...values, userId: this.userId } as typeof schema.settings.$inferInsert;
     this.db.insert(schema.settings).values(row)
       .onConflictDoUpdate({ target: schema.settings.userId, set: row }).run();
   }
