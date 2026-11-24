@@ -311,5 +311,31 @@ for (const width of [1280, 390]) {
     await expect(page.getByText('월급날 당일 식사')).toBeVisible();
     await expect(page.getByText('전달 마지막날 커피')).toHaveCount(0);
     await checkNoHorizontalOverflow(page);
+
+    // Calendar tab view across cross-month payday cycle + add transaction for clicked date
+    await page.getByRole('tab', { name: '캘린더' }).click();
+    const calendarGrid = page.getByLabel('가계부 캘린더');
+    await expect(calendarGrid).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    const paydayBtn = calendarGrid.getByRole('button', { name: new RegExp(`${prevCycleMonth}-25`) });
+    await paydayBtn.click();
+    await expect(paydayBtn).toHaveAttribute('aria-pressed', 'true');
+    const detailPanel = page.getByLabel('선택한 날짜 거래 내역');
+    await expect(detailPanel).toContainText(`${prevCycleMonth}-25`);
+    await expect(detailPanel).toContainText('월급날 당일 식사');
+
+    const firstOfMonthBtn = calendarGrid.getByRole('button', { name: new RegExp(`${cycleMonth}-01`) });
+    await firstOfMonthBtn.click();
+    await detailPanel.getByRole('button', { name: '이 날짜에 거래 추가' }).click();
+    const txDialog = page.getByRole('dialog');
+    await expect(txDialog.getByLabel('거래 날짜')).toHaveValue(`${cycleMonth}-01`);
+    await txDialog.getByLabel('거래 금액').fill('4800');
+    await txDialog.getByLabel('거래 내용').fill('캘린더 추가 간식');
+    await txDialog.getByRole('button', { name: '거래 저장' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(detailPanel).toContainText('캘린더 추가 간식');
+    await expect(page.getByRole('region', { name: '이번 달 재무 요약' })).toContainText('₩19,800');
+    await checkNoHorizontalOverflow(page);
   });
 }

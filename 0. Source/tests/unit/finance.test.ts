@@ -5,6 +5,8 @@ import iconv from 'iconv-lite';
 import officeCrypto from 'officecrypto-tool';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  buildFinanceCalendarWeeks,
+  formatCompactKrw,
   formatFinanceAmount,
   formatFinanceTransactionAmount,
   getFinanceCycleKeyForDate,
@@ -483,5 +485,95 @@ describe('finance parser, repository, budgets & Life OS integration', () => {
     expect(nextDash.monthFinance.startDate).toBe('2026-11-25');
     expect(nextDash.monthFinance.endDate).toBe('2026-12-24');
     expect(nextDash.monthFinance.totalExpense).toBe(0);
+  });
+
+  it('builds calendar weeks for standard and payday cycles and aggregates daily totals cleanly', () => {
+    expect(formatCompactKrw(900)).toBe('900');
+    expect(formatCompactKrw(4500)).toBe('4.5천');
+    expect(formatCompactKrw(15000)).toBe('1.5만');
+    expect(formatCompactKrw(125000)).toBe('13만');
+    expect(formatCompactKrw(3500000)).toBe('350만');
+    expect(formatCompactKrw(120000000)).toBe('1.2억');
+
+    const db = connection.get();
+    const repos = new UserRepositories(db, 'cal-user');
+
+    // Standard calendar month (mon vs sun week start)
+    const calMonWeeks = buildFinanceCalendarWeeks('2026-11-01', '2026-11-30', [], 'mon');
+    expect(calMonWeeks.every(w => w.length === 7)).toBe(true);
+    expect(calMonWeeks[0][0]).toMatchObject({ date: '2026-10-26', inRange: false });
+    expect(calMonWeeks[0][6]).toMatchObject({ date: '2026-11-01', inRange: true, isMonthStart: true });
+    expect(calMonWeeks[calMonWeeks.length - 1][0]).toMatchObject({ date: '2026-11-30', inRange: true });
+
+    const calSunWeeks = buildFinanceCalendarWeeks('2026-11-01', '2026-11-30', [], 'sun');
+    expect(calSunWeeks[0][0]).toMatchObject({ date: '2026-11-01', inRange: true });
+
+    // Payday cycle (2026-10-25 ~ 2026-11-24) with mixed kinds, refunds, excluded, transfers, foreign
+    const add = (
+      date: string,
+      kind: 'expense' | 'income' | 'transfer',
+      amount: number,
+      merchant: string,
+      opts?: { excluded?: boolean; currency?: 'KRW' | 'USD' },
+    ) =>
+      repos.finance.createTransaction({
+        date,
+        time: null,
+        kind,
+        amount,
+        currency: opts?.currency ?? 'KRW',
+        category: kind === 'income' ? '급여' : kind === 'transfer' ? '이체' : '식비',
+        subCategory: null,
+        merchant,
+        paymentMethod: null,
+        note: null,
+        excluded: opts?.excluded ?? false,
+        source: 'manual',
+        subscriptionId: null,
+      });
+
+    add('2026-10-24', 'expense', 9900, '범위 밖 지출');
+    add('2026-10-25', 'income', 3000000, '월급');
+    add('2026-10-25', 'expense', 15000, '점심');
+    add('2026-10-25', 'expense', -5000, '부분취소');
+    add('2026-11-01', 'expense', -4500, '전액환불');
+    add('2026-11-01', 'expense', 50, '해외결제', { currency: 'USD' });
+    add('2026-11-02', 'expense', 40000, '더치페이', { excluded: true });
+    add('2026-11-02', 'transfer', -200000, '적금이체');
+
+    const paydayWeeks = buildFinanceCalendarWeeks(
+      '2026-10-25',
+      '2026-11-24',
+      repos.finance.listTransactions(),
+      'mon',
+    );
+    const flat = paydayWeeks.flat();
+    expect(paydayWeeks.every(w => w.length === 7)).toBe(true);
+    expect(flat.find(c => c.date === '2026-10-24')).toMatchObject({
+      inRange: false,
+      expenseTotal: 0,
+      txCount: 0,
+    });
+    expect(flat.find(c => c.date === '2026-10-25')).toMatchObject({
+      inRange: true,
+      incomeTotal: 3000000,
+      expenseTotal: 10000,
+      txCount: 3,
+    });
+    expect(flat.find(c => c.date === '2026-11-01')).toMatchObject({
+      inRange: true,
+      isMonthStart: true,
+      expenseTotal: -4500,
+      txCount: 2,
+    });
+    expect(flat.find(c => c.date === '2026-11-02')).toMatchObject({
+      inRange: true,
+      expenseTotal: 0,
+      transferCount: 1,
+      excludedCount: 1,
+      txCount: 2,
+    });
+    expect(flat.find(c => c.date === '2026-11-24')?.inRange).toBe(true);
+    expect(flat.find(c => c.date === '2026-11-25')?.inRange).toBe(false);
   });
 });

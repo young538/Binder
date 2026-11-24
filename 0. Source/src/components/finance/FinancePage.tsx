@@ -5,13 +5,12 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { parseISO } from 'date-fns';
 import {
+  Calendar,
   ChevronLeft,
   ChevronRight,
   CreditCard,
-  EyeOff,
   FileSpreadsheet,
   Mail,
-  Pencil,
   PieChart,
   Plus,
   RefreshCw,
@@ -22,10 +21,8 @@ import {
 import {
   TOTAL_BUDGET_CATEGORY,
   formatFinanceAmount,
-  formatFinanceTransactionAmount,
   getFinanceCycleKeyForDate,
   getFinanceCycleRange,
-  getFinanceTransactionKindLabel,
   nextMonthKey,
   normalizeFinanceCycleStartDay,
   prevMonthKey,
@@ -53,22 +50,10 @@ import {
 } from '@/lib/types';
 import { toIsoDate } from '@/lib/utils/date';
 import { FinanceAutomationDialog } from './FinanceAutomationDialog';
+import { FinanceCalendarView } from './FinanceCalendarView';
 import { FinanceImportDialog } from './FinanceImportDialog';
 import { FinanceTransactionDialog } from './FinanceTransactionDialog';
-
-const SOURCE_BADGE: Record<FinanceTransaction['source'], string | null> = {
-  manual: null,
-  banksalad: '뱅크샐러드',
-  csv: 'CSV',
-  subscription: '구독 자동',
-  shortcut: '단축어',
-};
-
-const KIND_BADGE_CLASS: Record<FinanceTransactionKind, string> = {
-  expense: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900',
-  income: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900',
-  transfer: 'bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700',
-};
+import { FinanceTransactionRow } from './FinanceTransactionRow';
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -88,12 +73,13 @@ export function FinancePage() {
     [cycleStartDay, month],
   );
 
-  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'calendar' | 'budgets'>('transactions');
   const [searchQuery, setSearchQuery] = useState(() => sp.get('q') ?? '');
   const [kindFilter, setKindFilter] = useState<'all' | FinanceTransactionKind>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
+  const [txDialogDefaultDate, setTxDialogDefaultDate] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<FinanceTransaction | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [automationDialogOpen, setAutomationDialogOpen] = useState(false);
@@ -447,6 +433,7 @@ export function FinancePage() {
             type="button"
             onClick={() => {
               setEditingTx(null);
+              setTxDialogDefaultDate(null);
               setTxDialogOpen(true);
             }}
             className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700"
@@ -574,6 +561,19 @@ export function FinancePage() {
           <button
             type="button"
             role="tab"
+            aria-selected={activeTab === 'calendar'}
+            onClick={() => setActiveTab('calendar')}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+              activeTab === 'calendar'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+            }`}
+          >
+            <Calendar size={14} /> 캘린더
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={activeTab === 'budgets'}
             onClick={() => setActiveTab('budgets')}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
@@ -594,7 +594,7 @@ export function FinancePage() {
         </Link>
       </div>
 
-      {activeTab === 'transactions' ? (
+      {activeTab !== 'budgets' ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative min-w-[180px] flex-1">
@@ -634,7 +634,26 @@ export function FinancePage() {
             </select>
           </div>
 
-          {groupedByDate.length === 0 ? (
+          {activeTab === 'calendar' ? (
+            <FinanceCalendarView
+              cycleRange={cycleRange}
+              transactions={filteredTransactions}
+              todayIso={todayIso}
+              firstDayOfWeek={settings?.firstDayOfWeek ?? 'mon'}
+              onAddForDate={date => {
+                setEditingTx(null);
+                setTxDialogDefaultDate(date);
+                setTxDialogOpen(true);
+              }}
+              onEdit={tx => {
+                setEditingTx(tx);
+                setTxDialogDefaultDate(null);
+                setTxDialogOpen(true);
+              }}
+              onToggleExcluded={tx => void handleToggleExcluded(tx)}
+              onDelete={tx => void handleDeleteTx(tx)}
+            />
+          ) : groupedByDate.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
               {month} ({cycleRange.shortLabel})에 기록된 거래 내역이 없습니다. <strong>+ 거래 추가</strong>나{' '}
               <strong>뱅크샐러드 엑셀 가져오기</strong>로 내역을 채워보세요.
@@ -653,114 +672,19 @@ export function FinancePage() {
                     </span>
                   </div>
                   <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {group.rows.map(tx => {
-                      const srcBadge = SOURCE_BADGE[tx.source];
-                      const kindBadgeCls =
-                        tx.kind === 'transfer' && tx.amount >= 0
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-900'
-                          : KIND_BADGE_CLASS[tx.kind];
-                      const amountColorCls =
-                        tx.kind === 'expense'
-                          ? tx.amount < 0
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-zinc-900 dark:text-zinc-100'
-                          : tx.kind === 'income'
-                            ? tx.amount < 0
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-emerald-700 dark:text-emerald-400'
-                            : tx.amount > 0
-                              ? 'text-blue-700 dark:text-blue-400'
-                              : 'text-zinc-500 dark:text-zinc-400';
-
-                      return (
-                        <li
-                          key={tx.id}
-                          className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs ${
-                            tx.excluded ? 'opacity-55' : ''
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${kindBadgeCls}`}>
-                                {getFinanceTransactionKindLabel(tx)}
-                              </span>
-                              {tx.kind === 'expense' && tx.amount < 0 && (
-                                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                                  취소/환불
-                                </span>
-                              )}
-                              {tx.kind === 'income' && tx.amount < 0 && (
-                                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                                  취소
-                                </span>
-                              )}
-                              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                {tx.category}
-                                {tx.subCategory ? ` · ${tx.subCategory}` : ''}
-                              </span>
-                              <span className={`truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100 ${tx.excluded ? 'line-through' : ''}`}>
-                                {tx.merchant}
-                              </span>
-                              {srcBadge && (
-                                <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
-                                  {srcBadge}
-                                </span>
-                              )}
-                              {tx.excluded && (
-                                <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                                  합계 제외됨
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              {tx.time && <span>{tx.time}</span>}
-                              {tx.paymentMethod && <span>{tx.paymentMethod}</span>}
-                              {tx.note && <span className="truncate">· {tx.note}</span>}
-                            </div>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <span className={`mr-1 text-sm font-bold tabular-nums ${amountColorCls}`}>
-                              {formatFinanceTransactionAmount(tx)}
-                            </span>
-                            <button
-                              type="button"
-                              title={tx.excluded ? '합계에 다시 포함' : '이번 달 합계에서 제외'}
-                              aria-label={`${tx.merchant} 합계 제외 전환`}
-                              aria-pressed={tx.excluded}
-                              onClick={() => void handleToggleExcluded(tx)}
-                              className={`rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
-                                tx.excluded
-                                  ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                                  : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800'
-                              }`}
-                            >
-                              <EyeOff size={12} className="inline mr-0.5" />
-                              {tx.excluded ? '제외됨' : '제외'}
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`${tx.merchant} 수정`}
-                              onClick={() => {
-                                setEditingTx(tx);
-                                setTxDialogOpen(true);
-                              }}
-                              className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                            >
-                              <Pencil size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`${tx.merchant} 삭제`}
-                              onClick={() => void handleDeleteTx(tx)}
-                              className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
+                    {group.rows.map(tx => (
+                      <FinanceTransactionRow
+                        key={tx.id}
+                        tx={tx}
+                        onToggleExcluded={item => void handleToggleExcluded(item)}
+                        onEdit={item => {
+                          setEditingTx(item);
+                          setTxDialogDefaultDate(null);
+                          setTxDialogOpen(true);
+                        }}
+                        onDelete={item => void handleDeleteTx(item)}
+                      />
+                    ))}
                   </ul>
                 </div>
               ))}
@@ -982,8 +906,11 @@ export function FinancePage() {
       {txDialogOpen && (
         <FinanceTransactionDialog
           initial={editingTx}
-          defaultDate={defaultTxDate}
-          onClose={() => setTxDialogOpen(false)}
+          defaultDate={txDialogDefaultDate ?? defaultTxDate}
+          onClose={() => {
+            setTxDialogOpen(false);
+            setTxDialogDefaultDate(null);
+          }}
           onSaved={() => void refreshTx(true)}
         />
       )}

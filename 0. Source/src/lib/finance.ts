@@ -2,9 +2,11 @@ import {
   addDays,
   differenceInCalendarDays,
   endOfMonth,
+  endOfWeek,
   format,
   getDaysInMonth,
   parseISO,
+  startOfWeek,
   subDays,
   subMonths,
 } from 'date-fns';
@@ -406,4 +408,107 @@ export function summarizeMonthFinance(
     topCategories: byCategory.filter(c => c.amount > 0).slice(0, 3),
     byDay,
   };
+}
+
+export interface FinanceCalendarDayCell {
+  date: string;
+  inRange: boolean;
+  month: number;
+  day: number;
+  isMonthStart: boolean;
+  expenseTotal: number;
+  incomeTotal: number;
+  transferCount: number;
+  txCount: number;
+  excludedCount: number;
+}
+
+export function formatCompactKrw(amount: number): string {
+  const abs = Math.abs(amount);
+  if (abs >= 100_000_000) {
+    return `${(abs / 100_000_000).toFixed(1).replace(/\.0$/, '')}억`;
+  }
+  if (abs >= 10_000) {
+    return `${(abs / 10_000).toFixed(abs >= 100_000 ? 0 : 1).replace(/\.0$/, '')}만`;
+  }
+  if (abs >= 1_000) {
+    return `${(abs / 1_000).toFixed(1).replace(/\.0$/, '')}천`;
+  }
+  return String(Math.round(abs));
+}
+
+export function buildFinanceCalendarWeeks(
+  startDate: string,
+  endDate: string,
+  transactions: FinanceTransaction[],
+  firstDayOfWeek: 'mon' | 'sun' = 'mon',
+): FinanceCalendarDayCell[][] {
+  const weekStartsOn = firstDayOfWeek === 'sun' ? 0 : 1;
+  const gridStart = startOfWeek(parseISO(startDate), { weekStartsOn });
+  const gridEnd = endOfWeek(parseISO(endDate), { weekStartsOn });
+
+  const statsByDate = new Map<
+    string,
+    {
+      expenseTotal: number;
+      incomeTotal: number;
+      transferCount: number;
+      txCount: number;
+      excludedCount: number;
+    }
+  >();
+
+  for (const tx of transactions) {
+    if (tx.date < startDate || tx.date > endDate) continue;
+    const stat = statsByDate.get(tx.date) ?? {
+      expenseTotal: 0,
+      incomeTotal: 0,
+      transferCount: 0,
+      txCount: 0,
+      excludedCount: 0,
+    };
+    stat.txCount += 1;
+    if (tx.excluded) {
+      stat.excludedCount += 1;
+    } else if (tx.kind === 'transfer') {
+      stat.transferCount += 1;
+    } else if (tx.kind === 'income' && tx.currency === 'KRW') {
+      stat.incomeTotal += tx.amount;
+    } else if (tx.kind === 'expense' && tx.currency === 'KRW') {
+      stat.expenseTotal += tx.amount;
+    }
+    statsByDate.set(tx.date, stat);
+  }
+
+  const weeks: FinanceCalendarDayCell[][] = [];
+  let currentWeek: FinanceCalendarDayCell[] = [];
+
+  for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) {
+    const date = format(d, 'yyyy-MM-dd');
+    const month = Number(date.slice(5, 7));
+    const day = Number(date.slice(8, 10));
+    const stat = statsByDate.get(date);
+    currentWeek.push({
+      date,
+      inRange: date >= startDate && date <= endDate,
+      month,
+      day,
+      isMonthStart: day === 1,
+      expenseTotal: stat?.expenseTotal ?? 0,
+      incomeTotal: stat?.incomeTotal ?? 0,
+      transferCount: stat?.transferCount ?? 0,
+      txCount: stat?.txCount ?? 0,
+      excludedCount: stat?.excludedCount ?? 0,
+    });
+    if (currentWeek.length === 7) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+  }
+
+  if (currentWeek.length > 0) {
+    weeks.push(currentWeek);
+  }
+
+  return weeks;
 }
