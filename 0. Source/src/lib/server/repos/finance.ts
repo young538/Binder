@@ -1,19 +1,46 @@
 import 'server-only';
 import { endOfMonth, getDaysInMonth, parseISO } from 'date-fns';
 import { and, asc, between, desc, eq, inArray, or } from 'drizzle-orm';
-import { ulid } from 'ulid';
+import { newId } from '@/lib/utils/id';
 import { getFinanceCycleRange, monthEndDate, type FinanceImportRow } from '@/lib/finance';
 import { toMonthlyAmount } from '@/lib/subscriptions';
 import type { FinanceBudget, FinanceTransaction, FinanceTransactionKind } from '@/lib/types';
-import type { BinderDatabase } from '../db/connection';
+import type { BinderDatabase, DatabaseSession } from '../db/connection';
 import { financeBudgets, financeTransactions, subscriptions } from '../db/schema';
-
-const newId = () => ulid();
 
 function monthDiff(fromYyyymm: string, toYyyymm: string): number {
   const [fy, fm] = fromYyyymm.split('-').map(Number);
   const [ty, tm] = toYyyymm.split('-').map(Number);
   return (ty - fy) * 12 + (tm - fm);
+}
+
+function existingTransactionHashes(db: DatabaseSession, userId: string, hashes: string[]): Set<string> {
+  const existing = new Set<string>();
+  const unique = [...new Set(hashes.filter(Boolean))];
+  for (let i = 0; i < unique.length; i += 400) {
+    const chunk = unique.slice(i, i + 400);
+    const rows = db
+      .select({ externalHash: financeTransactions.externalHash })
+      .from(financeTransactions)
+      .where(
+        and(
+          eq(financeTransactions.userId, userId),
+          inArray(financeTransactions.externalHash, chunk),
+        ),
+      )
+      .all();
+    for (const r of rows) {
+      if (r.externalHash) existing.add(r.externalHash);
+    }
+  }
+  return existing;
+}
+
+function insertTransactions(tx: DatabaseSession, rows: FinanceTransaction[]) {
+  const batchSize = 100;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    tx.insert(financeTransactions).values(rows.slice(i, i + batchSize)).run();
+  }
 }
 
 /** User-scoped repository for personal income/expense transactions and monthly budgets. */
@@ -58,15 +85,6 @@ export class FinanceRepository {
       .all() as FinanceTransaction[];
   }
 
-  getTransactionById(id: string): FinanceTransaction | null {
-    const row = this.database
-      .select()
-      .from(financeTransactions)
-      .where(and(eq(financeTransactions.userId, this.userId), eq(financeTransactions.id, id)))
-      .get();
-    return (row as FinanceTransaction | undefined) ?? null;
-  }
-
   createTransaction(
     data: Omit<FinanceTransaction, 'id' | 'userId' | 'externalHash' | 'createdAt' | 'updatedAt'> & {
       externalHash?: string | null;
@@ -101,8 +119,6 @@ export class FinanceRepository {
     id: string,
     patch: Partial<Omit<FinanceTransaction, 'id' | 'userId' | 'externalHash' | 'createdAt'>>,
   ): FinanceTransaction | null {
-    const existing = this.getTransactionById(id);
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
     const updated = this.database
       .update(financeTransactions)
@@ -141,49 +157,13 @@ export class FinanceRepository {
   }
 
   findExistingHashes(hashes: string[]): Set<string> {
-    const existing = new Set<string>();
-    const unique = [...new Set(hashes.filter(Boolean))];
-    for (let i = 0; i < unique.length; i += 400) {
-      const chunk = unique.slice(i, i + 400);
-      const rows = this.database
-        .select({ externalHash: financeTransactions.externalHash })
-        .from(financeTransactions)
-        .where(
-          and(
-            eq(financeTransactions.userId, this.userId),
-            inArray(financeTransactions.externalHash, chunk),
-          ),
-        )
-        .all();
-      for (const r of rows) {
-        if (r.externalHash) existing.add(r.externalHash);
-      }
-    }
-    return existing;
+    return existingTransactionHashes(this.database, this.userId, hashes);
   }
 
   importTransactions(rows: FinanceImportRow[]): { inserted: number; duplicates: number } {
     const timestamp = this.now().toISOString();
     return this.database.transaction(tx => {
-      const existing = new Set<string>();
-      const allHashes = [...new Set(rows.map(r => r.externalHash).filter(Boolean))];
-      for (let i = 0; i < allHashes.length; i += 400) {
-        const chunk = allHashes.slice(i, i + 400);
-        const found = tx
-          .select({ externalHash: financeTransactions.externalHash })
-          .from(financeTransactions)
-          .where(
-            and(
-              eq(financeTransactions.userId, this.userId),
-              inArray(financeTransactions.externalHash, chunk),
-            ),
-          )
-          .all();
-        for (const r of found) {
-          if (r.externalHash) existing.add(r.externalHash);
-        }
-      }
-
+      const existing = existingTransactionHashes(tx, this.userId, rows.map(row => row.externalHash));
       const toInsert: FinanceTransaction[] = [];
       let duplicates = 0;
 
@@ -215,9 +195,7 @@ export class FinanceRepository {
         });
       }
 
-      for (let i = 0; i < toInsert.length; i += 100) {
-        tx.insert(financeTransactions).values(toInsert.slice(i, i + 100)).run();
-      }
+      insertTransactions(tx, toInsert);
 
       return { inserted: toInsert.length, duplicates };
     }, { behavior: 'immediate' });
@@ -295,26 +273,8 @@ export class FinanceRepository {
         .all();
 
       const hashes = activeSubs.map(sub => `sub:${sub.id}:${yyyymm}`);
-      const existingSet = new Set<string>();
-      for (let i = 0; i < hashes.length; i += 400) {
-        const chunk = hashes.slice(i, i + 400);
-        if (chunk.length === 0) continue;
-        const rows = tx
-          .select({ externalHash: financeTransactions.externalHash })
-          .from(financeTransactions)
-          .where(
-            and(
-              eq(financeTransactions.userId, this.userId),
-              inArray(financeTransactions.externalHash, chunk),
-            ),
-          )
-          .all();
-        for (const r of rows) {
-          if (r.externalHash) existingSet.add(r.externalHash);
-        }
-      }
+      const existingSet = existingTransactionHashes(tx, this.userId, hashes);
 
-      let created = 0;
       let skipped = 0;
       const toInsert: FinanceTransaction[] = [];
 
@@ -386,14 +346,10 @@ export class FinanceRepository {
           createdAt: timestamp,
           updatedAt: timestamp,
         });
-        created++;
       }
 
-      if (toInsert.length > 0) {
-        tx.insert(financeTransactions).values(toInsert).run();
-      }
-
-      return { created, skipped };
+      insertTransactions(tx, toInsert);
+      return { created: toInsert.length, skipped };
     }, { behavior: 'immediate' });
   }
 }

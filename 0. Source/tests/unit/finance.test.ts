@@ -1,5 +1,6 @@
 // @vitest-environment node
 import path from 'node:path';
+import { sql } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import iconv from 'iconv-lite';
 import officeCrypto from 'officecrypto-tool';
@@ -62,6 +63,30 @@ afterEach(() => {
 });
 
 describe('finance parser, repository, budgets & Life OS integration', () => {
+  it('posts large subscription batches atomically and skips them on retry', () => {
+    const db = connection.get();
+    const repos = new UserRepositories(db, 'many-subscriptions');
+    const count = 2200;
+    db.transaction(() => {
+      for (let i = 0; i < count; i++) {
+        repos.subscriptions.create({
+          name: `Subscription ${i}`, amount: 1, currency: 'KRW', billingCycle: 'monthly',
+          status: 'active', autoRenew: true, order: i,
+        });
+      }
+    });
+
+    db.run(sql`create temp trigger fail_subscription before insert on finance_transactions
+      when new.merchant = 'Subscription 2100' begin select raise(abort, 'test failure'); end`);
+    expect(() => repos.finance.syncSubscriptionsForMonth('2026-11')).toThrow();
+    expect(repos.finance.listTransactions({ month: '2026-11' })).toHaveLength(0);
+    db.run(sql`drop trigger fail_subscription`);
+
+    expect(repos.finance.syncSubscriptionsForMonth('2026-11')).toEqual({ created: count, skipped: 0 });
+    expect(repos.finance.syncSubscriptionsForMonth('2026-11')).toEqual({ created: 0, skipped: count });
+    expect(repos.finance.listTransactions({ month: '2026-11' })).toHaveLength(count);
+  });
+
   it('parses BankSalad .xlsx and encrypted .xlsx (password prompt + wrong password rejection) cleanly', async () => {
     const plainBuffer = await buildBankSaladWorkbookBuffer();
     const parsed = await parseFinanceUploadFile({
