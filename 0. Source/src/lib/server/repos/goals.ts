@@ -1,7 +1,6 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { goals } from '../db/schema';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { annualGoals, binderNotes, goals, habits, lifeEvents, metrics, projects, timeBlocks, todos, weeklyTemplates } from '../db/schema';
 import { Goal } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 import { stripUndefined } from '../db/patch';
@@ -45,20 +44,35 @@ export class GoalRepository {
 
   async delete(id: string): Promise<void> {
     const userId = this.userId;
-    const db = this.database;
-    await db.delete(goals).where(and(eq(goals.userId, userId), eq(goals.id, id))).run();
+    this.database.transaction(tx => {
+      // UNION also terminates for cycles in older imported goal trees.
+      const subtree = sql`(WITH RECURSIVE descendants(id) AS (
+        SELECT id FROM goals WHERE user_id = ${userId} AND id = ${id}
+        UNION
+        SELECT child.id FROM goals AS child JOIN descendants ON child.parent_id = descendants.id
+        WHERE child.user_id = ${userId}
+      ) SELECT id FROM descendants)`;
+      const removed = new Set(tx.select({ id: goals.id }).from(goals)
+        .where(inArray(goals.id, subtree)).all().map(row => row.id));
+      if (!removed.size) return;
+
+      const updatedAt = new Date().toISOString();
+      for (const table of [annualGoals, habits, todos]) {
+        tx.update(table).set({ parentGoalId: null, updatedAt })
+          .where(and(eq(table.userId, userId), inArray(table.parentGoalId, subtree))).run();
+      }
+      for (const table of [projects, timeBlocks, metrics, binderNotes, lifeEvents]) {
+        tx.update(table).set({ goalId: null, updatedAt })
+          .where(and(eq(table.userId, userId), inArray(table.goalId, subtree))).run();
+      }
+      const templates = tx.select().from(weeklyTemplates).where(eq(weeklyTemplates.userId, userId)).all();
+      for (const template of templates) {
+        if (!template.blocks.some(block => block.goalId && removed.has(block.goalId))) continue;
+        const blocks = template.blocks.map(block =>
+          block.goalId && removed.has(block.goalId) ? { ...block, goalId: null } : block);
+        tx.update(weeklyTemplates).set({ blocks, updatedAt }).where(eq(weeklyTemplates.id, template.id)).run();
+      }
+      tx.delete(goals).where(inArray(goals.id, subtree)).run();
+    }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listGoals = async (userId: string): Promise<Goal[]> =>
-  new GoalRepository(getDb(), userId).list();
-
-export const createGoal = async (userId: string, data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Goal> =>
-  new GoalRepository(getDb(), userId).create(data);
-
-export const updateGoal = async (userId: string, id: string, patch: Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>): Promise<Goal | null> =>
-  new GoalRepository(getDb(), userId).update(id, patch);
-
-export const deleteGoal = async (userId: string, id: string): Promise<void> =>
-  new GoalRepository(getDb(), userId).delete(id);

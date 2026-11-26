@@ -40,7 +40,7 @@
 | `/api/annual-goals` | `year` 필수 | year, order 또는 year, ensureSeven:true | year, order, title, deadline, action, metric, target, monthlyTargets, monthlyActuals, parentGoalId |
 | `/api/habits` | 없음 | name, color, order, schedule?, categoryId?, note?, parentGoalId?, annualGoalId? | 동일 도메인 필드 |
 | `/api/books` | `year` 필수 또는 `all=true`로 모든 연도 | year, order, title, category?, oneThing?, keywords?, reviewUrl?, startedAt?, finishedAt? | 동일 도메인 필드(제목 PATCH 시 연결된 일일 독서 `bookTitle` 동기화) |
-| `/api/time-blocks` | `startDate`, `endDate` 필수 | date, startMin, endMin, text, kind, categoryId, goalId?, projectId?, todoId? | 동일 도메인 필드 |
+| `/api/time-blocks` | `startDate`, `endDate` 필수 | date, startMin, endMin, text, kind, categoryId, goalId?, projectId?, todoId?, sourcePlanId? | sourcePlanId를 제외한 동일 도메인 필드 |
 | `/api/metrics` | 없음 (엔트리 포함 `LifeMetricWithEntries` 배열) | name, unit, direction(`up`·`down`·`target`), targetValue?, goalId?, color, order | 동일 도메인 필드 |
 | `/api/notes` | `kind?`, `goalId?`, `projectId?`, `dueDecisionsDate?` | kind(`principle`·`decision`·`insight`·`reference`), title, body, pinned, reviewDate?, decisionOutcome?, goalId?, projectId?, sourceRetro? | 동일 도메인 필드 |
 | `/api/people` | 없음 | name, relationship?, cadenceDays?, lastContactAt?, birthday?, giftIdeas?, note?, order | 동일 도메인 필드 |
@@ -50,6 +50,12 @@
 예를 들어 책 수정은 PATCH `/api/books/[id]`, 삭제는 DELETE `/api/books/[id]`입니다. `?`는 정상 생성 입력에서 선택 가능한 필드를 뜻합니다. null로 지울 수 있는 필드는 [공통 타입](../0.%20Source/src/lib/types.ts)을 확인합니다.
 
 annual-goals의 일반 POST는 빈 제목과 12개의 null 계획·실적 배열을 만듭니다. `ensureSeven:true`면 최소 7개를 확보한 전체 배열을 200으로 반환합니다. 현재 행 조회와 부족분 삽입을 한 즉시 트랜잭션으로 처리해 동시 초기화가 중복 행을 만들지 않게 합니다. 일반 POST는 year·order만 허용하며 제목은 이후 PATCH합니다.
+
+목표 삭제 API는 해당 사용자의 하위 목표도 함께 삭제하고 관련 기록과 주간 템플릿의 목표 연결을 한 트랜잭션에서 해제합니다. 쓰기 가능한 Google 일정의 삭제 요청은 로컬 삭제와 함께 저장합니다. 원격 삭제 실패 시 다음 동기화에서 재시도하며, 대기 중인 일정은 다시 가져오지 않습니다.
+
+카테고리를 삭제할 때 `DELETE /api/categories/[id]?replacementId=...`로 같은 사용자의 대체 분류를 지정할 수 있습니다. 시간표·주간 템플릿이 사용 중이면 대체 분류를 생략한 요청은 409입니다. 구독 삭제는 기존 결제 거래의 구독 연결만 해제합니다.
+
+Google 일정 수정은 최신 로컬 내용을 저장하고 쓰기 가능한 연결 계정에서 재시도합니다. Google 할 일 삭제는 30초의 취소 시간이 지난 뒤 동기화에서 반영합니다. 취소하면 기존 Google 할 일 ID가 유지됩니다.
 
 ## 4. TODO 조회와 상태
 
@@ -125,7 +131,7 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 ```json
 {
-  "version": 14,
+  "version": 18,
   "generatedAt": "ISO 시각",
   "goals": [], "categories": [], "projects": [], "people": [], "metrics": [], "metricEntries": [],
   "dailyCheckins": [], "notes": [], "lifeEvents": [], "subscriptions": [], "timeBlocks": [],
@@ -135,7 +141,7 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 }
 ```
 
-`POST /api/import` 입력은 `{ "mode": "merge", "data": { ...내보낸 데이터... } }`입니다. mode는 UI에서 merge 또는 replace를 사용합니다. 서버는 mode enum, 데이터 컬렉션·필드·참조를 사전 검증합니다. version을 기준으로 자동 변환하는 기능은 없습니다.
+`POST /api/import` 입력은 `{ "mode": "merge", "data": { ...내보낸 데이터... } }`입니다. mode는 UI에서 merge 또는 replace를 사용합니다. 서버는 mode enum, 데이터 컬렉션·필드·참조를 사전 검증합니다. 구버전 시간블록은 일치하는 계획과 실제 기록을 1:1 연결합니다. 버전 15 이하의 내보내기에서 이미 삭제된 TODO 연결은 비우고 시간블록을 복원합니다.
 
 각 행의 userId는 로그인 사용자로 강제 교체합니다. 다른 계정 ID와의 충돌은 사전 검증에서 거절하고, 같은 계정의 기존 ID는 `onConflictDoNothing()`으로 건너뜁니다. merge는 기존 행 갱신이 아닙니다. replace는 본인 도메인 행을 먼저 삭제합니다. settings는 전달될 때만 upsert하며 replace 삭제 대상에서 제외됩니다.
 
@@ -165,7 +171,7 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 | GET `/api/projects/overview` | 없음 | `{projects:[{project,todos,totalTodos,doneTodos,activeTodos,actualMinutes,needsNextAction}]}` |
 | GET `/api/morning-boot?date=2026-11-20` | 기준 날짜(`YYYY-MM-DD`) | `{date,isoWeek,overdueTodos,todayTodos,weekTodos,inboxTodos,activeProjects,highlight,upcomingEvents,duePeople,dueDecisions}` |
 | POST `/api/morning-boot` | `{targetDate, moveToTodayIds?, moveToInboxIds?}` | `{movedToToday, movedToInbox}`; 선택한 대기·연기 할 일을 원자적으로 오늘/수집함으로 이동(수집함 이동 시 반복 해제) |
-| POST `/api/time-blocks/confirm-actuals` | `{date, blockIds?}` | `{created}`; 지정 날짜의 미확정 `plan` 블록을 `actual`로 복사(중복 제외, `projectId` 유지) |
+| POST `/api/time-blocks/confirm-actuals` | `{date, blockIds?}` | `{created}`; 지정 날짜의 미확정 `plan` 블록을 `actual`로 복사(원본 계획 ID당 한 건, 프로젝트 연결 유지) |
 | GET `/api/evening-shutdown?date=2026-11-20` | 기준 날짜(`YYYY-MM-DD`) | `{date,unconfirmedPlans,actualMinutes,openTodayTodos,doneCount,totalCount,checkin,retrospective}` |
 | POST `/api/evening-shutdown` | `{date, confirmBlockIds?, rolloverTodoIds?, inboxTodoIds?}` | `{confirmedBlocks, rolledOverTodos, movedToInbox}`; 마감 계획 확정·내일 이월·수집함 이동 원자 실행 |
 | POST `/api/metrics/[id]/entries` | `{metricId, date, value, note?}` | 201, `(metricId, date)` 기준 upsert된 LifeMetricEntry |
@@ -196,8 +202,10 @@ Google 계정이 연결되어 있고 `syncEnabled`/`autoPushEvents`가 활성화
 
 ## 기존 입력 검증과 백업 호환성
 
-잘못된 JSON과 허용되지 않는 변경 필드는 400 오류입니다. 선택 연결의 null 해제는 유지합니다. 가져오기는 삭제/병합 전에 전체 payload와 참조를 검증합니다. 다른 계정 ID와 충돌하거나 존재하지 않는 참조를 담은 백업은 거절하며, replace 검증 실패 시 기존 데이터를 삭제하지 않습니다. 과거에 삭제된 대상을 가리키는 백업은 해당 연결을 정리한 뒤 가져와야 합니다.
+잘못된 JSON과 허용되지 않는 변경 필드는 400 오류입니다. 선택 연결의 null 해제는 유지합니다. 가져오기는 삭제/병합 전에 전체 payload와 참조를 검증합니다. 다른 계정 ID와 충돌하거나 존재하지 않는 참조를 담은 백업은 거절하며, replace 검증 실패 시 기존 데이터를 삭제하지 않습니다. 버전 16부터 내보낼 때 삭제된 TODO의 시간블록 연결을 비웁니다.
 
 연간 목표 export에는 계산된 monthlyActuals와 내부 monthlyActualAdjustments가 함께 포함됩니다. 일반 목표 PATCH로 보정값을 직접 보내는 것은 허용하지 않으며, 정상 백업 가져오기에서만 복원합니다. 회고 PUT의 template은 전달한 개별 필드만 병합하고 생략된 필드는 보존합니다.
 
 한 문장(`focus-notes`) upsert는 사용자·scope·scopeKey 조회와 생성/수정을 즉시 트랜잭션으로 묶습니다. 최초 저장이 동시에 요청돼도 이 저장 경로에서 같은 논리 키의 행을 중복 생성하지 않습니다. DB 스키마에 모든 논리 키의 UNIQUE 제약을 추가한 것은 아닙니다.
+
+시간블록 생성에서 `kind=actual`과 `sourcePlanId`를 함께 보내면 같은 날짜에 속한 본인의 계획을 확정합니다. 편집한 시간과 내용을 실제 기록에 저장하고, 재시도하면 기존 기록을 반환합니다. 일괄 확정과 저녁 마감도 같은 연결을 사용합니다. 원본 계획을 삭제하거나 연결된 블록의 날짜·종류를 바꾸면 연결을 해제합니다.

@@ -232,13 +232,11 @@ export function FinancePage() {
 
   const handleToggleExcluded = async (tx: FinanceTransaction) => {
     await updateFinanceTransaction(tx.id, { excluded: !tx.excluded });
-    void refreshTx(true);
   };
 
   const handleDeleteTx = async (tx: FinanceTransaction) => {
     if (!confirm(`'${tx.merchant}' 거래를 삭제할까요?`)) return;
     await deleteFinanceTransaction(tx.id);
-    void refreshTx(true);
   };
 
   const handleSyncSubscriptions = async () => {
@@ -247,7 +245,6 @@ export function FinancePage() {
     setNotice(null);
     try {
       const res = await syncSubscriptionsToFinance(month);
-      await refreshTx(true);
       setNotice({
         kind: 'success',
         text:
@@ -270,7 +267,6 @@ export function FinancePage() {
       kind: 'success',
       text: `가져오기 완료: 신규 ${result.inserted}건 등록 · 중복 ${result.duplicates}건 건너뜀`,
     });
-    void refreshTx(true);
   };
 
   const saveTotalBudget = async (e: React.FormEvent) => {
@@ -290,7 +286,6 @@ export function FinancePage() {
         amount,
       });
       setTotalBudgetDraft('');
-      await refreshBudgets(true);
       setNotice({ kind: 'success', text: '월 총 예산을 저장했어요.' });
     } finally {
       setBudgetBusy(false);
@@ -311,7 +306,6 @@ export function FinancePage() {
         amount,
       });
       setNewCatBudgetAmount('');
-      await refreshBudgets(true);
       setNotice({ kind: 'success', text: `${newCatBudgetName.trim()} 예산을 저장했어요.` });
     } finally {
       setBudgetBusy(false);
@@ -320,7 +314,6 @@ export function FinancePage() {
 
   const removeBudgetRow = async (id: string) => {
     await deleteFinanceBudget(id);
-    await refreshBudgets(true);
   };
 
   const maxDailySpend = useMemo(
@@ -911,7 +904,6 @@ export function FinancePage() {
             setTxDialogOpen(false);
             setTxDialogDefaultDate(null);
           }}
-          onSaved={() => void refreshTx(true)}
         />
       )}
 
@@ -926,7 +918,6 @@ export function FinancePage() {
         <FinanceAutomationDialog
           status={automationStatus}
           onClose={() => setAutomationDialogOpen(false)}
-          onChanged={() => void refreshAutomation(true)}
         />
       )}
     </div>

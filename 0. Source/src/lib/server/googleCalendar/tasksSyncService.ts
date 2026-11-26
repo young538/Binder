@@ -69,6 +69,19 @@ export class GoogleTasksSyncService {
         conn,
         this.now,
       );
+      const deletions = this.repos.todos.pendingGoogleDeletions(conn.googleEmail);
+      let deleteFailure: Error | undefined;
+      if (conn.tasksAutoPush) {
+        for (const job of deletions) {
+          if (!this.repos.todos.googleDeletionReady(job, this.now().toISOString())) continue;
+          try {
+            await this.apiClient.deleteTask(accessToken, job.listId, job.taskId);
+            this.repos.todos.completeGoogleDeletion(job);
+          } catch (error) {
+            deleteFailure = error instanceof Error ? error : new Error('Google 할 일 삭제 동기화 실패');
+          }
+        }
+      }
       const taskLists = await this.apiClient.listTaskLists(accessToken);
       if (taskLists.length > 0) {
         this.repos.googleCalendar.updateTaskListMeta(taskLists);
@@ -98,17 +111,28 @@ export class GoogleTasksSyncService {
       let listsSynced = 0;
 
       for (const listId of targetListIds) {
+        const version = this.repos.googleCalendar.get();
+        const checkVersion = () => {
+          const latest = this.repos.googleCalendar.get();
+          if (!version || latest?.googleEmail !== conn.googleEmail || latest.taskDeletionRevision !== version.taskDeletionRevision) {
+            throw new Error('할 일 변경 중입니다. 다음 동기화에서 다시 조회합니다.');
+          }
+        };
         const remoteTasks = await this.apiClient.listTasks(accessToken, listId);
+        checkVersion();
+        const pending = this.repos.todos.pendingGoogleDeletions(conn.googleEmail);
+        const deletedIds = new Set([...deletions, ...pending].filter(job => job.listId === listId).map(job => job.taskId));
         const existingRows = this.repos.todos.listSyncedByTaskList(listId);
         const byTaskId = new Map<string, Todo>();
         for (const row of existingRows) {
           if (row.googleTaskId) byTaskId.set(row.googleTaskId, row);
         }
 
-        const seenIds = new Set<string>();
+        const seenIds = new Set(deletedIds);
         const mappedProjectId = refreshedConn.tasksProjectMap[listId] ?? null;
 
         for (const task of remoteTasks) {
+          if (deletedIds.has(task.id)) continue;
           if (task.deleted) {
             seenIds.add(task.id);
             const existing = byTaskId.get(task.id);
@@ -170,6 +194,7 @@ export class GoogleTasksSyncService {
               task.id,
               todoToGoogleTaskBody(existing),
             );
+            checkVersion();
             this.repos.todos.setGoogleTaskLink(existing.id, {
               googleTaskListId: listId,
               googleTaskId: updatedRemote.id || task.id,
@@ -218,6 +243,7 @@ export class GoogleTasksSyncService {
         }
       }
 
+      if (deleteFailure) throw deleteFailure;
       const syncedAt = this.now().toISOString();
       this.repos.googleCalendar.recordTasksSyncStatus({
         tasksLastSyncedAt: syncedAt,
@@ -360,27 +386,6 @@ export class GoogleTasksSyncService {
     }
   }
 
-  async pushDeletedTodo(todo: Pick<Todo, 'googleTaskListId' | 'googleTaskId'>): Promise<void> {
-    if (!todo.googleTaskListId || !todo.googleTaskId) return;
-    const conn = this.repos.googleCalendar.get();
-    if (!conn || !conn.tasksSyncEnabled || !conn.tasksAutoPush) return;
-
-    try {
-      const accessToken = await ensureGoogleAccessToken(
-        this.repos,
-        this.apiClient,
-        this.config,
-        conn,
-        this.now,
-      );
-      await this.apiClient.deleteTask(accessToken, todo.googleTaskListId, todo.googleTaskId);
-      this.repos.googleCalendar.recordTasksSyncStatus({ tasksLastSyncError: null });
-    } catch (error) {
-      this.repos.googleCalendar.recordTasksSyncStatus({
-        tasksLastSyncError: formatTasksError(error),
-      });
-    }
-  }
 }
 
 export function createGoogleTasksSyncService(

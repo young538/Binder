@@ -13,10 +13,9 @@ import { Dialog, actionClass, fieldClass } from '@/components/common/Dialog';
 interface Props {
   status: FinanceAutomationStatus | null;
   onClose: () => void;
-  onChanged: () => void;
 }
 
-export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
+export function FinanceAutomationDialog({ status, onClose }: Props) {
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [excelPasswordInput, setExcelPasswordInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -63,7 +62,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
       setIssuedToken(res.token);
       setCopiedToken(false);
       setInfo('새 자동 연동 토큰을 발급했습니다. 로컬 에이전트 설정(.env.finance-automation)에 등록해 주세요.');
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '토큰 발급에 실패했습니다.');
     } finally {
@@ -80,7 +78,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
       const next = !status.enabled;
       await updateFinanceAutomationSettings({ enabled: next });
       setInfo(next ? '자동 연동을 다시 활성화했습니다.' : '자동 연동을 일시 중지했습니다.');
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
     } finally {
@@ -100,7 +97,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
       await revokeFinanceAutomationToken();
       setIssuedToken(null);
       setInfo('자동 연동 토큰을 폐기했습니다.');
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '토큰 폐기에 실패했습니다.');
     } finally {
@@ -118,7 +114,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
       await updateFinanceAutomationSettings({ excelPassword: excelPasswordInput });
       setExcelPasswordInput('');
       setInfo('고정 엑셀 · ZIP 비밀번호를 암호화해 저장했습니다.');
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '비밀번호 저장에 실패했습니다.');
     } finally {
@@ -136,7 +131,6 @@ export function FinanceAutomationDialog({ status, onClose, onChanged }: Props) {
       await updateFinanceAutomationSettings({ excelPassword: null });
       setExcelPasswordInput('');
       setInfo('저장된 비밀번호를 삭제했습니다.');
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '비밀번호 삭제에 실패했습니다.');
     } finally {

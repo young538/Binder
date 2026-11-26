@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { books, retrospectives } from '../db/schema';
 import { Book } from '@/lib/types';
 import { parseReadingEntry } from '@/lib/reading';
@@ -86,16 +85,3 @@ export class BookRepository {
     await db.delete(books).where(and(eq(books.userId, userId), eq(books.id, id))).run();
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listBooksByYear = async (userId: string, year: string): Promise<Book[]> =>
-  new BookRepository(getDb(), userId).listByYear(year);
-
-export const createBook = async (userId: string, data: Omit<Book, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Book> =>
-  new BookRepository(getDb(), userId).create(data);
-
-export const updateBook = async (userId: string, id: string, patch: Partial<Omit<Book, 'id' | 'userId' | 'createdAt'>>): Promise<Book | null> =>
-  new BookRepository(getDb(), userId).update(id, patch);
-
-export const deleteBook = async (userId: string, id: string): Promise<void> =>
-  new BookRepository(getDb(), userId).delete(id);

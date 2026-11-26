@@ -355,10 +355,24 @@ describe('google calendar integration', () => {
       expect.objectContaining({ summary: '치과 검진' }),
     );
 
-    // Google failure during update/delete records lastSyncError without throwing
+    const remote = { id: pushedNew.googleEventId!, summary: '치과', start: { date: '2026-11-26' }, end: { date: '2026-11-27' } };
     vi.mocked(api.deleteEvent).mockRejectedValueOnce(new Error('Google unavailable'));
-    await expect(syncService.pushDeletedEvent(edited)).resolves.toBeUndefined();
+    await syncService.deleteEvent(edited.id);
+    expect(reposA.lifeEvents.getById(edited.id)).toBeNull();
     expect(reposA.googleCalendar.get()?.lastSyncError).toContain('Google unavailable');
+    expect(reposB.lifeEvents.pendingGoogleDeletions('alice@gmail.com')).toEqual([]);
+
+    // A fresh service instance retries the durable operation even after another failed pull/push cycle.
+    const resumed = new GoogleCalendarSyncService(new UserRepositories(db, 'user-a'), api, config, () => fixedNow);
+    vi.mocked(api.listEvents).mockResolvedValue([remote]);
+    vi.mocked(api.deleteEvent).mockRejectedValueOnce(new Error('still offline'));
+    await expect(resumed.syncNow('2026-11-20')).rejects.toThrow('still offline');
+    expect(reposA.lifeEvents.list().some(event => event.googleEventId === remote.id)).toBe(false);
+    expect(reposA.lifeEvents.pendingGoogleDeletions('alice@gmail.com')).toHaveLength(1);
+    await resumed.syncNow('2026-11-20');
+    expect(reposA.lifeEvents.pendingGoogleDeletions('alice@gmail.com')).toEqual([]);
+    expect(reposA.lifeEvents.list().some(event => event.googleEventId === remote.id)).toBe(false);
+    expect(api.deleteEvent).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -388,6 +402,61 @@ describe('GoogleSyncCoordinator auto-sync & coalescing', () => {
     }
     return repos;
   };
+
+  it('retries the latest edit after failure and preserves edits made during an in-flight update', async () => {
+    const repos = seedConnectedUser(connection.get(), 'edit');
+    const api = createMockApiClient();
+    const service = new GoogleCalendarSyncService(repos, api, oauthConfig, () => fixedNow);
+    const remote = { id: 'remote', summary: 'original', start: { date: '2026-11-20' }, end: { date: '2026-11-21' } };
+    vi.mocked(api.listEvents).mockResolvedValue([remote]);
+    await service.syncNow();
+    const id = repos.lifeEvents.list()[0].id;
+    vi.mocked(api.updateEvent).mockRejectedValueOnce(new Error('offline'));
+    await service.pushUpdatedEvent(repos.lifeEvents.update(id, { title: 'first' })!);
+    expect(repos.lifeEvents.pendingGoogleUpdates('edit@gmail.com')).toHaveLength(1);
+    const resumed = new GoogleCalendarSyncService(new UserRepositories(connection.get(), 'edit'), api, oauthConfig, () => fixedNow);
+    vi.mocked(api.updateEvent).mockImplementationOnce(async () => {
+      await resumed.pushUpdatedEvent(repos.lifeEvents.update(id, { title: 'second' })!);
+      return { id: remote.id, updated: fixedNow.toISOString() };
+    });
+    await resumed.syncNow();
+    expect(repos.lifeEvents.getById(id)?.title).toBe('second');
+    expect(repos.lifeEvents.pendingGoogleUpdates('edit@gmail.com')).toHaveLength(1);
+    await resumed.syncNow();
+    expect(api.updateEvent).toHaveBeenLastCalledWith(expect.any(String), 'primary-cal', remote.id, expect.objectContaining({ summary: 'second' }));
+    expect(repos.lifeEvents.pendingGoogleUpdates('edit@gmail.com')).toHaveLength(0);
+    expect(repos.lifeEvents.getById(id)?.title).toBe('second');
+  });
+
+  it('discards a stale calendar response racing a successful local and remote delete', async () => {
+    const repos = seedConnectedUser(connection.get(), 'race');
+    const api = createMockApiClient();
+    const service = new GoogleCalendarSyncService(repos, api, oauthConfig, () => fixedNow);
+    const remote = { id: 'remote', summary: '회의', start: { date: '2026-11-20' }, end: { date: '2026-11-21' } };
+    vi.mocked(api.listEvents).mockResolvedValueOnce([remote]);
+    await service.syncNow();
+    const event = repos.lifeEvents.list()[0];
+    // The GET captured its remote snapshot before the DELETE completed.
+    vi.mocked(api.listEvents).mockImplementationOnce(async () => {
+      await service.deleteEvent(event.id);
+      return [remote];
+    });
+    await service.syncNow();
+    expect(api.listEvents).toHaveBeenCalledTimes(3);
+    expect(repos.lifeEvents.list()).toEqual([]);
+    expect(repos.lifeEvents.pendingGoogleDeletions('race@gmail.com')).toEqual([]);
+  });
+
+  it('still runs Google Tasks when the calendar fails', async () => {
+    const db = connection.get();
+    seedConnectedUser(db, 'independent');
+    const api = createMockApiClient();
+    vi.mocked(api.listCalendars).mockRejectedValueOnce(new Error('calendar unavailable'));
+    await expect(new GoogleSyncCoordinator().syncUserIfDue('independent', {
+      force: true, database: db, apiClient: api, config: oauthConfig, now: () => fixedNow,
+    })).rejects.toThrow('calendar unavailable');
+    expect(api.listTaskLists).toHaveBeenCalledOnce();
+  });
 
   it('coalesces concurrent syncs, skips recent/disabled syncs, backs off on error, and allows force sync', async () => {
     const db = connection.get();

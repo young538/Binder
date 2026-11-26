@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { ensureUserExists, loginAs } from './_helpers';
 import { toIsoWeek } from '@/lib/utils/date';
 
 // Each spec uses its own user so test data on the server-side SQLite DB
@@ -96,7 +96,7 @@ const editBlockViaSelection = async (page: Page, title: string, nextTitle: strin
 };
 
 test('single click selects a slot without opening the editor', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -114,7 +114,7 @@ test('single click selects a slot without opening the editor', async ({ page }) 
 });
 
 test('double click a slot opens BlockEditor on the exact slot', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -151,7 +151,7 @@ test('double click a slot opens BlockEditor on the exact slot', async ({ page })
 });
 
 test('Enter on a selected slot opens BlockEditor', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -168,7 +168,7 @@ test('Enter on a selected slot opens BlockEditor', async ({ page }) => {
 });
 
 test('create, edit, delete time block via selection', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -194,7 +194,7 @@ test('create, edit, delete time block via selection', async ({ page }) => {
 });
 
 test('drag across multiple slots opens BlockEditor with that range', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -244,7 +244,7 @@ test('drag across multiple slots opens BlockEditor with that range', async ({ pa
 });
 
 test('dragging an existing block moves it to another slot', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -294,7 +294,7 @@ test('dragging an existing block moves it to another slot', async ({ page }) => 
 });
 
 test('ctrl dragging an existing block copies it to the target slot', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -360,7 +360,7 @@ test('ctrl dragging an existing block copies it to the target slot', async ({ pa
 });
 
 test('todo title needs explicit edit gesture before typing', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-week-input', 'pwTest123*');
   await page.goto(`/week/${toIsoWeek(new Date())}`);
   await page.waitForURL(/\/week\//);
@@ -368,7 +368,7 @@ test('todo title needs explicit edit gesture before typing', async ({ page }) =>
 
   const runId = Date.now();
   const title = `선택편집할일 ${runId}`;
-  const addBtn = page.getByRole('button', { name: '추가' }).first();
+  const addBtn = page.getByRole('button', { name: '추가', exact: true }).first();
   await addBtn.click();
   const draftInput = page.getByPlaceholder('할 일');
   await draftInput.fill(title);

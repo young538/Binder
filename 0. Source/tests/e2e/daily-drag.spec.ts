@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { ensureUserExists, loginAs } from './_helpers';
 
 const USERNAME = 'e2e-daily-drag';
 const PASSWORD = 'pwTest123*';
@@ -25,7 +25,7 @@ const listBlocks = async (page: Page): Promise<Block[]> => {
 };
 
 const prepareDailyPage = async (page: Page) => {
-  await resetDb(page);
+
   await page.setViewportSize({ width: 1280, height: 900 });
   await loginAs(page, USERNAME, PASSWORD);
 

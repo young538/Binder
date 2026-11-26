@@ -9,7 +9,7 @@ import { newId } from '@/lib/utils/id';
 import { nextRepeatDate } from '@/lib/todos/planning';
 import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
-import { categories, goals, projects, todos, todoCreateRequests, todoTrash } from '../db/schema';
+import { categories, goals, googleCalendarConnections, googleTaskDeletions, projects, todos, todoCreateRequests, todoTrash } from '../db/schema';
 import { DomainError } from '../errors';
 
 type NewTodo = Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
@@ -76,15 +76,16 @@ export class TodoActions {
         if (inheritedGoalId) row.parentGoalId = inheritedGoalId;
       }
       if (toggle) row.status = existing.status === 'done' ? 'pending' : 'done';
-      if (row.status !== existing.status) row.completedAt = row.status === 'done' ? timestamp : null;
+      if (row.status !== existing.status) row.completedAt = row.status === 'done' ? patch.completedAt ?? timestamp : null;
       if (row.status === 'done' && existing.status !== 'done' && row.repeatRule && !existing.repeatGenerated) {
-        const completedDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(this.now());
+        const completedDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date(row.completedAt ?? timestamp));
         const date = nextRepeatDate(row.scopeKey, row.repeatRule, completedDate);
         if (!isDate(date)) throw new DomainError('다음 반복 날짜를 만들 수 없습니다.', 400);
         const last = tx.select({ order: max(todos.order) }).from(todos).where(and(
           eq(todos.userId, this.userId), eq(todos.scope, 'day'), eq(todos.scopeKey, date),
         )).get()?.order ?? -1;
         const next: Todo = { ...row, id: newId(), scope: 'day', scopeKey: date, status: 'pending', order: last + 1,
+          googleTaskListId: null, googleTaskId: null, googleTaskUpdatedAt: null,
           repeatGenerated: false, completedAt: null, createdAt: timestamp };
         // Deleting a linked goal/category must not copy a dangling reference forward.
         if (next.categoryId && !tx.select().from(categories).where(and(eq(categories.id, next.categoryId), eq(categories.userId, this.userId))).get()) next.categoryId = null;
@@ -111,6 +112,15 @@ export class TodoActions {
       }
       const expiresAt = new Date(timestamp.getTime() + TODO_UNDO_MS).toISOString();
       tx.insert(todoTrash).values({ id, userId: this.userId, snapshot: row, expiresAt }).run();
+      if (row.googleTaskListId && row.googleTaskId) {
+        const connection = tx.select().from(googleCalendarConnections).where(eq(googleCalendarConnections.userId, this.userId)).get();
+        if (connection?.tasksAutoPush) {
+          tx.insert(googleTaskDeletions).values({ userId: this.userId, googleEmail: connection.googleEmail, todoId: id,
+            listId: row.googleTaskListId, taskId: row.googleTaskId, notBefore: expiresAt }).onConflictDoNothing().run();
+          tx.update(googleCalendarConnections).set({ taskDeletionRevision: sql`task_deletion_revision + 1` })
+            .where(eq(googleCalendarConnections.userId, this.userId)).run();
+        }
+      }
       tx.delete(todos).where(predicate).run();
       return { ok: true, undo: { id, expiresAt } };
     }, { behavior: 'immediate' });
@@ -132,6 +142,12 @@ export class TodoActions {
       if (row.categoryId && !tx.select({ id: categories.id }).from(categories).where(and(eq(categories.id, row.categoryId), eq(categories.userId, this.userId))).get()) row.categoryId = null;
       if (row.parentGoalId && !tx.select({ id: goals.id }).from(goals).where(and(eq(goals.id, row.parentGoalId), eq(goals.userId, this.userId))).get()) row.parentGoalId = null;
       if (row.projectId && !tx.select({ id: projects.id }).from(projects).where(and(eq(projects.id, row.projectId), eq(projects.userId, this.userId))).get()) row.projectId = null;
+      const cancelled = tx.delete(googleTaskDeletions)
+        .where(and(eq(googleTaskDeletions.userId, this.userId), eq(googleTaskDeletions.todoId, id))).run();
+      if (cancelled.changes) {
+        tx.update(googleCalendarConnections).set({ taskDeletionRevision: sql`task_deletion_revision + 1` })
+          .where(eq(googleCalendarConnections.userId, this.userId)).run();
+      }
       tx.insert(todos).values(row).run();
       tx.delete(todoTrash).where(predicate).run();
       return row;

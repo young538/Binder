@@ -7,14 +7,6 @@ export const POST = authenticated(async (session, request: Request, context: { p
   const repositories = getUserRepositories(session.userId);
   const restored = await repositories.todos.restore(id);
   if (!restored) return Response.json(null);
-  const cleared =
-    restored.googleTaskId || restored.googleTaskListId
-      ? (repositories.todos.setGoogleTaskLink(restored.id, {
-          googleTaskListId: null,
-          googleTaskId: null,
-          googleTaskUpdatedAt: null,
-        }) ?? restored)
-      : restored;
-  const synced = await createGoogleTasksSyncService(repositories, request).pushCreatedTodo(cleared);
+  const synced = await createGoogleTasksSyncService(repositories, request).pushCreatedTodo(restored);
   return Response.json(synced);
 });

@@ -300,7 +300,17 @@ describe('DashboardRepository snapshot & multi-user isolation', () => {
       note: null,
     });
 
+    const birthday = reposA.people.create({ name: '지민', birthday: '1990-11-28', order: 0 });
+    const morning = reposA.morningBoot.snapshot(today);
+    expect(morning.upcomingEvents.find(item => item.kind === 'subscription')).toMatchObject({
+      daysLeft: 3, title: expect.stringContaining(' 결제 '),
+    });
+    expect(morning.upcomingEvents.some(item => item.personId === birthday.id)).toBe(false);
     const snapA = reposA.dashboard.snapshot(today);
+    expect(snapA.upcomingItems.find(item => item.kind === 'birthday')).toMatchObject({
+      daysLeft: 7, label: 'D-7', title: '지민 생일',
+    });
+    expect(snapA.upcomingItems.find(item => item.kind === 'subscription')?.title).not.toContain(' 결제 ');
     expect(snapA.todayEvents).toHaveLength(1);
     expect(snapA.todayEvents[0].title).toBe('A 구글 일정');
     expect(snapA.todayEvents[0].isGoogle).toBe(true);

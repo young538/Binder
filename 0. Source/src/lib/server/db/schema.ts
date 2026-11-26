@@ -283,10 +283,12 @@ export const timeBlocks = sqliteTable(
     goalId: text('goal_id'),
     projectId: text('project_id'),
     todoId: text('todo_id'),
+    sourcePlanId: text('source_plan_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   t => ({
+    sourcePlanIdx: uniqueIndex('time_blocks_user_source_plan_idx').on(t.userId, t.sourcePlanId),
     dateIdx: index('time_blocks_date_idx').on(t.date),
     goalIdx: index('time_blocks_goal_idx').on(t.goalId),
     projectIdx: index('time_blocks_project_idx').on(t.projectId),
@@ -459,6 +461,8 @@ export const googleCalendarConnections = sqliteTable('google_calendar_connection
   pushCalendarId: text('push_calendar_id').notNull(),
   calendarMeta: text('calendar_meta', { mode: 'json' }).$type<GoogleCalendarInfo[]>().notNull(),
   syncEnabled: integer('sync_enabled', { mode: 'boolean' }).notNull().default(true),
+  taskDeletionRevision: integer('task_deletion_revision').notNull().default(0),
+  eventSyncRevision: integer('event_deletion_revision').notNull().default(0),
   autoPushEvents: integer('auto_push_events', { mode: 'boolean' }).notNull().default(true),
   lastSyncedAt: text('last_synced_at'),
   lastSyncError: text('last_sync_error'),
@@ -473,6 +477,32 @@ export const googleCalendarConnections = sqliteTable('google_calendar_connection
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+// Account-scoped outbound operations, kept out of portable backups.
+export const googleEventDeletions = sqliteTable('google_event_deletions', {
+  userId: text('user_id').notNull().references(() => googleCalendarConnections.userId, { onDelete: 'cascade' }),
+  googleEmail: text('google_email').notNull(),
+  calendarId: text('calendar_id').notNull(),
+  eventId: text('event_id').notNull(),
+}, t => [primaryKey({ columns: [t.userId, t.googleEmail, t.calendarId, t.eventId] })]);
+
+export const googleEventUpdates = sqliteTable('google_event_updates', {
+  localId: text('local_id').primaryKey().references(() => lifeEvents.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => googleCalendarConnections.userId, { onDelete: 'cascade' }),
+  googleEmail: text('google_email').notNull(),
+  revision: text('revision').notNull(),
+  lease: text('lease'),
+  leaseExpiresAt: text('lease_expires_at'),
+}, t => [index('google_event_updates_account').on(t.userId, t.googleEmail)]);
+
+export const googleTaskDeletions = sqliteTable('google_task_deletions', {
+  userId: text('user_id').notNull().references(() => googleCalendarConnections.userId, { onDelete: 'cascade' }),
+  googleEmail: text('google_email').notNull(),
+  listId: text('list_id').notNull(),
+  taskId: text('task_id').notNull(),
+  todoId: text('todo_id').notNull(),
+  notBefore: text('not_before').notNull(),
+}, t => [primaryKey({ columns: [t.userId, t.googleEmail, t.listId, t.taskId] })]);
 
 // FinanceTransactions — personal income/expense/transfer ledger & BankSalad imports
 export const financeTransactions = sqliteTable('finance_transactions', {

@@ -39,41 +39,41 @@ const seedSecondUser = async () => {
 describe('repo isolation: todos', () => {
   it('listTodos for user A excludes user B todos', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { createTodo, listTodos } = await import('@/lib/server/repos/todos');
-    await createTodo(adminId, { title: 'admin todo', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
-    await createTodo(otherId, { title: 'B todo', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
+    const { getUserRepositories } = await import('@/lib/server/repos');
+    await getUserRepositories(adminId).todos.create({ title: 'admin todo', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
+    await getUserRepositories(otherId).todos.create({ title: 'B todo', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
 
-    const adminList = await listTodos(adminId, { scope: 'day', scopeKey: '2026-04-28' });
+    const adminList = await getUserRepositories(adminId).todos.list({ scope: 'day', scopeKey: '2026-04-28' });
     expect(adminList).toHaveLength(1);
     expect(adminList[0].title).toBe('admin todo');
     expect(adminList[0].userId).toBe(adminId);
 
-    const bList = await listTodos(otherId, { scope: 'day', scopeKey: '2026-04-28' });
+    const bList = await getUserRepositories(otherId).todos.list({ scope: 'day', scopeKey: '2026-04-28' });
     expect(bList).toHaveLength(1);
     expect(bList[0].title).toBe('B todo');
   });
 
   it('updateTodo cannot modify another user todo', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { createTodo, updateTodo, listTodos } = await import('@/lib/server/repos/todos');
-    const adminTodo = await createTodo(adminId, { title: 'admin original', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
+    const { getUserRepositories } = await import('@/lib/server/repos');
+    const adminTodo = await getUserRepositories(adminId).todos.create({ title: 'admin original', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
 
     // userB attempts to update adminTodo by guessing the id
-    const result = await updateTodo(otherId, adminTodo.id, { title: 'hijacked' });
+    const result = await getUserRepositories(otherId).todos.update(adminTodo.id, { title: 'hijacked' });
     expect(result).toBeNull(); // returns null because WHERE matched 0 rows
 
-    const adminList = await listTodos(adminId, { scope: 'day', scopeKey: '2026-04-28' });
+    const adminList = await getUserRepositories(adminId).todos.list({ scope: 'day', scopeKey: '2026-04-28' });
     expect(adminList[0].title).toBe('admin original');
   });
 
   it('deleteTodo cannot delete another user todo', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { createTodo, deleteTodo, listTodos } = await import('@/lib/server/repos/todos');
-    const adminTodo = await createTodo(adminId, { title: 'admin keep', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
+    const { getUserRepositories } = await import('@/lib/server/repos');
+    const adminTodo = await getUserRepositories(adminId).todos.create({ title: 'admin keep', scope: 'day', scopeKey: '2026-04-28', status: 'pending', order: 0 });
 
-    await deleteTodo(otherId, adminTodo.id);
+    await getUserRepositories(otherId).todos.delete(adminTodo.id);
 
-    const adminList = await listTodos(adminId, { scope: 'day', scopeKey: '2026-04-28' });
+    const adminList = await getUserRepositories(adminId).todos.list({ scope: 'day', scopeKey: '2026-04-28' });
     expect(adminList).toHaveLength(1);
   });
 });
@@ -81,15 +81,15 @@ describe('repo isolation: todos', () => {
 describe('repo isolation: categories', () => {
   it('listCategories returns only the calling user categories', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { listCategories, createCategory } = await import('@/lib/server/repos/categories');
-    await createCategory(otherId, { name: 'B-only', color: '#abcdef', order: 100 });
+    const { getUserRepositories } = await import('@/lib/server/repos');
+    await getUserRepositories(otherId).categories.create({ name: 'B-only', color: '#abcdef', order: 100 });
 
-    const adminCats = await listCategories(adminId);
+    const adminCats = await getUserRepositories(adminId).categories.list();
     // admin has the 8 default seeded categories + 0 B-only
     expect(adminCats.every(c => c.userId === adminId)).toBe(true);
     expect(adminCats.find(c => c.name === 'B-only')).toBeUndefined();
 
-    const bCats = await listCategories(otherId);
+    const bCats = await getUserRepositories(otherId).categories.list();
     expect(bCats.every(c => c.userId === otherId)).toBe(true);
     expect(bCats.some(c => c.name === 'B-only')).toBe(true);
   });
@@ -98,15 +98,15 @@ describe('repo isolation: categories', () => {
 describe('repo isolation: goals', () => {
   it('listGoals isolates per user', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { createGoal, listGoals } = await import('@/lib/server/repos/goals');
-    await createGoal(adminId, { title: 'admin goal', level: 'oneThing', order: 0 });
-    await createGoal(otherId, { title: 'B goal', level: 'oneThing', order: 0 });
+    const { getUserRepositories } = await import('@/lib/server/repos');
+    await getUserRepositories(adminId).goals.create({ title: 'admin goal', level: 'oneThing', order: 0 });
+    await getUserRepositories(otherId).goals.create({ title: 'B goal', level: 'oneThing', order: 0 });
 
-    const adminGoals = await listGoals(adminId);
+    const adminGoals = await getUserRepositories(adminId).goals.list();
     expect(adminGoals).toHaveLength(1);
     expect(adminGoals[0].title).toBe('admin goal');
 
-    const bGoals = await listGoals(otherId);
+    const bGoals = await getUserRepositories(otherId).goals.list();
     expect(bGoals).toHaveLength(1);
     expect(bGoals[0].title).toBe('B goal');
   });
@@ -115,22 +115,21 @@ describe('repo isolation: goals', () => {
 describe('repo isolation: habitLogs', () => {
   it('listLogsForRange isolates per user; toggleHabit only affects calling user', async () => {
     const { adminId, otherId } = await seedSecondUser();
-    const { createHabit } = await import('@/lib/server/repos/habits');
-    const { toggleHabit, listLogsForRange } = await import('@/lib/server/repos/habitLogs');
+    const { getUserRepositories } = await import('@/lib/server/repos');
 
-    const adminHabit = await createHabit(adminId, { name: 'admin habit', color: '#fff', order: 0 });
-    const bHabit = await createHabit(otherId, { name: 'B habit', color: '#000', order: 0 });
+    const adminHabit = await getUserRepositories(adminId).habits.create({ name: 'admin habit', color: '#fff', order: 0 });
+    const bHabit = await getUserRepositories(otherId).habits.create({ name: 'B habit', color: '#000', order: 0 });
 
     // Both users log on the same date
-    await toggleHabit(adminId, adminHabit.id, '2026-04-28');
-    await toggleHabit(otherId, bHabit.id, '2026-04-28');
+    await getUserRepositories(adminId).habitLogs.toggle(adminHabit.id, '2026-04-28');
+    await getUserRepositories(otherId).habitLogs.toggle(bHabit.id, '2026-04-28');
 
-    const adminLogs = await listLogsForRange(adminId, '2026-04-28', '2026-04-28');
+    const adminLogs = await getUserRepositories(adminId).habitLogs.listInRange('2026-04-28', '2026-04-28');
     expect(adminLogs).toHaveLength(1);
     expect(adminLogs[0].habitId).toBe(adminHabit.id);
     expect(adminLogs[0].userId).toBe(adminId);
 
-    const bLogs = await listLogsForRange(otherId, '2026-04-28', '2026-04-28');
+    const bLogs = await getUserRepositories(otherId).habitLogs.listInRange('2026-04-28', '2026-04-28');
     expect(bLogs).toHaveLength(1);
     expect(bLogs[0].habitId).toBe(bHabit.id);
     expect(bLogs[0].userId).toBe(otherId);

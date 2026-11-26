@@ -104,29 +104,34 @@ export class GoogleSyncCoordinator {
 
     try {
       const result = await this.runCoalesced(userId, async () => {
-        const calendarResult = await syncService.syncNow();
+        let calendarResult: GoogleCalendarSyncResult;
         let tasksResult: GoogleCalendarSyncResult['tasks'] = null;
-        const latestConn = repos.googleCalendar.get();
-        if (latestConn?.tasksSyncEnabled) {
-          try {
-            const tasksService = new GoogleTasksSyncService(repos, apiClient, config, now);
-            tasksResult = await tasksService.syncNow();
-          } catch (tasksErr) {
-            const latestAfterErr = repos.googleCalendar.get();
-            tasksResult = {
-              pulledCreated: 0,
-              pulledUpdated: 0,
-              pulledDeleted: 0,
-              pushedCreated: 0,
-              pushedUpdated: 0,
-              listsSynced: 0,
-              syncedAt: now().toISOString(),
-              error:
-                latestAfterErr?.tasksLastSyncError ??
-                (tasksErr instanceof Error
-                  ? tasksErr.message
-                  : 'Google Tasks 동기화에 실패했습니다.'),
-            };
+        try {
+          calendarResult = await syncService.syncNow();
+        } finally {
+          // Task deletions must also run when a calendar-specific request fails.
+          const latestConn = repos.googleCalendar.get();
+          if (latestConn?.tasksSyncEnabled) {
+            try {
+              const tasksService = new GoogleTasksSyncService(repos, apiClient, config, now);
+              tasksResult = await tasksService.syncNow();
+            } catch (tasksErr) {
+              const latestAfterErr = repos.googleCalendar.get();
+              tasksResult = {
+                pulledCreated: 0,
+                pulledUpdated: 0,
+                pulledDeleted: 0,
+                pushedCreated: 0,
+                pushedUpdated: 0,
+                listsSynced: 0,
+                syncedAt: now().toISOString(),
+                error:
+                  latestAfterErr?.tasksLastSyncError ??
+                  (tasksErr instanceof Error
+                    ? tasksErr.message
+                    : 'Google Tasks 동기화에 실패했습니다.'),
+              };
+            }
           }
         }
         return { ...calendarResult, tasks: tasksResult };

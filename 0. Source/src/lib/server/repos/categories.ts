@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { categories } from '../db/schema';
+import { categories, habits, projects, timeBlocks, todos, weeklyTemplates } from '../db/schema';
+import { DomainError } from '../errors';
 import { Category } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 import type { BinderDatabase } from '../db/connection';
@@ -46,25 +46,31 @@ export class CategoryRepository {
     return (row as Category | undefined) ?? null;
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, replacementId?: string | null): Promise<void> {
     const userId = this.userId;
-    const db = this.database;
-    await db
-      .delete(categories)
-      .where(and(eq(categories.userId, userId), eq(categories.id, id)))
-      .run();
+    this.database.transaction(tx => {
+      const owned = (categoryId: string) => and(eq(categories.userId, userId), eq(categories.id, categoryId));
+      if (!tx.select().from(categories).where(owned(id)).get()) return;
+      if (replacementId && (replacementId === id || !tx.select().from(categories).where(owned(replacementId)).get())) {
+        throw new DomainError('내 카테고리에서 다른 항목을 선택해 주세요.', 400);
+      }
+      const updatedAt = new Date().toISOString();
+      const linkedBlocks = and(eq(timeBlocks.userId, userId), eq(timeBlocks.categoryId, id));
+      const templates = tx.select().from(weeklyTemplates).where(eq(weeklyTemplates.userId, userId))
+        .all().filter(t => t.blocks.some(block => block.categoryId === id));
+      if (templates.length || tx.select({ id: timeBlocks.id }).from(timeBlocks).where(linkedBlocks).get()) {
+        if (!replacementId) throw new DomainError('시간표 또는 주간 템플릿에 쓰인 카테고리입니다. 옮길 카테고리를 선택해 주세요.', 409);
+        tx.update(timeBlocks).set({ categoryId: replacementId, updatedAt }).where(linkedBlocks).run();
+        for (const template of templates) {
+          const blocks = template.blocks.map(block => block.categoryId === id ? { ...block, categoryId: replacementId } : block);
+          tx.update(weeklyTemplates).set({ blocks, updatedAt }).where(eq(weeklyTemplates.id, template.id)).run();
+        }
+      }
+      for (const table of [todos, projects, habits]) {
+        tx.update(table).set({ categoryId: replacementId ?? null, updatedAt })
+          .where(and(eq(table.userId, userId), eq(table.categoryId, id))).run();
+      }
+      tx.delete(categories).where(owned(id)).run();
+    }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listCategories = async (userId: string): Promise<Category[]> =>
-  new CategoryRepository(getDb(), userId).list();
-
-export const createCategory = async (userId: string, data: Omit<Category, 'id' | 'userId'>): Promise<Category> =>
-  new CategoryRepository(getDb(), userId).create(data);
-
-export const updateCategory = async (userId: string, id: string, patch: Partial<Omit<Category, 'id' | 'userId'>>): Promise<Category | null> =>
-  new CategoryRepository(getDb(), userId).update(id, patch);
-
-export const deleteCategory = async (userId: string, id: string): Promise<void> =>
-  new CategoryRepository(getDb(), userId).delete(id);

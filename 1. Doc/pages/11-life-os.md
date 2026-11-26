@@ -22,8 +22,8 @@
    - `/daily/[date]` 상단에 수면 시간(`0~24`h), 에너지(`1~5`), 스트레스(`1~5`), 컨디션 메모를 입력합니다.
    - `GET/PUT /api/daily-checkins`를 통해 날짜별로 즉시 upsert 되며, 같은 버튼을 다시 누르면 해당 평점을 `null`로 해제합니다.
 2. **계획 → 실제 확정 (`DailyTimeBlocks`)**:
-   - 일일 시간표에 `plan` 블록이 남아 있고 동일 시간·제목의 `actual` 블록이 아직 없으면 **계획 → 실제 확정** 버튼을 표시합니다.
-   - `POST /api/time-blocks/confirm-actuals`가 계획 블록의 카테고리·목표·프로젝트·할 일 연결(`projectId`·`goalId`·`todoId`)을 유지한 채 `actual` 블록으로 일괄 복사하며, 동일 `(startMin, endMin, text)` 블록은 중복 생성하지 않습니다.
+   - 일일 시간표에 `plan` 블록이 남아 있고 원본 계획 ID로 연결된 `actual` 블록이 아직 없으면 **계획 → 실제 확정** 버튼을 표시합니다.
+   - `POST /api/time-blocks/confirm-actuals`가 계획 블록의 카테고리·목표·프로젝트·할 일 연결(`projectId`·`goalId`·`todoId`)을 유지한 채 `actual` 블록으로 일괄 복사하며, 한 계획을 여러 번 확정해도 실제 기록은 한 건만 생성합니다.
 3. **이브닝 셧다운 (`EveningShutdownBanner` · `EveningShutdownDialog`)**:
    - `GET /api/evening-shutdown?date=YYYY-MM-DD`로 미확정 계획, 미완료 오늘 할 일, 당일 컨디션·일일 회고 현황을 불러옵니다.
    - 3단계 마감 대화상자에서 ① 계획 블록 실제 확정, ② 미완료 할 일 내일로 이월 또는 수집함 이동(`repeatRule` 자동 해제), ③ 수면·에너지·일일 회고 작성을 순서대로 마무리합니다.

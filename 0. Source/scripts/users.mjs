@@ -62,10 +62,15 @@ if (cmd === 'add') {
   if (!username) usage();
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
   if (!user) { console.error(`User '${username}' not found`); process.exit(2); }
-  const tables = ['google_calendar_connections', 'subscriptions', 'metric_entries', 'metrics', 'life_events', 'people', 'binder_notes', 'daily_checkins', 'todo_create_requests', 'todo_trash', 'weekly_templates', 'todos', 'projects', 'goals', 'categories', 'focus_notes', 'annual_goals', 'habits', 'habit_logs', 'books', 'retrospectives', 'time_blocks', 'settings'];
   const tx = db.transaction(() => {
-    for (const t of tables) {
-      db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(user.id);
+    // All account-owned tables use user_id. Defer FK checks until child and parent rows are gone.
+    db.pragma('defer_foreign_keys = ON');
+    const tables = db.prepare(`SELECT name FROM pragma_table_list AS t
+      WHERE t.schema = 'main' AND t.type = 'table'
+        AND EXISTS (SELECT 1 FROM pragma_table_info(t.name) WHERE name = 'user_id')`).pluck().all();
+    for (const table of tables) {
+      const identifier = '"' + table.replaceAll('"', '""') + '"';
+      db.prepare(`DELETE FROM ${identifier} WHERE user_id = ?`).run(user.id);
     }
     db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
   });

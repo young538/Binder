@@ -5,7 +5,7 @@ import { CheckCheck, Plus, RotateCcw } from 'lucide-react';
 import { BlockEditor } from '@/components/week/BlockEditor';
 import { TimeGrid } from '@/components/common/TimeGrid';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
-import { listLifeEvents } from '@/lib/repo/lifeEvents';
+import { unconfirmedPlansForDay } from '@/lib/time-grid/confirmation';
 import { confirmPlansAsActual, getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
 import { minutesToTimeStr } from '@/lib/utils/date';
 import type { LifeEvent, TimeBlock, TimeBlockKind } from '@/lib/types';
@@ -13,6 +13,7 @@ import { useBinder } from '@/store';
 
 interface Props {
   date: string;
+  dayEvents: LifeEvent[];
 }
 
 interface EditorState {
@@ -38,10 +39,7 @@ const formatDuration = (minutes: number) => {
 const sortBlocks = (a: TimeBlock, b: TimeBlock) =>
   a.startMin - b.startMin || a.endMin - b.endMin || a.id.localeCompare(b.id);
 
-const blockSig = (b: Pick<TimeBlock, 'startMin' | 'endMin' | 'text'>) =>
-  `${b.startMin}:${b.endMin}:${b.text}`;
-
-export const DailyTimeBlocks = ({ date }: Props) => {
+export const DailyTimeBlocks = ({ date, dayEvents }: Props) => {
   const dates = useMemo(() => {
     const [year, month, day] = date.split('-').map(Number);
     return [new Date(year, month - 1, day)];
@@ -55,11 +53,6 @@ export const DailyTimeBlocks = ({ date }: Props) => {
     date,
     () => getTimeBlocksInRange(date, date).then(rows => rows.filter(block => block.date === date).sort(sortBlocks)),
     [], ['timeBlocks'],
-  );
-  const { value: dayEvents } = useAsyncResource(
-    `day-events:${date}`,
-    () => listLifeEvents({ startDate: date, endDate: date }),
-    [], ['lifeEvents'],
   );
   const error = loadError ? '하루 계획과 실제 기록을 불러오지 못했어요. 다시 시도해 주세요.' : '';
 
@@ -85,10 +78,7 @@ export const DailyTimeBlocks = ({ date }: Props) => {
       projectId: ev.projectId ?? null,
     });
   };
-  const unconfirmedPlans = useMemo(() => {
-    const actualKeys = new Set(actuals.map(blockSig));
-    return plans.filter(plan => !actualKeys.has(blockSig(plan)));
-  }, [plans, actuals]);
+  const unconfirmedPlans = useMemo(() => unconfirmedPlansForDay(blocks), [blocks]);
 
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
   const goalById = useMemo(() => new Map(goals.map((goal) => [goal.id, goal])), [goals]);

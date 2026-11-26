@@ -64,19 +64,23 @@ const DailyPageSession = ({ date }: Props) => {
     fixedHabits, flexibleHabits, completedToday, fixedDone, fixedPercent,
     toggle, addTrackerPreset, flexibleProgress } = useDailyTracker(date, categories);
 
+  const { value: dayEvents } = useAsyncResource(
+    `day-events:${date}`,
+    () => listLifeEvents({ startDate: date, endDate: date }),
+    [], ['lifeEvents'],
+  );
   const { value: dayExtras } = useAsyncResource(
     `daily-markers:${date}`,
     async () => {
-      const [annualGoals, lifeEvents, people, subscriptions] = await Promise.all([
+      const [annualGoals, people, subscriptions] = await Promise.all([
         listAnnualGoalsByYear(date.slice(0, 4)),
-        listLifeEvents({ startDate: date, endDate: date }),
         listPeople(),
         listSubscriptions(),
       ]);
-      return { annualGoals, lifeEvents, people, subscriptions };
+      return { annualGoals, people, subscriptions };
     },
-    { annualGoals: [], lifeEvents: [], people: [], subscriptions: [] },
-    ['annualGoals', 'lifeEvents', 'people', 'subscriptions'],
+    { annualGoals: [], people: [], subscriptions: [] },
+    ['annualGoals', 'people', 'subscriptions'],
   );
 
   const dayMarkers = useMemo(
@@ -84,11 +88,11 @@ const DailyPageSession = ({ date }: Props) => {
       buildCalendarMarkers(date, date, {
         projects,
         annualGoals: dayExtras.annualGoals,
-        lifeEvents: dayExtras.lifeEvents,
+        lifeEvents: dayEvents,
         people: dayExtras.people,
         subscriptions: dayExtras.subscriptions,
       }).get(date) ?? [],
-    [date, projects, dayExtras],
+    [date, projects, dayExtras, dayEvents],
   );
 
   const previousDate = toIsoDate(addDays(selectedDate, -1));
@@ -153,7 +157,7 @@ const DailyPageSession = ({ date }: Props) => {
 
         <DailyCheckinBar key={`checkin-${date}`} date={date} />
 
-        <DailyTimeBlocks key={date} date={date} />
+        <DailyTimeBlocks key={date} date={date} dayEvents={dayEvents} />
 
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.85fr)]">
           <div className="space-y-5">

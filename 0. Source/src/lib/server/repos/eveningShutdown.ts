@@ -4,13 +4,12 @@ import { addDays, parseISO } from 'date-fns';
 import type { EveningShutdownApplyInput, EveningShutdownApplyResult, EveningShutdownSnapshot } from '@/lib/eveningShutdown';
 import type { DailyCheckin, Retrospective, TimeBlock, Todo } from '@/lib/types';
 import { toIsoDate } from '@/lib/utils/date';
-import { newId } from '@/lib/utils/id';
+import { confirmPlans } from './timeBlocks';
+import { unconfirmedPlansForDay } from '@/lib/time-grid/confirmation';
 import type { BinderDatabase } from '../db/connection';
 import { dailyCheckins, retrospectives, timeBlocks, todos } from '../db/schema';
 
 const ACTIVE_STATUSES = ['pending', 'postponed'] as const;
-const blockSignature = (block: Pick<TimeBlock, 'startMin' | 'endMin' | 'text'>) =>
-  `${block.startMin}:${block.endMin}:${block.text}`;
 
 /** Aggregates today's Evening Shutdown context and executes atomic closing actions. */
 export class EveningShutdownRepository {
@@ -30,10 +29,7 @@ export class EveningShutdownRepository {
         .all() as TimeBlock[];
 
       const actualBlocks = blocks.filter(b => b.kind === 'actual');
-      const actualKeys = new Set(actualBlocks.map(blockSignature));
-      const unconfirmedPlans = blocks.filter(
-        b => (b.kind ?? 'plan') === 'plan' && !actualKeys.has(blockSignature(b)),
-      );
+      const unconfirmedPlans = unconfirmedPlansForDay(blocks);
       const actualMinutes = actualBlocks.reduce((sum, b) => sum + Math.max(0, b.endMin - b.startMin), 0);
 
       const todayTodos = tx
@@ -86,56 +82,9 @@ export class EveningShutdownRepository {
 
     return this.database.transaction(tx => {
       const timestamp = this.now().toISOString();
-      let confirmedBlocks = 0;
+      const confirmedBlocks = confirmPlans(tx, this.userId, input.date, confirmIds, timestamp);
       let rolledOverTodos = 0;
       let movedToInbox = 0;
-
-      if (confirmIds.length > 0) {
-        const plans = tx
-          .select()
-          .from(timeBlocks)
-          .where(
-            and(
-              eq(timeBlocks.userId, this.userId),
-              eq(timeBlocks.date, input.date),
-              eq(timeBlocks.kind, 'plan'),
-              inArray(timeBlocks.id, confirmIds),
-            ),
-          )
-          .orderBy(asc(timeBlocks.startMin), asc(timeBlocks.id))
-          .all() as TimeBlock[];
-
-        const existingActuals = tx
-          .select()
-          .from(timeBlocks)
-          .where(and(eq(timeBlocks.userId, this.userId), eq(timeBlocks.date, input.date), eq(timeBlocks.kind, 'actual')))
-          .all() as TimeBlock[];
-        const actualKeys = new Set(existingActuals.map(blockSignature));
-
-        for (const plan of plans) {
-          const sig = blockSignature(plan);
-          if (actualKeys.has(sig)) continue;
-          actualKeys.add(sig);
-          tx.insert(timeBlocks)
-            .values({
-              id: newId(),
-              userId: this.userId,
-              date: plan.date,
-              startMin: plan.startMin,
-              endMin: plan.endMin,
-              text: plan.text,
-              kind: 'actual',
-              categoryId: plan.categoryId,
-              goalId: plan.goalId ?? null,
-              projectId: plan.projectId ?? null,
-              todoId: plan.todoId ?? null,
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            })
-            .run();
-          confirmedBlocks++;
-        }
-      }
 
       if (rolloverIds.length > 0) {
         const rows = (

@@ -1,22 +1,6 @@
 import { Page, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
-export const resetDb = async (page: Page) => {
-  // Runs before the app bundle loads on each navigation.
-  // Use a sessionStorage flag so we only wipe BinderDb once per test session
-  // (the first navigation), not on page.reload() which would discard saved state.
-  await page.addInitScript(() => {
-    try {
-      if (!sessionStorage.getItem('__e2e_db_reset__')) {
-        indexedDB.deleteDatabase('BinderDb');
-        sessionStorage.setItem('__e2e_db_reset__', '1');
-      }
-    } catch {
-      indexedDB.deleteDatabase('BinderDb');
-    }
-  });
-};
-
 /**
  * Forces the dev server to open the DB and apply migrations. POSTing to
  * /api/auth/login (a PUBLIC_PATH) with bogus creds calls verifyCredentials()
@@ -56,27 +40,19 @@ const ensureMigrationsApplied = async () => {
   throw new Error('e2e dev server never accepted /api/auth/login within 90s');
 };
 
-/**
- * Idempotent user-create against the same DB the e2e webServer is running on.
- * scripts/users.mjs (Task 8) returns exit code 2 if the user already exists,
- * which we swallow so test runs can be re-run without manual cleanup.
- *
- * The DB_PATH MUST match playwright.config.ts webServer.env.DB_PATH so the
- * CLI writes to the same SQLite file the dev server reads from.
- *
- * IMPORTANT: caller must `await ensureMigrationsReady()` once before the
- * first call so the schema exists. We bake that into this helper for safety.
- */
+// Several scenarios can share an account within one run. The account CLI must use the server's DB.
 let _migrationsReady: Promise<void> | null = null;
 export const ensureUserExists = async (username: string, password: string) => {
   if (!_migrationsReady) _migrationsReady = ensureMigrationsApplied();
   await _migrationsReady;
 
+  const database = process.env.BINDER_E2E_DATABASE;
+  if (!database) throw new Error('Missing Playwright run database');
   try {
     execFileSync(
       process.execPath, ['scripts/users.mjs', 'add', username, password],
       {
-        env: { ...process.env, DB_PATH: './tmp-test/e2e.sqlite' },
+        env: { ...process.env, DB_PATH: database },
         stdio: 'pipe',
       }
     );

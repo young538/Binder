@@ -21,7 +21,10 @@ export const updateCategory = async (
   notifyMutation('categories');
 };
 
-export const deleteCategory = async (id: string): Promise<void> => {
-  await http.del(`/api/categories/${id}`);
-  notifyMutation('categories');
+export const deleteCategory = async (id: string, replacementId?: string): Promise<void> => {
+  const query = replacementId ? `?replacementId=${encodeURIComponent(replacementId)}` : '';
+  await http.del(`/api/categories/${encodeURIComponent(id)}${query}`);
+  for (const resource of ['categories', 'habits', 'projects', 'todos', 'timeBlocks', 'weeklyTemplates'] as const) {
+    notifyMutation(resource);
+  }
 };

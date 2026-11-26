@@ -152,7 +152,7 @@ const rules: Record<MutationKind, Rules> = {
   eveningShutdownApply: { fields: { date: isDate, confirmBlockIds: idList, rolloverTodoIds: idList, inboxTodoIds: idList }, required: ['date'] },
   projects: { fields: { title: identifier, status: oneOf('active', 'planned', 'onHold', 'done'), order: integer(0), goalId: optionalId, categoryId: optionalId, deadline: nullable(isDate), outcome: optionalText, note: optionalText }, required: ['title', 'status', 'order'] },
   todos: { fields: { title: str, scope: oneOf('day', 'week', 'month', 'year', 'inbox'), scopeKey: identifier, status: oneOf('pending', 'done', 'postponed', 'delegated', 'cancelled'), order: integer(0), parentGoalId: optionalId, projectId: optionalId, priority: nullable(oneOf(1, 2, 3)), categoryId: optionalId, note: optionalText, repeatRule: nullable(repeatRule), sourceRetro: nullable(sourceRetro) }, required: ['title', 'scope', 'scopeKey', 'status', 'order'] },
-  timeBlocks: { fields: { date: isDate, startMin: integer(0, 1439), endMin: integer(1, 1440), text: str, kind: oneOf('plan', 'actual'), categoryId: identifier, goalId: optionalId, projectId: optionalId, todoId: optionalId }, required: ['date', 'startMin', 'endMin', 'text', 'kind', 'categoryId'] },
+  timeBlocks: { fields: { date: isDate, startMin: integer(0, 1439), endMin: integer(1, 1440), text: str, kind: oneOf('plan', 'actual'), categoryId: identifier, goalId: optionalId, projectId: optionalId, todoId: optionalId, sourcePlanId: optionalId }, required: ['date', 'startMin', 'endMin', 'text', 'kind', 'categoryId'] },
   goals: { fields: { title: str, parentId: optionalId, level: oneOf('oneThing', 'mandalartCore', 'mandalartSub'), color: nullable(color), order: integer(0) }, required: ['title', 'level', 'order'] },
   categories: { fields: { name: str, color, order: integer(0) }, required: ['name', 'color', 'order'] },
   habits: { fields: { name: str, color, order: integer(0), schedule, categoryId: optionalId, note: optionalText, parentGoalId: optionalId, annualGoalId: optionalId }, required: ['name', 'color', 'order'] },
@@ -224,11 +224,13 @@ const invalid = (message: string): never => { throw new ValidationError(message)
 export function validateFields(kind: MutationKind, value: unknown, patch = false): Record<string, unknown> {
   if (!object(value)) return invalid('JSON body must be an object');
   if (patch && Object.keys(value).length === 0) invalid('Patch must contain at least one field');
+  if (kind === 'timeBlocks' && patch && Object.hasOwn(value, 'sourcePlanId')) invalid('Immutable field: sourcePlanId');
   const rule = rules[kind];
   for (const [key, entry] of Object.entries(value)) {
     if (!Object.hasOwn(rule.fields, key)) invalid(`Unknown or immutable field: ${key}`);
     if (!rule.fields[key](entry)) invalid(`Invalid field: ${key}`);
   }
+  if (!patch && kind === 'timeBlocks' && value.sourcePlanId && value.kind !== 'actual') invalid('Only actuals can reference a plan');
   if (!patch) for (const key of rule.required) if (!Object.hasOwn(value, key)) invalid(`Required field: ${key}`);
   if (kind === 'annualGoalCreate' && value.ensureSeven !== true && value.order === undefined) invalid('Required field: order');
   return value;

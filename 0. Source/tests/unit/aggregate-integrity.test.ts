@@ -1,12 +1,10 @@
+import { getUserRepositories } from '@/lib/server/repos';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { getDb, closeDb, schema } from '@/lib/server/db/client';
-import { createAnnualGoal, listAnnualGoalsByYear, updateAnnualGoal } from '@/lib/server/repos/annualGoals';
-import { createHabit, updateHabit, deleteHabit } from '@/lib/server/repos/habits';
-import { toggleHabit, listLogsForRange } from '@/lib/server/repos/habitLogs';
 import { computeGoalProgress } from '@/lib/server/progress';
 import { computeHabitStatsForRange, computeHabitYearBreakdown, expectedHabitCountInRange, habitTrackerLogRange } from '@/lib/utils/habitSchedule';
 import { Habit, HabitLog } from '@/lib/types';
@@ -15,10 +13,14 @@ vi.mock('@/lib/server/auth', () => ({ requireSession: async () => ({ userId: 'ag
 
 const tmpDb = path.join(process.cwd(), 'tmp-test', `aggregates-${process.pid}-${Date.now()}.sqlite`);
 const uid = 'aggregate-user';
+let repos: ReturnType<typeof getUserRepositories>;
 const empty = () => Array<number | null>(12).fill(null);
-const goal = async (id: string) => (await listAnnualGoalsByYear(uid, '2026')).find(row => row.id === id)!;
+const goal = async (id: string) => (await repos.annualGoals.listByYear('2026')).find(row => row.id === id)!;
 
-beforeEach(() => { process.env.DB_PATH = tmpDb; });
+beforeEach(() => {
+  process.env.DB_PATH = tmpDb;
+  repos = getUserRepositories(uid);
+});
 afterEach(() => {
   closeDb();
   for (const suffix of ['', '-wal', '-shm']) fs.rmSync(`${tmpDb}${suffix}`, { force: true });
@@ -26,87 +28,87 @@ afterEach(() => {
 
 describe('annual actuals from logs and manual offsets', () => {
   it('sums manual monthly targets including clearing the last value and preserves annual-only edits', async () => {
-    const annual = await createAnnualGoal(uid, '2026', 0);
+    const annual = await repos.annualGoals.create('2026', 0);
     const targets = empty(); targets[0] = 12; targets[3] = 8;
-    await updateAnnualGoal(uid, annual.id, { monthlyTargets: targets, target: 999 });
+    await repos.annualGoals.update(annual.id, { monthlyTargets: targets, target: 999 });
     expect((await goal(annual.id)).target).toBe(20);
-    await updateAnnualGoal(uid, annual.id, { monthlyTargets: empty() });
+    await repos.annualGoals.update(annual.id, { monthlyTargets: empty() });
     expect((await goal(annual.id)).target).toBe(0);
-    await updateAnnualGoal(uid, annual.id, { target: 42 });
+    await repos.annualGoals.update(annual.id, { target: 42 });
     expect((await goal(annual.id)).target).toBe(42);
-    await updateAnnualGoal(uid, annual.id, { title: 'Keep annual target' });
+    await repos.annualGoals.update(annual.id, { title: 'Keep annual target' });
     expect((await goal(annual.id)).target).toBe(42);
-    const habit = await createHabit(uid, { name: 'Read', color: '#ffffff', order: 0, annualGoalId: annual.id });
-    await updateAnnualGoal(uid, annual.id, { monthlyTargets: empty(), target: 0 });
+    const habit = await repos.habits.create({ name: 'Read', color: '#ffffff', order: 0, annualGoalId: annual.id });
+    await repos.annualGoals.update(annual.id, { monthlyTargets: empty(), target: 0 });
     expect((await goal(annual.id)).target).toBe(365);
-    await deleteHabit(uid, habit.id);
+    await repos.habits.delete(habit.id);
   });
 
   it('roundtrips exported adjustments and initializes legacy imports after their logs are inserted', async () => {
     const { GET: exportData } = await import('@/app/api/export/route');
     const { POST: importData } = await import('@/app/api/import/route');
-    const annual = await createAnnualGoal(uid, '2026', 0);
-    const habit = await createHabit(uid, { name: 'Read', color: '#ffffff', order: 0, annualGoalId: annual.id });
-    await toggleHabit(uid, habit.id, '2026-01-01');
+    const annual = await repos.annualGoals.create('2026', 0);
+    const habit = await repos.habits.create({ name: 'Read', color: '#ffffff', order: 0, annualGoalId: annual.id });
+    await repos.habitLogs.toggle(habit.id, '2026-01-01');
     const totals = empty(); totals[0] = 10;
-    await updateAnnualGoal(uid, annual.id, { monthlyActuals: totals });
+    await repos.annualGoals.update(annual.id, { monthlyActuals: totals });
     const exported = await (await exportData()).json();
     expect(exported.annualGoals[0].monthlyActuals[0]).toBe(10);
     expect(exported.annualGoals[0].monthlyActualAdjustments[0]).toBe(9);
     const restore = () => importData(new Request('http://localhost/api/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'replace', data: exported }) }));
     expect((await restore()).status).toBe(200);
-    await toggleHabit(uid, habit.id, '2026-01-02');
+    await repos.habitLogs.toggle(habit.id, '2026-01-02');
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(11);
     delete exported.annualGoals[0].monthlyActualAdjustments;
     expect((await restore()).status).toBe(200);
-    await toggleHabit(uid, habit.id, '2026-01-02');
+    await repos.habitLogs.toggle(habit.id, '2026-01-02');
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(11);
   });
 
   it('moves logs on relink, removes them on deletion, preserves manual offsets and clears the last target', async () => {
-    const first = await createAnnualGoal(uid, '2026', 0);
-    const second = await createAnnualGoal(uid, '2026', 1);
-    const habit = await createHabit(uid, { name: 'Read', color: '#fff', order: 0, annualGoalId: first.id, schedule: { kind: 'perWeek', count: 3 } });
-    await toggleHabit(uid, habit.id, '2026-01-01');
-    await toggleHabit(uid, habit.id, '2026-01-02');
+    const first = await repos.annualGoals.create('2026', 0);
+    const second = await repos.annualGoals.create('2026', 1);
+    const habit = await repos.habits.create({ name: 'Read', color: '#fff', order: 0, annualGoalId: first.id, schedule: { kind: 'perWeek', count: 3 } });
+    await repos.habitLogs.toggle(habit.id, '2026-01-01');
+    await repos.habitLogs.toggle(habit.id, '2026-01-02');
     const totals = empty(); totals[0] = 10;
-    await updateAnnualGoal(uid, first.id, { monthlyActuals: totals });
+    await repos.annualGoals.update(first.id, { monthlyActuals: totals });
     expect((await goal(first.id)).monthlyActuals[0]).toBe(10);
-    await updateHabit(uid, habit.id, { annualGoalId: second.id });
+    await repos.habits.update(habit.id, { annualGoalId: second.id });
     expect((await goal(first.id)).monthlyActuals[0]).toBe(8);
     expect((await goal(first.id)).target).toBe(0);
     expect((await goal(first.id)).monthlyTargets).toEqual(Array(12).fill(0));
     expect((await goal(second.id)).monthlyActuals[0]).toBe(2);
-    await deleteHabit(uid, habit.id);
+    await repos.habits.delete(habit.id);
     expect((await goal(second.id)).monthlyActuals[0] ?? 0).toBe(0);
     expect((await goal(second.id)).target).toBe(0);
     expect((await goal(first.id)).monthlyActuals[0]).toBe(8);
   });
 
   it('does not lose concurrent completions and treats repeated toggles as one logical log', async () => {
-    const annual = await createAnnualGoal(uid, '2026', 0);
-    const habit = await createHabit(uid, { name: 'Read', color: '#fff', order: 0, annualGoalId: annual.id });
-    await Promise.all(Array.from({ length: 20 }, (_, i) => toggleHabit(uid, habit.id, `2026-01-${String(i + 1).padStart(2, '0')}`)));
+    const annual = await repos.annualGoals.create('2026', 0);
+    const habit = await repos.habits.create({ name: 'Read', color: '#fff', order: 0, annualGoalId: annual.id });
+    await Promise.all(Array.from({ length: 20 }, (_, i) => repos.habitLogs.toggle(habit.id, `2026-01-${String(i + 1).padStart(2, '0')}`)));
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(20);
-    await Promise.all(Array.from({ length: 10 }, () => toggleHabit(uid, habit.id, '2026-02-01')));
-    expect(await listLogsForRange(uid, '2026-02-01', '2026-02-01')).toHaveLength(0);
+    await Promise.all(Array.from({ length: 10 }, () => repos.habitLogs.toggle(habit.id, '2026-02-01')));
+    expect(await repos.habitLogs.listInRange('2026-02-01', '2026-02-01')).toHaveLength(0);
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(20);
-    await expect(toggleHabit('other-user', habit.id, '2026-01-01')).rejects.toThrow('Habit not found');
+    await expect(getUserRepositories('other-user').habitLogs.toggle(habit.id, '2026-01-01')).rejects.toThrow('Habit not found');
   });
 
   it('preserves a legacy imported baseline before mutation and counts duplicate logs once', async () => {
-    const annual = await createAnnualGoal(uid, '2026', 0);
-    const habit = await createHabit(uid, { name: 'Read', color: '#fff', order: 0, annualGoalId: annual.id });
-    await toggleHabit(uid, habit.id, '2026-01-01');
+    const annual = await repos.annualGoals.create('2026', 0);
+    const habit = await repos.habits.create({ name: 'Read', color: '#fff', order: 0, annualGoalId: annual.id });
+    await repos.habitLogs.toggle(habit.id, '2026-01-01');
     const db = getDb();
     db.insert(schema.habitLogs).values({ id: 'duplicate', userId: uid, habitId: habit.id, date: '2026-01-01', createdAt: '' }).run();
     const totals = empty(); totals[0] = 6;
     db.update(schema.annualGoals).set({ monthlyActuals: totals, monthlyActualAdjustments: null }).where(eq(schema.annualGoals.id, annual.id)).run();
-    await toggleHabit(uid, habit.id, '2026-01-02');
+    await repos.habitLogs.toggle(habit.id, '2026-01-02');
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(7);
-    await toggleHabit(uid, habit.id, '2026-01-01');
+    await repos.habitLogs.toggle(habit.id, '2026-01-01');
     expect((await goal(annual.id)).monthlyActuals[0]).toBe(6);
-    expect(await listLogsForRange(uid, '2026-01-01', '2026-01-01')).toHaveLength(0);
+    expect(await repos.habitLogs.listInRange('2026-01-01', '2026-01-01')).toHaveLength(0);
   });
 
   it('backfills signed manual offsets during the schema migration without changing legacy totals', () => {

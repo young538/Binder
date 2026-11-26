@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { habits, habitLogs } from '../db/schema';
 import { Habit } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
@@ -22,11 +21,6 @@ export class HabitRepository {
       .orderBy(asc(habits.order))
       .all();
     return rows as Habit[];
-  }
-
-  async syncAnnualGoal(annualGoalId: string): Promise<void> {
-    const userId = this.userId;
-    this.database.transaction(tx => syncAnnualTargets(tx, userId, annualGoalId), { behavior: 'immediate' });
   }
 
   async create(data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Habit> {
@@ -71,19 +65,3 @@ export class HabitRepository {
     }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listHabits = async (userId: string): Promise<Habit[]> =>
-  new HabitRepository(getDb(), userId).list();
-
-export const syncAnnualGoalFromHabits = async (userId: string, annualGoalId: string): Promise<void> =>
-  new HabitRepository(getDb(), userId).syncAnnualGoal(annualGoalId);
-
-export const createHabit = async (userId: string, data: Omit<Habit, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Habit> =>
-  new HabitRepository(getDb(), userId).create(data);
-
-export const updateHabit = async (userId: string, id: string, patch: Partial<Omit<Habit, 'id' | 'userId' | 'createdAt'>>): Promise<Habit | null> =>
-  new HabitRepository(getDb(), userId).update(id, patch);
-
-export const deleteHabit = async (userId: string, id: string): Promise<void> =>
-  new HabitRepository(getDb(), userId).delete(id);

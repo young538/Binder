@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { focusNotes } from '../db/schema';
 import { FocusNote, FocusScope } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
@@ -46,10 +45,3 @@ export class FocusNoteRepository {
     }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const getFocus = async (userId: string, scope: FocusScope, scopeKey: string): Promise<FocusNote | null> =>
-  new FocusNoteRepository(getDb(), userId).get(scope, scopeKey);
-
-export const upsertFocus = async (userId: string, scope: FocusScope, scopeKey: string, text: string): Promise<FocusNote> =>
-  new FocusNoteRepository(getDb(), userId).upsert(scope, scopeKey, text);

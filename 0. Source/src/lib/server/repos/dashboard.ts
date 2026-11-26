@@ -1,6 +1,6 @@
 import 'server-only';
 import { addDays, parseISO } from 'date-fns';
-import { and, asc, between, eq, inArray, isNotNull, lte, or } from 'drizzle-orm';
+import { and, asc, desc, between, eq, inArray, isNotNull, lte, or } from 'drizzle-orm';
 import type {
   DashboardMetricItem,
   DashboardProjectItem,
@@ -14,10 +14,11 @@ import {
   normalizeFinanceCycleStartDay,
   summarizeMonthFinance,
 } from '@/lib/finance';
-import { annualOccurrenceForYear, describeEventDday, isContactDue, nextAnnualOccurrence } from '@/lib/lifeEvents';
-import { sortMetricEntries, summarizeMetric } from '@/lib/metrics';
+import { annualOccurrenceForYear, isContactDue } from '@/lib/lifeEvents';
+import { METRIC_CHART_ENTRIES, summarizeMetric } from '@/lib/metrics';
+import { upcomingItemsFor } from '@/lib/upcomingItems';
 import { buildProjectOverview } from '@/lib/projects';
-import { describeBillingDday, formatCurrency, summarizeSubscriptions } from '@/lib/subscriptions';
+import { summarizeSubscriptions } from '@/lib/subscriptions';
 import type {
   BinderNote,
   DailyCheckin,
@@ -172,7 +173,6 @@ export class DashboardRepository {
         .all() as Subscription[];
 
       const todayEvents: DashboardTodayEvent[] = [];
-      const upcomingItems: DashboardUpcomingItem[] = [];
 
       for (const ev of eventRows) {
         const isToday =
@@ -192,19 +192,6 @@ export class DashboardRepository {
             isGoogle: Boolean(ev.googleEventId),
           });
         }
-
-        const dday = describeEventDday(ev, date);
-        if (dday.daysLeft >= 0 && dday.daysLeft <= 7) {
-          upcomingItems.push({
-            id: ev.id,
-            title: ev.title,
-            kind: ev.kind,
-            date: dday.targetDate,
-            daysLeft: dday.daysLeft,
-            label: dday.label,
-            isGoogle: Boolean(ev.googleEventId),
-          });
-        }
       }
 
       todayEvents.sort((a, b) => {
@@ -214,46 +201,12 @@ export class DashboardRepository {
         return a.title.localeCompare(b.title);
       });
 
-      let duePeopleCount = 0;
-      for (const person of peopleRows) {
-        if (isContactDue(person, date).due) {
-          duePeopleCount++;
-        }
-        if (person.birthday) {
-          const next = nextAnnualOccurrence(person.birthday.slice(5, 10), date);
-          if (next.daysLeft >= 0 && next.daysLeft <= 7) {
-            upcomingItems.push({
-              id: `bday:${person.id}`,
-              title: `${person.name} 생일`,
-              kind: 'birthday',
-              date: next.date,
-              daysLeft: next.daysLeft,
-              label: next.daysLeft === 0 ? '오늘' : `D-${next.daysLeft}`,
-              isGoogle: false,
-            });
-          }
-        }
-      }
-
-      for (const sub of subscriptionRows) {
-        if (sub.status !== 'active' || !sub.nextBillingDate) continue;
-        const billing = describeBillingDday(sub.nextBillingDate, date);
-        if (billing.daysLeft >= 0 && billing.daysLeft <= 7) {
-          upcomingItems.push({
-            id: `sub:${sub.id}`,
-            title: `💳 ${sub.name} (${formatCurrency(sub.amount, sub.currency)})`,
-            kind: 'subscription',
-            date: sub.nextBillingDate,
-            daysLeft: billing.daysLeft,
-            label: billing.label,
-            isGoogle: false,
-          });
-        }
-      }
-
-      upcomingItems.sort(
-        (a, b) => a.daysLeft - b.daysLeft || a.date.localeCompare(b.date) || a.title.localeCompare(b.title),
-      );
+      const duePeopleCount = peopleRows.filter(person => isContactDue(person, date).due).length;
+      const upcomingItems: DashboardUpcomingItem[] = upcomingItemsFor(
+        date, 7, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} (${price})`,
+      ).map(({ id, title, kind, date, daysLeft, label, isGoogle }) => ({
+        id, title, kind, date, daysLeft, label, isGoogle,
+      }));
 
       const subscriptionSummary = summarizeSubscriptions(subscriptionRows, date);
 
@@ -322,33 +275,19 @@ export class DashboardRepository {
         .from(metrics)
         .where(eq(metrics.userId, this.userId))
         .orderBy(asc(metrics.order), asc(metrics.createdAt), asc(metrics.id))
+        .limit(6)
         .all() as LifeMetric[];
 
-      const limitedMetrics = metricRows.slice(0, 6);
-      const metricIds = limitedMetrics.map(m => m.id);
-      const metricEntryRows = metricIds.length
-        ? (tx
-            .select()
-            .from(metricEntries)
-            .where(and(eq(metricEntries.userId, this.userId), inArray(metricEntries.metricId, metricIds)))
-            .orderBy(asc(metricEntries.date), asc(metricEntries.id))
-            .all() as LifeMetricEntry[])
-        : [];
-
-      const entriesByMetric = new Map<string, LifeMetricEntry[]>();
-      for (const entry of metricEntryRows) {
-        const list = entriesByMetric.get(entry.metricId);
-        if (list) list.push(entry);
-        else entriesByMetric.set(entry.metricId, [entry]);
-      }
-
-      const dashboardMetrics: DashboardMetricItem[] = limitedMetrics.map(metric => {
-        const sortedEntries = sortMetricEntries(entriesByMetric.get(metric.id) ?? []);
-        return {
-          metric,
-          entries: sortedEntries,
-          summary: summarizeMetric(metric, sortedEntries),
-        };
+      const dashboardMetrics: DashboardMetricItem[] = metricRows.map(metric => {
+        const scope = and(eq(metricEntries.userId, this.userId), eq(metricEntries.metricId, metric.id));
+        const recent = tx.select().from(metricEntries).where(scope)
+          .orderBy(desc(metricEntries.date), desc(metricEntries.id)).limit(METRIC_CHART_ENTRIES).all().reverse() as LifeMetricEntry[];
+        // Downward targets measure progress from the first recorded value.
+        const first = recent.length === METRIC_CHART_ENTRIES && metric.direction === 'down'
+          ? tx.select().from(metricEntries).where(scope).orderBy(asc(metricEntries.date), asc(metricEntries.id)).get()
+          : undefined;
+        const summary = summarizeMetric(metric, first && first.id !== recent[0].id ? [first, ...recent] : recent);
+        return { metric, entries: recent, summary };
       });
 
       const googleConn = tx

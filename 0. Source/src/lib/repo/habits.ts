@@ -2,14 +2,6 @@ import { Habit } from '../types';
 import { http } from './http';
 import { notifyMutation } from './events';
 
-// Server automatically syncs linked annual goals on create/update/delete.
-// This function remains exported for legacy callers but is now a no-op
-// (server-side repos handle the sync transparently).
-export const syncAnnualGoalFromHabits = async (_annualGoalId: string): Promise<void> => {
-  // server handles it; keep exported symbol for compatibility
-  void _annualGoalId;
-};
-
 export const listHabits = (): Promise<Habit[]> => http.get<Habit[]>('/api/habits');
 
 export const createHabit = async (

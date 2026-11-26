@@ -25,10 +25,10 @@ describe('nullable clear: null 해제 vs undefined 변경없음', () => {
   it('habit categoryId: null → 해제, undefined → 유지', async () => {
     const { getDb, schema } = await import('@/lib/server/db/client');
     const { eq } = await import('drizzle-orm');
-    const { createHabit, updateHabit } = await import('@/lib/server/repos/habits');
+    const { getUserRepositories } = await import('@/lib/server/repos');
 
     const admin = getDb().select().from(schema.users).get() as { id: string };
-    const habit = await createHabit(admin.id, {
+    const habit = await getUserRepositories(admin.id).habits.create({
       name: '운동',
       color: '#ddd9c4',
       order: 0,
@@ -43,23 +43,23 @@ describe('nullable clear: null 해제 vs undefined 변경없음', () => {
     // undefined 는 변경 없음 (JSON round-trip 에서 키 증발과 동일)
     const dropped = JSON.parse(JSON.stringify({ categoryId: undefined }));
     expect(dropped).toEqual({});
-    await updateHabit(admin.id, habit.id, dropped);
+    await getUserRepositories(admin.id).habits.update(habit.id, dropped);
     expect(read().categoryId).toBe('cat-1');
 
     // null 은 명시적 해제 → DB null
     const cleared = JSON.parse(JSON.stringify({ categoryId: null }));
     expect(cleared).toEqual({ categoryId: null });
-    await updateHabit(admin.id, habit.id, cleared);
+    await getUserRepositories(admin.id).habits.update(habit.id, cleared);
     expect(read().categoryId).toBeNull();
   });
 
   it('todo categoryId/parentGoalId: null → 해제', async () => {
     const { getDb, schema } = await import('@/lib/server/db/client');
     const { eq } = await import('drizzle-orm');
-    const { createTodo, updateTodo } = await import('@/lib/server/repos/todos');
+    const { getUserRepositories } = await import('@/lib/server/repos');
 
     const admin = getDb().select().from(schema.users).get() as { id: string };
-    const todo = await createTodo(admin.id, {
+    const todo = await getUserRepositories(admin.id).todos.create({
       title: '할 일',
       scope: 'day',
       scopeKey: '2026-09-05',
@@ -74,27 +74,27 @@ describe('nullable clear: null 해제 vs undefined 변경없음', () => {
         parentGoalId: string | null;
       };
 
-    await updateTodo(admin.id, todo.id, JSON.parse(JSON.stringify({ categoryId: null })));
+    await getUserRepositories(admin.id).todos.update(todo.id, JSON.parse(JSON.stringify({ categoryId: null })));
     expect(read().categoryId).toBeNull();
     expect(read().parentGoalId).toBe('goal-1');
 
-    await updateTodo(admin.id, todo.id, JSON.parse(JSON.stringify({ parentGoalId: null })));
+    await getUserRepositories(admin.id).todos.update(todo.id, JSON.parse(JSON.stringify({ parentGoalId: null })));
     expect(read().parentGoalId).toBeNull();
   });
 
   it('값 변경은 그대로 동작 (회귀)', async () => {
     const { getDb, schema } = await import('@/lib/server/db/client');
     const { eq } = await import('drizzle-orm');
-    const { createHabit, updateHabit } = await import('@/lib/server/repos/habits');
+    const { getUserRepositories } = await import('@/lib/server/repos');
 
     const admin = getDb().select().from(schema.users).get() as { id: string };
-    const habit = await createHabit(admin.id, {
+    const habit = await getUserRepositories(admin.id).habits.create({
       name: '운동',
       color: '#ddd9c4',
       order: 0,
       schedule: { kind: 'daily' },
     });
-    await updateHabit(admin.id, habit.id, { categoryId: 'cat-2', name: '수영' });
+    await getUserRepositories(admin.id).habits.update(habit.id, { categoryId: 'cat-2', name: '수영' });
     const row = getDb()
       .select()
       .from(schema.habits)

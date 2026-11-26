@@ -25,4 +25,5 @@ export const updateSubscription = async (
 export const deleteSubscription = async (id: string): Promise<void> => {
   await http.del(`/api/subscriptions/${encodeURIComponent(id)}`);
   notifyMutation('subscriptions');
+  notifyMutation('financeTransactions');
 };

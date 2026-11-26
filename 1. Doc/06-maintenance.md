@@ -2,7 +2,7 @@
 
 [전체 목차](README.md) · [구조](01-architecture.md) · [전체 리팩토링 기록](08-full-refactor.md)
 
-이 문서는 책임 분리 이후의 변경 위치와 검증 방법을 설명합니다. 서버의 13개 저장소는 DB와 사용자 ID를 주입받는 객체입니다. 기존 함수형 API는 호환용으로 유지하고 새 호출은 UserRepositories를 사용합니다. 화면은 기능별 훅과 표시 컴포넌트로 나누고, 조회·전송·저장 큐를 공통화했습니다.
+이 문서는 책임 분리 이후의 변경 위치와 검증 방법을 설명합니다. 서버 저장소는 DB와 사용자 ID를 주입받는 객체입니다. API와 테스트는 UserRepositories로 사용자별 저장소를 얻습니다. 화면은 기능별 훅과 표시 컴포넌트로 나누고, 조회·전송·저장 큐를 공통화했습니다.
 
 ## 1. 책임과 의존성
 
@@ -58,7 +58,7 @@ flowchart TD
 1. [도메인 타입](../0.%20Source/src/lib/types.ts), [DB 스키마](../0.%20Source/src/lib/server/db/schema.ts), 순수 입력 규칙을 함께 수정합니다.
 2. `npx drizzle-kit generate`로 SQL을 생성하고 기존 데이터 변환과 기본값을 검토합니다. 생성 SQL을 테스트 DB에 실제 적용합니다.
 3. 해당 서버 repository 클래스에 동작을 추가하고 모든 조회·변경에 사용자 조건을 유지합니다. 다른 사용자의 참조 ID를 받지 않도록 서버 검증도 연결합니다.
-4. API는 `authenticated(async (session, req, ctx) => ...)`로 감싸고 `getUserRepositories(session.userId)`를 사용합니다. 파싱·상태코드는 API, 업무 처리와 트랜잭션은 서비스/repository에 둡니다. 기존 함수형 진입점은 호환성을 유지합니다.
+4. API는 `authenticated(async (session, req, ctx) => ...)`로 감싸고 `getUserRepositories(session.userId)`를 사용합니다. 파싱·상태코드는 API, 업무 처리와 트랜잭션은 서비스/repository에 둡니다.
 5. 브라우저 repository의 반환 타입·변경 알림·화면 재조회와 자동 저장을 확인합니다. PATCH의 `null`은 해제, 키 생략은 유지입니다.
 6. 새 컬렉션이면 [백업 계약](../0.%20Source/src/lib/backup.ts), 백업 테이블 매핑·조회·삭제 순서, [import 검증](../0.%20Source/src/lib/server/importValidation.ts), 백업 왕복 테스트도 갱신합니다.
 7. [데이터 모델](02-data-model.md), [API 명세](03-api.md), 해당 페이지 문서와 검증 기록을 함께 고칩니다.
@@ -93,7 +93,7 @@ npm run build
 
 변경 범위에 맞는 검사를 먼저 실행하고, 빌드는 E2E 개발 서버가 종료된 뒤 실행합니다. 두 작업은 기본 `.next` 경로를 공유합니다. 전체 lint는 오류·경고 0개를 유지합니다. 현재 검증 결과는 [전체 리팩토링 기록](08-full-refactor.md)에 있습니다. 검사 실패를 규칙 비활성화로 숨기지 않습니다.
 
-운영 DB와 분리한 환경을 사용합니다. E2E는 3100과 `tmp-test/e2e.sqlite`, 수동 개발은 3101과 별도 DB를 사용합니다. 이미 켜진 3100 서버를 재사용하면 그 서버의 DB 설정도 확인합니다. `docs:check`는 Markdown 상대 파일 링크만 확인하며, 문장 정확성·앵커·외부 URL 검사는 대신하지 않습니다.
+운영 DB와 분리한 환경을 사용합니다. E2E는 3100에서 실행별 프로덕션 빌드 서버와 `test-results/<실행 ID>/e2e.sqlite`를 사용합니다. 수동 개발은 3101과 별도 DB를 사용합니다. `docs:check`는 Markdown 상대 파일 링크만 확인하며, 문장 정확성·앵커·외부 URL 검사는 대신하지 않습니다.
 
 작업 전 기존 미커밋 변경을 확인하고 보존합니다. 소스 검증과 Docker 배포는 구분해 기록하며, 운영 반영은 [개발·운영 절차](04-development-and-operations.md)를 따릅니다.
 

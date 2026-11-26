@@ -1,6 +1,7 @@
 import 'server-only';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { BackupCollection } from '@/lib/backup';
+import { ValidationError } from '@/lib/validation/mutations';
 import { DEFAULT_SETTINGS } from '@/lib/settings';
 import type { DatabaseSession } from '../db/connection';
 import * as schema from '../db/schema';
@@ -17,6 +18,7 @@ const tables = {
 } satisfies Record<BackupCollection, unknown>;
 
 export interface BackupLookup {
+  recoveryCategoryId(): string | undefined;
   ownerOf(collection: BackupCollection, id: string): string | undefined;
 }
 
@@ -29,6 +31,13 @@ export class UserBackupRepository implements BackupLookup {
     return this.db.select({ userId: table.userId }).from(table).where(eq(table.id, id)).get()?.userId;
   }
 
+  recoveryCategoryId(): string | undefined {
+    const { categories } = schema;
+    return this.db.select({ id: categories.id }).from(categories)
+      .where(and(eq(categories.userId, this.userId), eq(categories.name, '기타')))
+      .orderBy(asc(categories.order), asc(categories.id)).get()?.id;
+  }
+
   private list<K extends BackupCollection>(collection: K): (typeof tables)[K]['$inferSelect'][] {
     const table = tables[collection];
     // Drizzle loses the key/row correlation when selecting a mapped table.
@@ -37,6 +46,10 @@ export class UserBackupRepository implements BackupLookup {
 
   exportData() {
     const settings = this.db.select().from(schema.settings).where(eq(schema.settings.userId, this.userId)).get();
+    const todos = this.list('todos');
+    const todoIds = new Set(todos.map(todo => todo.id));
+    const timeBlocks = this.list('timeBlocks').map(block =>
+      block.todoId && !todoIds.has(block.todoId) ? { ...block, todoId: null } : block);
     const settingsOut = settings ? {
       firstDayOfWeek: settings.firstDayOfWeek, gridMinutes: settings.gridMinutes,
       dayStartHour: settings.dayStartHour, dayEndHour: settings.dayEndHour, theme: settings.theme,
@@ -49,8 +62,8 @@ export class UserBackupRepository implements BackupLookup {
       subscriptions: this.list('subscriptions'),
       financeTransactions: this.list('financeTransactions'),
       financeBudgets: this.list('financeBudgets'),
-      timeBlocks: this.list('timeBlocks'), retrospectives: this.list('retrospectives'),
-      todos: this.list('todos'), focusNotes: this.list('focusNotes'),
+      timeBlocks, retrospectives: this.list('retrospectives'),
+      todos, focusNotes: this.list('focusNotes'),
       annualGoals: this.list('annualGoals').map(goal => ({
         ...projectAnnualGoal(this.db, goal),
         monthlyActualAdjustments: actualAdjustments(goal, automaticMonthlyActuals(this.db, goal)),
@@ -78,8 +91,40 @@ export class UserBackupRepository implements BackupLookup {
   insert(collection: BackupCollection, rows: Record<string, unknown>[]): void {
     const table = tables[collection];
     // Called only after complete runtime validation, including cross-user ID checks.
-    const stamped = rows.map(row => ({ ...row, userId: this.userId }));
-    this.db.insert(table).values(stamped as typeof table.$inferInsert[]).onConflictDoNothing().run();
+    const incoming = collection === 'todos' && rows.some(row => row.googleTaskId) ? this.prepareImportedTodos(rows) : rows;
+    const batchSize = 100;
+    for (let offset = 0; offset < incoming.length; offset += batchSize) {
+      const batch = incoming.slice(offset, offset + batchSize).map(row => ({ ...row, userId: this.userId }));
+      this.db.insert(table).values(batch as typeof table.$inferInsert[]).onConflictDoNothing(collection === 'timeBlocks' ? { target: table.id } : undefined).run();
+    }
+  }
+
+  checkPlanLinks(): void {
+    const blocks = this.list('timeBlocks');
+    const plans = new Map(blocks.filter(block => block.kind === 'plan').map(plan => [plan.id, plan.date]));
+    for (const actual of blocks) {
+      if (actual.sourcePlanId && (actual.kind !== 'actual' || plans.get(actual.sourcePlanId) !== actual.date)) {
+        throw new ValidationError('Invalid reference: timeBlocks.sourcePlanId');
+      }
+    }
+  }
+
+  private prepareImportedTodos(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+    const current = this.db.select({
+      id: schema.todos.id, list: schema.todos.googleTaskListId, task: schema.todos.googleTaskId,
+    }).from(schema.todos).where(eq(schema.todos.userId, this.userId)).all();
+    const existingIds = new Set(current.map(row => row.id));
+    const links = new Set(current.filter(row => row.list && row.task).map(row => JSON.stringify([row.list, row.task])));
+    // Older exports can include the same remote identifier on a generated occurrence.
+    const ordered = [...rows].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) ||
+      String(a.id).localeCompare(String(b.id)));
+    return ordered.map(row => {
+      if (existingIds.has(String(row.id)) || !row.googleTaskListId || !row.googleTaskId) return row;
+      const key = JSON.stringify([row.googleTaskListId, row.googleTaskId]);
+      if (links.has(key)) return { ...row, googleTaskId: null, googleTaskListId: null, googleTaskUpdatedAt: null };
+      links.add(key);
+      return row;
+    });
   }
 
   saveSettings(values: Record<string, unknown>): void {

@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { ensureUserExists, loginAs } from './_helpers';
 
 test.beforeAll(async () => {
   await ensureUserExists('e2e-daily-visual', 'pwTest123*');
 });
 
 test('visual snapshot of the daily tracker', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-daily-visual', 'pwTest123*');
   await page.goto('/daily');
 

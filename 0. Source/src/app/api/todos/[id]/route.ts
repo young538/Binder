@@ -19,10 +19,6 @@ export const PATCH = authenticated(async (session, req: Request, ctx: { params: 
 export const DELETE = authenticated(async (session, req: Request, ctx: { params: Promise<{ id: string }> }) => {
   const repositories = getUserRepositories(session.userId);
   const { id } = await ctx.params;
-  const existing = repositories.todos.getById(id);
   const result = await repositories.todos.delete(id);
-  if (existing) {
-    await createGoogleTasksSyncService(repositories, req).pushDeletedTodo(existing);
-  }
   return NextResponse.json(result);
 });

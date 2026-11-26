@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { annualGoals, habits } from '../db/schema';
 import { AnnualGoal } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
@@ -96,19 +95,3 @@ export class AnnualGoalRepository {
     }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listAnnualGoalsByYear = async (userId: string, year: string): Promise<AnnualGoal[]> =>
-  new AnnualGoalRepository(getDb(), userId).listByYear(year);
-
-export const createAnnualGoal = async (userId: string, year: string, order: number): Promise<AnnualGoal> =>
-  new AnnualGoalRepository(getDb(), userId).create(year, order);
-
-export const updateAnnualGoal = async (userId: string, id: string, patch: Partial<Omit<AnnualGoal, 'id' | 'userId' | 'createdAt'>>): Promise<AnnualGoal | null> =>
-  new AnnualGoalRepository(getDb(), userId).update(id, patch);
-
-export const deleteAnnualGoal = async (userId: string, id: string): Promise<void> =>
-  new AnnualGoalRepository(getDb(), userId).delete(id);
-
-export const ensureSeven = async (userId: string, year: string): Promise<AnnualGoal[]> =>
-  new AnnualGoalRepository(getDb(), userId).ensureSeven(year);

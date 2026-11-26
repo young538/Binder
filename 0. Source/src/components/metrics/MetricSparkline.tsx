@@ -1,3 +1,4 @@
+import { METRIC_CHART_ENTRIES } from '@/lib/metrics';
 import type { LifeMetricEntry } from '@/lib/types';
 
 interface Props {
@@ -16,7 +17,7 @@ export function MetricSparkline({ entries, color, targetValue, label }: Props) {
     );
   }
 
-  const recent = entries.slice(-20);
+  const recent = entries.slice(-METRIC_CHART_ENTRIES);
   const width = 240;
   const height = 56;
   const padX = 8;

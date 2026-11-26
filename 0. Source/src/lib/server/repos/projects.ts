@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, asc, eq, isNotNull, or } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { binderNotes, lifeEvents, projects, timeBlocks, todos } from '../db/schema';
 import type { Project, TimeBlock, Todo } from '@/lib/types';
 import { buildProjectOverview, type ProjectOverviewResponse } from '@/lib/projects';
@@ -111,15 +110,3 @@ export class ProjectRepository {
     });
   }
 }
-
-export const listProjects = async (userId: string): Promise<Project[]> =>
-  new ProjectRepository(getDb(), userId).list();
-
-export const createProject = async (userId: string, data: NewProject): Promise<Project> =>
-  new ProjectRepository(getDb(), userId).create(data);
-
-export const updateProject = async (userId: string, id: string, patch: ProjectPatch): Promise<Project | null> =>
-  new ProjectRepository(getDb(), userId).update(id, patch);
-
-export const deleteProject = async (userId: string, id: string): Promise<void> =>
-  new ProjectRepository(getDb(), userId).delete(id);

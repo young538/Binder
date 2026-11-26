@@ -50,13 +50,15 @@ for (const scenario of scenarios) {
       const list = titleField.locator('xpath=ancestor::ul');
       expect(await list.evaluate(element => element.scrollHeight <= element.clientHeight + 1)).toBe(true);
     }
-    // Write artifacts after interactions so the dev watcher cannot refresh the page mid-test.
-    const screenshot = await page.screenshot({ fullPage: true });
     await expect(page.getByRole('button', { name: `${title} 메모 접기`, exact: true })).toBeVisible();
     await page.getByRole('button', { name: `${title} 메모 접기`, exact: true }).click();
     await expect(page.getByText(note, { exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: `${title} 메모 보기`, exact: true }).click();
     await expect(page.getByText(note, { exact: true })).toBeVisible();
+
+    // Capture the expanded note at the actual responsive viewport after testing the toggle.
+    await page.getByText(note, { exact: true }).scrollIntoViewIfNeeded();
+    const screenshot = await page.screenshot();
 
     await openView();
     await page.getByRole('button', { name: `${title} 메모 보기`, exact: true }).click();
@@ -70,6 +72,6 @@ for (const scenario of scenarios) {
     expect(saved.title).toBe(title);
     expect(saved.status).toBe('pending');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await writeFile(`tmp-test/todo-notes-${scenario.view}-${scenario.width}.png`, screenshot);
+    await writeFile(`test-results/todo-notes-${scenario.view}-${scenario.width}.png`, screenshot);
   });
 }

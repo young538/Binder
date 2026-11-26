@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, between, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { habitLogs, habits } from '../db/schema';
 import { HabitLog } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
@@ -41,10 +40,3 @@ export class HabitLogRepository {
     return rows as HabitLog[];
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const toggleHabit = async (userId: string, habitId: string, date: string): Promise<boolean> =>
-  new HabitLogRepository(getDb(), userId).toggle(habitId, date);
-
-export const listLogsForRange = async (userId: string, startDate: string, endDate: string): Promise<HabitLog[]> =>
-  new HabitLogRepository(getDb(), userId).listInRange(startDate, endDate);

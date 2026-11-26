@@ -127,7 +127,6 @@
 | [useDailyTracker](../../0.%20Source/src/components/daily/useDailyTracker.ts) / [HabitCheckRow](../../0.%20Source/src/components/daily/HabitCheckRow.tsx) | 루틴 조회·체크·프리셋과 행 표시 분리 |
 | [useHabitEditor](../../0.%20Source/src/components/daily/useHabitEditor.ts) / [HabitRow](../../0.%20Source/src/components/daily/HabitRow.tsx) | 일정 변경·정렬 저장과 편집 행 분리 |
 | [DailyRoutineSheet](../../0.%20Source/src/components/daily/DailyRoutineSheet.tsx) / [HabitEditor](../../0.%20Source/src/components/daily/HabitEditor.tsx) | 관리 시트와 정렬·편집 |
-| [DailyMemo](../../0.%20Source/src/components/daily/DailyMemo.tsx) | 날짜별 일반 메모 구현(기존 데이터 보존용 레거시, 현재 일일 화면에서 렌더링하지 않음) |
 | [DailyReading](../../0.%20Source/src/components/daily/DailyReading.tsx) | 날짜별 책·쪽수·독서 메모 |
 | [DailyRecord](../../0.%20Source/src/components/daily/DailyRecord.tsx) | 인라인 일일 회고 기록 |
 | [일정 유틸](../../0.%20Source/src/lib/utils/habitSchedule.ts) | 고정/횟수형 분리, 적용 날짜, 일정 라벨 |

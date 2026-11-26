@@ -31,6 +31,15 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ].join(' ');
 
+interface CalendarListItem {
+  id?: string;
+  summary?: string;
+  summaryOverride?: string;
+  backgroundColor?: string;
+  primary?: boolean;
+  accessRole?: string;
+}
+
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 export class GoogleCalendarApiClient {
@@ -87,31 +96,27 @@ export class GoogleCalendarApiClient {
     return data.email?.trim() || 'google-user';
   }
 
-  async listCalendars(accessToken: string): Promise<GoogleCalendarInfo[]> {
-    const items: GoogleCalendarInfo[] = [];
-    let pageToken: string | undefined;
-
-    for (let page = 0; page < 5; page++) {
-      const url = new URL(`${CALENDAR_API_BASE}/users/me/calendarList`);
-      url.searchParams.set('minAccessRole', 'reader');
-      url.searchParams.set('maxResults', '100');
-      if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-      const data = await this.requestJson<{
-        items?: Array<{
-          id?: string;
-          summary?: string;
-          summaryOverride?: string;
-          backgroundColor?: string;
-          primary?: boolean;
-          accessRole?: string;
-        }>;
-        nextPageToken?: string;
-      }>(url.toString(), {
+  private async *listPages<Item>(url: URL, accessToken: string): AsyncGenerator<Item[]> {
+    const seen = new Set<string>();
+    for (;;) {
+      const page = await this.requestJson<{ items?: Item[]; nextPageToken?: string }>(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+      yield page.items ?? [];
+      if (!page.nextPageToken) return;
+      if (seen.has(page.nextPageToken)) throw new Error('Google returned a repeated page token');
+      seen.add(page.nextPageToken);
+      url.searchParams.set('pageToken', page.nextPageToken);
+    }
+  }
 
-      for (const cal of data.items ?? []) {
+  async listCalendars(accessToken: string): Promise<GoogleCalendarInfo[]> {
+    const items: GoogleCalendarInfo[] = [];
+    const url = new URL(`${CALENDAR_API_BASE}/users/me/calendarList`);
+    url.searchParams.set('minAccessRole', 'reader');
+    url.searchParams.set('maxResults', '100');
+    for await (const page of this.listPages<CalendarListItem>(url, accessToken)) {
+      for (const cal of page) {
         if (!cal.id) continue;
         items.push({
           id: cal.id,
@@ -121,9 +126,6 @@ export class GoogleCalendarApiClient {
           accessRole: cal.accessRole ?? 'reader',
         });
       }
-
-      if (!data.nextPageToken) break;
-      pageToken = data.nextPageToken;
     }
 
     return items;
@@ -136,30 +138,15 @@ export class GoogleCalendarApiClient {
     timeMax: string,
   ): Promise<GoogleCalendarEventResource[]> {
     const events: GoogleCalendarEventResource[] = [];
-    let pageToken: string | undefined;
-
-    for (let page = 0; page < 10; page++) {
-      const url = new URL(`${CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events`);
-      url.searchParams.set('singleEvents', 'true');
-      url.searchParams.set('orderBy', 'startTime');
-      url.searchParams.set('maxResults', '250');
-      url.searchParams.set('showDeleted', 'false');
-      url.searchParams.set('timeMin', timeMin);
-      url.searchParams.set('timeMax', timeMax);
-      if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-      const data = await this.requestJson<{
-        items?: GoogleCalendarEventResource[];
-        nextPageToken?: string;
-      }>(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (Array.isArray(data.items)) {
-        events.push(...data.items);
-      }
-      if (!data.nextPageToken) break;
-      pageToken = data.nextPageToken;
+    const url = new URL(`${CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events`);
+    url.searchParams.set('singleEvents', 'true');
+    url.searchParams.set('orderBy', 'startTime');
+    url.searchParams.set('maxResults', '250');
+    url.searchParams.set('showDeleted', 'false');
+    url.searchParams.set('timeMin', timeMin);
+    url.searchParams.set('timeMax', timeMax);
+    for await (const page of this.listPages<GoogleCalendarEventResource>(url, accessToken)) {
+      events.push(...page);
     }
 
     return events;
@@ -219,29 +206,16 @@ export class GoogleCalendarApiClient {
 
   async listTaskLists(accessToken: string): Promise<GoogleTaskListInfo[]> {
     const lists: Array<{ id: string; title: string }> = [];
-    let pageToken: string | undefined;
-
-    for (let page = 0; page < 5; page++) {
-      const url = new URL(`${TASKS_API_BASE}/users/@me/lists`);
-      url.searchParams.set('maxResults', '100');
-      if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-      const data = await this.requestJson<{
-        items?: Array<{ id?: string; title?: string }>;
-        nextPageToken?: string;
-      }>(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      for (const item of data.items ?? []) {
+    const url = new URL(`${TASKS_API_BASE}/users/@me/lists`);
+    url.searchParams.set('maxResults', '100');
+    for await (const page of this.listPages<{ id?: string; title?: string }>(url, accessToken)) {
+      for (const item of page) {
         if (!item.id) continue;
         lists.push({
           id: item.id,
           title: item.title?.trim() || '내 할 일',
         });
       }
-      if (!data.nextPageToken) break;
-      pageToken = data.nextPageToken;
     }
 
     let defaultListId: string | null = null;
@@ -264,28 +238,13 @@ export class GoogleCalendarApiClient {
 
   async listTasks(accessToken: string, taskListId: string): Promise<GoogleTaskResource[]> {
     const tasks: GoogleTaskResource[] = [];
-    let pageToken: string | undefined;
-
-    for (let page = 0; page < 5; page++) {
-      const url = new URL(`${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks`);
-      url.searchParams.set('showCompleted', 'true');
-      url.searchParams.set('showHidden', 'true');
-      url.searchParams.set('showDeleted', 'true');
-      url.searchParams.set('maxResults', '100');
-      if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-      const data = await this.requestJson<{
-        items?: GoogleTaskResource[];
-        nextPageToken?: string;
-      }>(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (Array.isArray(data.items)) {
-        tasks.push(...data.items);
-      }
-      if (!data.nextPageToken) break;
-      pageToken = data.nextPageToken;
+    const url = new URL(`${TASKS_API_BASE}/lists/${encodeURIComponent(taskListId)}/tasks`);
+    url.searchParams.set('showCompleted', 'true');
+    url.searchParams.set('showHidden', 'true');
+    url.searchParams.set('showDeleted', 'true');
+    url.searchParams.set('maxResults', '100');
+    for await (const page of this.listPages<GoogleTaskResource>(url, accessToken)) {
+      tasks.push(...page);
     }
 
     return tasks;

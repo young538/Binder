@@ -58,7 +58,7 @@ Node.js 22.22 이상(22.x LTS)과 npm을 사용합니다. 모든 npm·CLI·Docke
 ## 테스트 작성과 실행 기준
 
 - Vitest와 React Testing Library를 사용하며, 파일명은 `tests/unit/*.test.ts` 또는 `*.test.tsx`입니다. DB 테스트는 기존 예처럼 Node 환경과 전용 임시 DB를 사용합니다.
-- E2E는 `tests/e2e/*.spec.ts`에 작성합니다. 설정상 서버는 3100, DB는 `tmp-test/e2e.sqlite`입니다. 재사용되는 3100 서버도 이 테스트 DB를 사용하는지 확인하세요.
+- E2E는 `tests/e2e/*.spec.ts`에 작성합니다. 실행할 때마다 3100에 전용 서버를 띄우며, 서버와 계정 CLI는 같은 실행 전용 `test-results/<실행 ID>/e2e.sqlite`를 사용합니다. 실행 중인 다른 서버가 3100을 사용하면 테스트를 시작하지 않습니다.
 - 개별 실행 예: `npm test -- tests/unit/api-validation.test.ts`, `npm run e2e -- tests/e2e/weekly-habits.spec.ts`.
 - 커버리지 수치 임계값은 설정돼 있지 않습니다. 동작 변경은 관련 회귀 테스트로 검증하고, UI 변경은 PC·모바일의 저장·재조회·레이아웃을 확인하세요. 단순 문서 변경은 diff 검토로 확인합니다.
 

@@ -1,11 +1,34 @@
 import 'server-only';
-import { and, asc, between, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
+import { and, asc, between, eq, inArray } from 'drizzle-orm';
+import { DomainError } from '../errors';
 import { timeBlocks } from '../db/schema';
 import { TimeBlock } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 import { stripUndefined } from '../db/patch';
-import type { BinderDatabase } from '../db/connection';
+import type { BinderDatabase, DatabaseSession } from '../db/connection';
+
+type BlockInput = Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
+
+function recordPlanActual(tx: DatabaseSession, plan: TimeBlock, timestamp: string, values: BlockInput = plan) {
+  const inserted = tx.insert(timeBlocks).values({
+    ...values, id: newId(), userId: plan.userId, kind: 'actual', sourcePlanId: plan.id,
+    date: plan.date, createdAt: timestamp, updatedAt: timestamp,
+  }).onConflictDoNothing({ target: [timeBlocks.userId, timeBlocks.sourcePlanId] }).returning().get();
+  return inserted as TimeBlock | undefined;
+}
+
+export function confirmPlans(tx: DatabaseSession, userId: string, date: string, ids: string[] | undefined, now: string) {
+  if (ids?.length === 0) return 0;
+  const plans = tx.select().from(timeBlocks).where(and(
+    eq(timeBlocks.userId, userId), eq(timeBlocks.date, date), eq(timeBlocks.kind, 'plan'),
+    ids ? inArray(timeBlocks.id, ids) : undefined,
+  )).all() as TimeBlock[];
+  let created = 0;
+  for (const plan of plans) {
+    if (recordPlanActual(tx, plan, now)) created++;
+  }
+  return created;
+}
 
 /** User-scoped timeBlocks operations; accepts an isolated database for tests. */
 export class TimeBlockRepository {
@@ -23,15 +46,28 @@ export class TimeBlockRepository {
     return rows as TimeBlock[];
   }
 
-  async create(data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<TimeBlock> {
+  async create(data: BlockInput): Promise<TimeBlock> {
     const userId = this.userId;
     const db = this.database;
     const now = new Date().toISOString();
+    if (data.sourcePlanId) {
+      const planId = data.sourcePlanId;
+      return db.transaction(tx => {
+        const plan = tx.select().from(timeBlocks).where(and(eq(timeBlocks.userId, userId),
+          eq(timeBlocks.id, planId), eq(timeBlocks.date, data.date), eq(timeBlocks.kind, 'plan'))).get();
+        if (!plan || data.kind !== 'actual') throw new DomainError('원본 계획을 찾을 수 없습니다.', 400);
+        const created = recordPlanActual(tx, plan as TimeBlock, now, data);
+        return created ?? tx.select().from(timeBlocks).where(and(
+          eq(timeBlocks.userId, userId), eq(timeBlocks.sourcePlanId, planId),
+        )).get() as TimeBlock;
+      }, { behavior: 'immediate' });
+    }
     const row: TimeBlock = {
       ...data,
       goalId: data.goalId ?? null,
       projectId: data.projectId ?? null,
       todoId: data.todoId ?? null,
+      sourcePlanId: null,
       id: newId(),
       userId,
       createdAt: now,
@@ -42,92 +78,33 @@ export class TimeBlockRepository {
   }
 
   async update(id: string, patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>): Promise<TimeBlock | null> {
-    const userId = this.userId;
-    const db = this.database;
-    await db
-      .update(timeBlocks)
-      .set({ ...stripUndefined(patch), updatedAt: new Date().toISOString() })
-      .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
-      .run();
-    const row = await db
-      .select()
-      .from(timeBlocks)
-      .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
-      .get();
-    return (row as TimeBlock | undefined) ?? null;
+    const owned = eq(timeBlocks.userId, this.userId);
+    return this.database.transaction(tx => {
+      const predicate = and(owned, eq(timeBlocks.id, id));
+      const existing = tx.select().from(timeBlocks).where(predicate).get();
+      if (!existing) return null;
+      const moved = (patch.date !== undefined && patch.date !== existing.date)
+        || (patch.kind !== undefined && patch.kind !== existing.kind);
+      if (moved && existing.kind === 'plan') {
+        tx.update(timeBlocks).set({ sourcePlanId: null }).where(and(owned, eq(timeBlocks.sourcePlanId, id))).run();
+      }
+      return tx.update(timeBlocks).set({
+        ...stripUndefined(patch), sourcePlanId: moved ? null : existing.sourcePlanId, updatedAt: new Date().toISOString(),
+      }).where(predicate).returning().get() as TimeBlock;
+    }, { behavior: 'immediate' });
   }
 
   async delete(id: string): Promise<void> {
-    const userId = this.userId;
-    const db = this.database;
-    await db
-      .delete(timeBlocks)
-      .where(and(eq(timeBlocks.userId, userId), eq(timeBlocks.id, id)))
-      .run();
+    const owned = eq(timeBlocks.userId, this.userId);
+    this.database.transaction(tx => {
+      tx.update(timeBlocks).set({ sourcePlanId: null }).where(and(owned, eq(timeBlocks.sourcePlanId, id))).run();
+      tx.delete(timeBlocks).where(and(owned, eq(timeBlocks.id, id))).run();
+    }, { behavior: 'immediate' });
   }
 
   confirmPlansAsActual(date: string, blockIds?: string[]): { created: number } {
-    const filterSet = blockIds && blockIds.length > 0 ? new Set(blockIds) : null;
-    const blockKey = (b: Pick<TimeBlock, 'startMin' | 'endMin' | 'text'>) =>
-      `${b.startMin}:${b.endMin}:${b.text}`;
-
-    return this.database.transaction(tx => {
-      const plans = tx
-        .select()
-        .from(timeBlocks)
-        .where(and(eq(timeBlocks.userId, this.userId), eq(timeBlocks.date, date), eq(timeBlocks.kind, 'plan')))
-        .orderBy(asc(timeBlocks.startMin), asc(timeBlocks.id))
-        .all() as TimeBlock[];
-
-      const actuals = tx
-        .select()
-        .from(timeBlocks)
-        .where(and(eq(timeBlocks.userId, this.userId), eq(timeBlocks.date, date), eq(timeBlocks.kind, 'actual')))
-        .all() as TimeBlock[];
-
-      const existingKeys = new Set(actuals.map(blockKey));
-      const now = new Date().toISOString();
-      let created = 0;
-
-      for (const plan of plans) {
-        if (filterSet && !filterSet.has(plan.id)) continue;
-        const key = blockKey(plan);
-        if (existingKeys.has(key)) continue;
-        existingKeys.add(key);
-        tx.insert(timeBlocks)
-          .values({
-            id: newId(),
-            userId: this.userId,
-            date: plan.date,
-            startMin: plan.startMin,
-            endMin: plan.endMin,
-            text: plan.text,
-            kind: 'actual',
-            categoryId: plan.categoryId,
-            goalId: plan.goalId ?? null,
-            projectId: plan.projectId ?? null,
-            todoId: plan.todoId ?? null,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .run();
-        created++;
-      }
-
-      return { created };
-    }, { behavior: 'immediate' });
+    return this.database.transaction(tx => ({
+      created: confirmPlans(tx, this.userId, date, blockIds?.length ? blockIds : undefined, new Date().toISOString()),
+    }), { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const getTimeBlocksInRange = async (userId: string, startDate: string, endDate: string): Promise<TimeBlock[]> =>
-  new TimeBlockRepository(getDb(), userId).listInRange(startDate, endDate);
-
-export const createTimeBlock = async (userId: string, data: Omit<TimeBlock, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<TimeBlock> =>
-  new TimeBlockRepository(getDb(), userId).create(data);
-
-export const updateTimeBlock = async (userId: string, id: string, patch: Partial<Omit<TimeBlock, 'id' | 'userId' | 'createdAt'>>): Promise<TimeBlock | null> =>
-  new TimeBlockRepository(getDb(), userId).update(id, patch);
-
-export const deleteTimeBlock = async (userId: string, id: string): Promise<void> =>
-  new TimeBlockRepository(getDb(), userId).delete(id);

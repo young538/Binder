@@ -83,6 +83,7 @@ export function googleTaskToTodoFields(
   scopeKey: string;
   projectId: string | null;
   googleTaskUpdatedAt: string | null;
+  completedAt?: string;
 } {
   const dueDate = googleDueToDate(task.due);
   const scope: 'inbox' | 'day' = dueDate ? 'day' : 'inbox';
@@ -107,6 +108,8 @@ export function googleTaskToTodoFields(
     scope,
     scopeKey,
     projectId,
+    ...(status === 'done' && task.completed && Number.isFinite(Date.parse(task.completed))
+      ? { completedAt: new Date(task.completed).toISOString() } : {}),
     googleTaskUpdatedAt: task.updated ?? null,
   };
 }

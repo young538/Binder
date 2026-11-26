@@ -25,30 +25,30 @@ afterEach(async () => {
 describe('retrospective partial writes', () => {
   it('preserves reading, reflection, rating, and free text across independent edits', async () => {
     const { getDb, schema } = await import('@/lib/server/db/client');
-    const { getRetrospective, upsertRetrospective } = await import('@/lib/server/repos/retrospectives');
+    const { getUserRepositories } = await import('@/lib/server/repos');
     const user = getDb().select().from(schema.users).get()!;
-    await upsertRetrospective(user.id, 'daily', '2026-09-09', {
+    await getUserRepositories(user.id).retrospectives.upsert('daily', '2026-09-09', {
       template: { good: 'good', bad: 'bad', nextStep: 'next' }, rating: 4, freeText: 'memo',
     });
-    await upsertRetrospective(user.id, 'daily', '2026-09-09', { template: { reading: 'book' } });
-    await upsertRetrospective(user.id, 'daily', '2026-09-09', { template: { good: '' } });
-    expect(await getRetrospective(user.id, 'daily', '2026-09-09')).toMatchObject({
+    await getUserRepositories(user.id).retrospectives.upsert('daily', '2026-09-09', { template: { reading: 'book' } });
+    await getUserRepositories(user.id).retrospectives.upsert('daily', '2026-09-09', { template: { good: '' } });
+    expect(await getUserRepositories(user.id).retrospectives.get('daily', '2026-09-09')).toMatchObject({
       template: { good: '', bad: 'bad', nextStep: 'next', reading: 'book' }, rating: 4, freeText: 'memo',
     });
   });
 
   it('concurrent first writes create one complete record and keep user scopes separate', async () => {
     const { getDb, schema } = await import('@/lib/server/db/client');
-    const { upsertRetrospective, getRetrospective } = await import('@/lib/server/repos/retrospectives');
+    const { getUserRepositories } = await import('@/lib/server/repos');
     const user = getDb().select().from(schema.users).get()!;
     await Promise.all([
-      upsertRetrospective(user.id, 'daily', '2026-09-09', { template: { reading: 'book' } }),
-      upsertRetrospective(user.id, 'daily', '2026-09-09', { template: { good: 'reflection' } }),
+      getUserRepositories(user.id).retrospectives.upsert('daily', '2026-09-09', { template: { reading: 'book' } }),
+      getUserRepositories(user.id).retrospectives.upsert('daily', '2026-09-09', { template: { good: 'reflection' } }),
     ]);
     expect(getDb().select().from(schema.retrospectives).all()).toHaveLength(1);
-    expect(await getRetrospective(user.id, 'daily', '2026-09-09')).toMatchObject({
+    expect(await getUserRepositories(user.id).retrospectives.get('daily', '2026-09-09')).toMatchObject({
       template: { reading: 'book', good: 'reflection' },
     });
-    expect(await getRetrospective('another-user', 'daily', '2026-09-09')).toBeNull();
+    expect(await getUserRepositories('another-user').retrospectives.get('daily', '2026-09-09')).toBeNull();
   });
 });

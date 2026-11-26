@@ -35,6 +35,37 @@ afterEach(() => connection.close());
 const repos = (userId = 'a') => new UserRepositories(connection.get(), userId);
 
 describe('life OS phase 1-4 domains', () => {
+  it('confirms identical-looking plans separately across editor, daily and evening operations', async () => {
+    const a = repos();
+    const category = await a.categories.create({ name: 'Work', color: '#abcdef', order: 0 });
+    const plan = { date: '2026-11-20', startMin: 600, endMin: 660, text: 'Review',
+      kind: 'plan' as const, categoryId: category.id };
+    const one = await a.timeBlocks.create(plan);
+    const two = await a.timeBlocks.create(plan);
+    const actual = { ...plan, kind: 'actual' as const, sourcePlanId: one.id, endMin: 630, text: 'Edited' };
+    const saved = await a.timeBlocks.create(actual);
+    expect((await a.timeBlocks.create(actual)).id).toBe(saved.id);
+    expect(a.eveningShutdown.snapshot(plan.date).unconfirmedPlans.map(p => p.id)).toEqual([two.id]);
+    expect(a.eveningShutdown.apply({ date: plan.date, confirmBlockIds: [two.id] }).confirmedBlocks).toBe(1);
+    expect(a.timeBlocks.confirmPlansAsActual(plan.date)).toEqual({ created: 0 });
+    await expect(repos('other').timeBlocks.create(actual)).rejects.toThrow();
+    await a.timeBlocks.delete(one.id);
+    expect((await a.timeBlocks.listInRange(plan.date, plan.date)).find(row => row.id === saved.id))
+      .toMatchObject({ sourcePlanId: null, text: 'Edited', endMin: 630 });
+  });
+
+  it('bounds dashboard history and uses the original baseline for downward progress', () => {
+    const a = repos();
+    const metric = a.metrics.create({ name: 'Weight', unit: 'kg', color: '#112233', direction: 'down', order: 0, targetValue: 50 });
+    for (let i = 0; i < 25; i++) {
+      a.metrics.upsertEntry({ metricId: metric.id, date: '2026-11-' + String(i + 1).padStart(2, '0'), value: 100 - i });
+    }
+    const item = a.dashboard.snapshot('2026-11-25').metrics[0];
+    expect(item.entries).toHaveLength(20);
+    expect(item.entries[0].value).toBe(95);
+    expect(item.summary).toMatchObject({ progressPercent: 48, delta: -1, latest: { value: 76 } });
+  });
+
   it('confirms plans as actuals idempotently and executes atomic evening shutdown', async () => {
     const a = repos('a');
     const b = repos('b');
@@ -252,7 +283,7 @@ describe('life OS phase 1-4 domains', () => {
       },
     });
     const out = backups.exportFor('legacy-v12');
-    expect(out.version).toBe(15);
+    expect(out.version).toBe(18);
     expect(out.projects).toHaveLength(1);
     expect(out.notes).toEqual([]);
     expect(out.metrics).toEqual([]);

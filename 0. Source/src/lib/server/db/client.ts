@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DatabaseConnection } from './connection';
 import { ensureUserCategories, initializeUsers } from './bootstrap';
 
-// Compatibility facade: existing repositories keep their public function API.
+// The application shares one initialized SQLite connection.
 const connection = new DatabaseConnection({
   filename: () => process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite'),
   migrationsFolder: path.join(process.cwd(), 'drizzle'),

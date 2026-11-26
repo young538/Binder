@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, between, eq, inArray, isNotNull, lte, max } from 'drizzle-orm';
 import { addDays, parseISO } from 'date-fns';
-import { describeEventDday, isContactDue, nextAnnualOccurrence } from '@/lib/lifeEvents';
+import { isContactDue } from '@/lib/lifeEvents';
 import type {
   MorningBootApplyInput,
   MorningBootApplyResult,
@@ -11,7 +11,7 @@ import type {
   MorningBootUpcomingEvent,
 } from '@/lib/morningBoot';
 import { sortProjectTodos } from '@/lib/projects';
-import { describeBillingDday, formatCurrency } from '@/lib/subscriptions';
+import { upcomingItemsFor } from '@/lib/upcomingItems';
 import type { BinderNote, LifeEvent, Person, Project, Subscription, Todo } from '@/lib/types';
 import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import type { BinderDatabase } from '../db/connection';
@@ -149,49 +149,11 @@ export class MorningBootRepository {
         .orderBy(asc(subscriptions.order), asc(subscriptions.id))
         .all() as Subscription[];
 
-      const upcomingEvents: MorningBootUpcomingEvent[] = [];
-      for (const ev of eventRows) {
-        const dday = describeEventDday(ev, date);
-        if (dday.daysLeft >= 0 && dday.daysLeft <= 3) {
-          upcomingEvents.push({
-            id: ev.id,
-            title: ev.title,
-            date: dday.targetDate,
-            kind: ev.kind,
-            daysLeft: dday.daysLeft,
-            ...(ev.personId ? { personId: ev.personId } : {}),
-          });
-        }
-      }
-      for (const person of peopleRows) {
-        if (!person.birthday) continue;
-        const next = nextAnnualOccurrence(person.birthday.slice(5, 10), date);
-        if (next.daysLeft >= 0 && next.daysLeft <= 3) {
-          upcomingEvents.push({
-            id: `bday:${person.id}`,
-            title: `${person.name} 생일`,
-            date: next.date,
-            kind: 'birthday',
-            daysLeft: next.daysLeft,
-            personId: person.id,
-          });
-        }
-      }
-      for (const sub of subscriptionRows) {
-        if (!sub.nextBillingDate) continue;
-        const billing = describeBillingDday(sub.nextBillingDate, date);
-        if (billing.daysLeft >= 0 && billing.daysLeft <= 3) {
-          upcomingEvents.push({
-            id: `sub:${sub.id}`,
-            title: `💳 ${sub.name} 결제 (${formatCurrency(sub.amount, sub.currency)})`,
-            date: sub.nextBillingDate,
-            kind: 'subscription',
-            daysLeft: billing.daysLeft,
-            subscriptionId: sub.id,
-          });
-        }
-      }
-      upcomingEvents.sort((a, b) => a.daysLeft - b.daysLeft || a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+      const upcomingEvents: MorningBootUpcomingEvent[] = upcomingItemsFor(
+        date, 3, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} 결제 (${price})`,
+      ).map(({ id, title, kind, date, daysLeft, personId, subscriptionId }) => ({
+        id, title, kind, date, daysLeft, personId, subscriptionId,
+      }));
 
       const duePeople: MorningBootDuePerson[] = [];
       for (const person of peopleRows) {

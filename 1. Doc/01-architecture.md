@@ -139,7 +139,7 @@ TODO, 책, 습관 로그, 일일 시간블록 등의 조회 상태는 [useAsyncR
 
 ## 8. 현재 화면에 연결되지 않은 코드
 
-`components/annual/CoreSection.tsx`와 `SubCard.tsx`, `components/daily/DailyMemo.tsx`, `components/week/HabitStrip.tsx`는 남아 있지만 현재 주요 페이지에서 렌더링하지 않습니다. `lib/repo/syncMeta.ts`는 아무 작업도 하지 않는 호환용 코드이고 클라이언트 `syncAnnualGoalFromHabits()`도 집계하지 않습니다. 실제 집계는 서버 습관 repository에 있습니다.
+연간 목표와 주간 습관은 현재 라우트의 전용 컴포넌트에서 표시합니다. 습관 기반 목표 집계는 서버 저장소에서 처리합니다.
 
 타입·컴포넌트 존재만으로 현재 화면 기능이라고 판단하지 말고 페이지의 import와 렌더링 경로를 확인합니다.
 
@@ -147,11 +147,11 @@ TODO, 책, 습관 로그, 일일 시간블록 등의 조회 상태는 [useAsyncR
 
 - DatabaseConnection은 연결·마이그레이션·초기화 성공 여부·close를 관리합니다.
 - BackupService는 검증·트랜잭션·집계 순서를, UserBackupRepository는 계정별 SQL을 담당합니다.
-- UserRepositories가 DB와 사용자 ID로 13개 저장소를 조립합니다. 기존 11개에 주간 템플릿 저장소와 독서/목표 점검 조회 저장소를 추가했습니다. 각 저장소가 SQL과 소유권 조건을 보유하며 SettingsRepository는 기본값과 원자적 설정 갱신을 담당합니다.
+- UserRepositories가 DB와 인증 사용자 ID로 도메인 저장소를 조립합니다. 각 저장소가 SQL과 소유권 조건을 보유하며 SettingsRepository는 기본값과 원자적 설정 갱신을 담당합니다.
 - GoalProgressService는 주입받은 DB와 기준 날짜로 목표 진행률을 계산합니다.
 - HttpClient는 전송·오류·인증 만료 처리를, AsyncResource는 조회 상태·최신 응답 반영을 담당합니다.
 - TimeGridGeometry는 좌표 계산, TimeBlockCommands는 주입받은 저장 인터페이스로 이동·복사를 수행합니다.
 - TodoCreateInput은 입력 이벤트와 중복 제출 방지를 한곳에서 처리합니다.
 - useTimeGridInteraction, useBlockEditor, useDailyTracker, useHabitEditor, useAnnualGoals는 동작과 조회를 맡고 대응 컴포넌트는 화면을 렌더링합니다.
 
-기존 도메인 repository 함수는 호환 진입점으로 유지합니다. 구체적인 의존성 주입 예와 기능별 변경 순서는 [유지보수 가이드](06-maintenance.md)에 있습니다.
+구체적인 의존성 주입 예와 기능별 변경 순서는 [유지보수 가이드](06-maintenance.md)에 있습니다.

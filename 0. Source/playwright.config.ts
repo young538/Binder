@@ -1,21 +1,30 @@
 import { defineConfig } from '@playwright/test';
 
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+
+const runId = process.env.BINDER_E2E_RUN_ID ??= randomUUID();
+if (!/^[a-f0-9-]{36}$/i.test(runId)) throw new Error('Invalid E2E run ID');
+const database = path.resolve('test-results', runId, 'e2e.sqlite');
+process.env.BINDER_E2E_DATABASE = database;
+
 export default defineConfig({
+  workers: 2,
   testDir: './tests/e2e',
   use: {
     baseURL: 'http://localhost:3100',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run build && npm run start',
     url: 'http://localhost:3100',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    reuseExistingServer: false,
+    timeout: 180000,
     env: {
       // Production container occupies host:3000; route the test dev server to 3100.
       PORT: '3100',
       // Isolated DB so tests can't pollute production data.
-      DB_PATH: './tmp-test/e2e.sqlite',
+      DB_PATH: database,
       // Default admin used by ensureAdminUser() in lib/server/db/client.ts.
       // Hash is for "admin-test-password" — not a real secret, e2e only.
       APP_USERNAME: 'admin',

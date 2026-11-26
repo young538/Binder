@@ -28,7 +28,7 @@ SQLite는 서버 파일에 저장하며 WAL 모드입니다. 식별자는 ULID �
 | books | year, order, category, title, oneThing, keywords, reviewUrl, startedAt, finishedAt, 시각 | 독서, 일일 책 선택 |
 | weekly_templates | name, blocks(JSON), 시각 | 요일별 계획 시간표 스냅샷 |
 | retrospectives | type, dateOrWeek, rating, template, freeText, 시각 | 일·주·월·연 회고, 일일 독서 |
-| time_blocks | date, startMin, endMin, text, kind, categoryId, goalId, projectId, todoId, 시각 | 일일·주간 시간표, 회고 통계 |
+| time_blocks | date, startMin, endMin, text, kind, categoryId, goalId, projectId, todoId, sourcePlanId, 시각 | 일일·주간 시간표, 회고 통계 |
 | settings | userId, firstDayOfWeek, gridMinutes, dayStartHour, dayEndHour, theme, financeCycleStartDay | 공통 표시·가계부 기준일 설정 |
 | daily_checkins | date, sleepHours, energy, stress, mood, 시각 | 일일 10초 컨디션 바, 월·연 회고 평균 |
 | metrics | name, unit, direction, targetValue, goalId, color, order, 시각 | 상태 지표 트래커, 검색 |
@@ -138,7 +138,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 기간 조회 인덱스와 사용자 인덱스는 있지만 `habitId+date`, `scope+scopeKey`, `type+dateOrWeek`의 논리상 단일 레코드를 모두 UNIQUE로 강제하지 않습니다. 습관 토글, 회고·한 문장 upsert는 즉시 트랜잭션으로 read/write를 직렬화합니다. 연간 기본 7행 확보도 조회와 부족분 삽입을 같은 즉시 트랜잭션에서 수행합니다. 다른 경로와 외부 직접 DB 쓰기까지 UNIQUE 제약으로 강제하는 것은 아닙니다.
 
-내보내기는 version 15의 21개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드, 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`), 가계부 도메인(`financeTransactions`, `financeBudgets`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
+내보내기는 version 18의 21개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드, 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`), 가계부 도메인(`financeTransactions`, `financeBudgets`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
 
 ## TODO 작업 기록
 
@@ -156,4 +156,10 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 0015 마이그레이션은 `settings` 테이블에 `finance_cycle_start_day`(기본 `1`, 범위 `1~31`)를 추가해 월급날 기준 가계부·대시보드·구독 고정비·월간 회고 주기를 사용자별로 설정할 수 있게 합니다(누락된 구버전 JSON 백업은 기본 `1`로 복원).
 
-운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 CLI 삭제는 두 테이블도 함께 삭제합니다. `google_calendar_connections`와 `finance_automation_configs` 역시 `SESSION_SECRET` 기반 암호화 비밀번호·토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않습니다(`google_calendar_connections`는 CLI 계정 삭제 시 함께 제거합니다).
+운영용 두 테이블은 SQLite 전체 백업에 포함되며 사용자 JSON 내보내기에는 포함하지 않습니다. JSON replace는 본인의 휴지통을 비우고 요청 기록은 유지합니다. 계정 삭제 CLI는 SQLite 스키마에서 `user_id` 열을 가진 테이블을 확인한 후 해당 계정의 행을 한 트랜잭션으로 삭제합니다. 가계부 거래·예산·자동화 설정도 이 대상입니다. `google_calendar_connections`와 `finance_automation_configs` 역시 `SESSION_SECRET` 기반 암호화 비밀번호·토큰을 보관하는 운영 테이블이므로 사용자 JSON 내보내기에 포함하지 않습니다.
+
+0016은 실제 기록의 원본 계획 ID를 추가합니다. 사용자·날짜·시간·제목·카테고리와 연결된 목표·프로젝트·TODO가 일치하는 기존 계획과 실제 기록을 생성 순서로 1:1 연결합니다. 짝이 없는 기록도 보존합니다. Google 할 일 ID가 중복된 경우 가장 먼저 생성된 TODO에 연결을 유지하고 나머지 로컬 TODO의 Google 연결만 해제합니다.
+
+0017은 기존 기록과 주간 템플릿에서 같은 사용자의 목표를 찾을 수 없는 연결을 해제합니다. 버전 16 이하 내보내기 파일을 가져올 때도 삭제된 목표 연결을 정리합니다. Google 일정 삭제 대기열은 SQLite에 계정별로 저장되며 온라인 DB 백업에 포함됩니다. JSON 백업에는 플래너 데이터만 포함됩니다.
+
+0018은 기존 DB의 끊어진 필수 카테고리를 사용자별 ‘기타’로 옮기고, 끊어진 선택 분류와 구독 연결을 해제합니다. Google 일정 수정과 할 일 삭제 대기열은 계정별 SQLite 테이블에 보관하며 JSON 내보내기에서 제외합니다.

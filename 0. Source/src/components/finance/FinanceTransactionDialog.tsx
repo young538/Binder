@@ -16,10 +16,9 @@ interface Props {
   initial?: FinanceTransaction | null;
   defaultDate: string;
   onClose: () => void;
-  onSaved: () => void;
 }
 
-export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSaved }: Props) {
+export function FinanceTransactionDialog({ initial, defaultDate, onClose }: Props) {
   const [kind, setKind] = useState<FinanceTransactionKind>(initial?.kind ?? 'expense');
   const [date, setDate] = useState(initial?.date ?? defaultDate);
   const [time, setTime] = useState(initial?.time ?? '');
@@ -99,7 +98,6 @@ export function FinanceTransactionDialog({ initial, defaultDate, onClose, onSave
           subscriptionId: null,
         });
       }
-      onSaved();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '거래 내역을 저장하지 못했습니다.');

@@ -15,12 +15,13 @@ import {
 import { DatabaseConnection } from '@/lib/server/db/connection';
 import { schema } from '@/lib/server/db/client';
 import { GoogleSyncCoordinator } from '@/lib/server/googleCalendar/autoSync';
-import { GoogleApiError, type GoogleCalendarApiClient } from '@/lib/server/googleCalendar/client';
+import { GoogleApiError, GoogleCalendarApiClient } from '@/lib/server/googleCalendar/client';
 import type { GoogleOAuthConfig } from '@/lib/server/googleCalendar/config';
 import { encryptSecret } from '@/lib/server/googleCalendar/crypto';
 import { GoogleTasksSyncService } from '@/lib/server/googleCalendar/tasksSyncService';
 import { UserBackupRepository } from '@/lib/server/backup/repository';
 import { validateImport } from '@/lib/server/importValidation';
+import { TodoActions } from '@/lib/server/todos/actions';
 import { UserRepositories } from '@/lib/server/repos';
 import type { GoogleCalendarInfo, GoogleTaskListInfo } from '@/lib/types';
 
@@ -84,6 +85,46 @@ function createMockTasksApi(): GoogleCalendarApiClient {
 }
 
 describe('google tasks mapping & sync service', () => {
+  it('reads every task and event page and rejects an incomplete listing on token loops', async () => {
+    const api = new GoogleCalendarApiClient(async url => {
+      const page = Number(new URL(String(url)).searchParams.get('pageToken') ?? 1);
+      return Response.json({ items: [{ id: String(page) }], nextPageToken: page < 12 ? String(page + 1) : undefined });
+    });
+    expect(await api.listTasks('token', 'list')).toHaveLength(12);
+    expect(await api.listEvents('token', 'cal', 'start', 'end')).toHaveLength(12);
+    const looping = new GoogleCalendarApiClient(async () => Response.json({ items: [], nextPageToken: 'same' }));
+    await expect(looping.listTasks('token', 'list')).rejects.toThrow('repeated page token');
+  });
+
+  it.each(['binder', 'google'])('creates exactly one independent occurrence after %s completion', async source => {
+    const { todos } = new UserRepositories(connection.get(), 'alice');
+    const fields = { scope: 'day', scopeKey: '2026-11-23', title: 'Read', status: 'pending', order: 0 } as const;
+    const todo = await todos.create({ ...fields, repeatRule: { unit: 'day', interval: 1, basis: 'scheduled' } });
+    const link = { googleTaskId: 'remote', googleTaskListId: 'list', googleTaskUpdatedAt: fixedNow.toISOString() };
+    todos.setGoogleTaskLink(todo.id, link);
+    for (let i = 0; i < 2; i++) {
+      if (source === 'binder') await todos.update(todo.id, { status: 'done' });
+      else todos.upsertFromGoogleTask({ ...fields, ...link, projectId: null, note: null, status: 'done' });
+    }
+    expect(todos.listSyncedByTaskList('list')).toHaveLength(1);
+    expect(await todos.list()).toHaveLength(2);
+    expect(todos.listUnpushedForGoogleTasks()).toMatchObject([{
+      scopeKey: '2026-11-24', status: 'pending', googleTaskId: null, googleTaskUpdatedAt: null, googleTaskListId: null,
+    }]);
+  });
+
+  it('uses the Google completion day for completion-based repeats even when sync runs later', async () => {
+    const { todos } = new UserRepositories(connection.get(), 'alice');
+    const fields = { title: 'Read', scope: 'day', scopeKey: '2026-11-17', order: 0, status: 'pending' } as const;
+    const todo = await todos.create({ ...fields, repeatRule: { unit: 'day', interval: 1, basis: 'completed' } });
+    const link = { googleTaskId: 'remote', googleTaskListId: 'list', googleTaskUpdatedAt: fixedNow.toISOString() };
+    todos.setGoogleTaskLink(todo.id, link);
+    const remote = googleTaskToTodoFields({ id: 'remote', title: 'Read', status: 'completed',
+      due: '2026-11-17T00:00:00Z', completed: '2026-11-19T16:00:00Z' });
+    todos.upsertFromGoogleTask({ ...link, ...remote }, () => fixedNow);
+    expect(todos.listUnpushedForGoogleTasks()[0].scopeKey).toBe('2026-11-21');
+  });
+
   it('maps between Binder Todo and Google Task resources cleanly', () => {
     expect(googleDueToDate('2026-11-23T00:00:00.000Z')).toBe('2026-11-23');
     expect(googleDueToDate('invalid-date')).toBeNull();
@@ -167,6 +208,44 @@ describe('google tasks mapping & sync service', () => {
       projectId: null,
       status: 'pending',
     });
+  });
+
+  it('retains task identity on undo and retries failed deletions only after undo expires', async () => {
+    const db = connection.get();
+    const repos = new UserRepositories(db, 'owner');
+    const api = createMockTasksApi();
+    const email = 'owner@example.test';
+    repos.googleCalendar.upsert({ googleEmail: email, accessTokenEnc: encryptSecret('access'), refreshTokenEnc: encryptSecret('refresh'),
+      tokenExpiresAt: '2027-01-01T00:00:00Z', calendarMeta: [], tasksSelectedListIds: ['list-default'] });
+    let ms = fixedNow.getTime();
+    const now = () => new Date(ms);
+    const actions = new TodoActions(db, 'owner', now);
+    const remote = { id: 'remote', title: 'linked', status: 'needsAction' as const };
+    vi.mocked(api.listTasks).mockResolvedValue([remote]);
+    const service = new GoogleTasksSyncService(repos, api, oauthConfig, now);
+    await service.syncNow();
+    const id = repos.todos.listSyncedByTaskList('list-default')[0].id;
+    actions.remove(id);
+    await service.syncNow();
+    expect(api.deleteTask).not.toHaveBeenCalled();
+    expect(repos.todos.listSyncedByTaskList('list-default')).toEqual([]);
+    expect(actions.restore(id).googleTaskId).toBe(remote.id);
+    expect(repos.todos.pendingGoogleDeletions(email)).toEqual([]);
+    await service.syncNow();
+    expect(repos.todos.listSyncedByTaskList('list-default').map(t => t.id)).toEqual([id]);
+    actions.remove(id);
+    ms += 30_001;
+    expect(() => actions.restore(id)).toThrow();
+    vi.mocked(api.deleteTask).mockRejectedValueOnce(new Error('offline'));
+    await expect(service.syncNow()).rejects.toThrow('offline');
+    expect(repos.todos.pendingGoogleDeletions(email)).toHaveLength(1);
+    expect(repos.todos.listSyncedByTaskList('list-default')).toEqual([]);
+    const resumed = new GoogleTasksSyncService(new UserRepositories(db, 'owner'), api, oauthConfig, now);
+    await resumed.syncNow();
+    expect(repos.todos.pendingGoogleDeletions(email)).toEqual([]);
+    expect(api.deleteTask).toHaveBeenCalledTimes(2);
+    expect(repos.todos.listSyncedByTaskList('list-default')).toEqual([]);
+    expect(api.createTask).not.toHaveBeenCalled();
   });
 
   it('syncs bi-directionally with project mapping, conflict resolution, single delete count, and user isolation', async () => {

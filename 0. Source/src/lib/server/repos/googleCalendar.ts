@@ -18,6 +18,8 @@ export interface GoogleCalendarConnectionRow {
   pushCalendarId: string;
   calendarMeta: GoogleCalendarInfo[];
   syncEnabled: boolean;
+  eventSyncRevision: number;
+  taskDeletionRevision: number;
   autoPushEvents: boolean;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
@@ -167,6 +169,8 @@ export class GoogleCalendarConnectionRepository {
       pushCalendarId,
       calendarMeta: input.calendarMeta,
       syncEnabled: true,
+      eventSyncRevision: 0,
+      taskDeletionRevision: 0,
       autoPushEvents: true,
       lastSyncedAt: null,
       lastSyncError: null,

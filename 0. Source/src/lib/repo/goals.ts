@@ -33,5 +33,8 @@ export const updateGoal = async (
 
 export const deleteGoal = async (id: string): Promise<void> => {
   await http.del(`/api/goals/${id}`);
-  notifyMutation('goals');
+  for (const resource of ['goals', 'todos', 'annualGoals', 'habits', 'projects', 'timeBlocks',
+    'metrics', 'notes', 'lifeEvents', 'weeklyTemplates'] as const) {
+    notifyMutation(resource);
+  }
 };

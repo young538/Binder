@@ -76,7 +76,7 @@ TODO 제목은 PC에서 14px, 모바일에서 16px로 표시하고 긴 제목은
 | [BlockEditor](../../0.%20Source/src/components/week/BlockEditor.tsx) / [useBlockEditor](../../0.%20Source/src/components/week/useBlockEditor.ts) | 편집 폼과 저장·삭제·복사 동작 분리 |
 | [DayListView](../../0.%20Source/src/components/week/DayListView.tsx) | 모바일 일별 목록 |
 | [DayTodoStrip](../../0.%20Source/src/components/week/DayTodoStrip.tsx) / [DayTodoColumn](../../0.%20Source/src/components/week/DayTodoColumn.tsx) | 일별 TODO와 블록 연결 |
-| [WeeklyHabitCalendar](../../0.%20Source/src/components/week/WeeklyHabitCalendar.tsx) | 통합 습관 표시와 체크; HabitStrip은 현재 주간 화면에서 사용하지 않음 |
+| [WeeklyHabitCalendar](../../0.%20Source/src/components/week/WeeklyHabitCalendar.tsx) | 주간 습관 표시와 체크 |
 | [GoalCoverageBar](../../0.%20Source/src/components/week/GoalCoverageBar.tsx) | 실제 시간 통계 |
 
 겹치는 블록을 금지하거나 자동으로 분할하지 않습니다. 집계도 겹치는 시간을 중복 합산합니다. API는 유효한 날짜·0~1440분·종료>시작과 전달된 참조의 소유권을 검증합니다. 사용자 설정의 표시 시간 밖에 있는 유효한 블록을 자동으로 격자 안으로 이동하지는 않습니다.

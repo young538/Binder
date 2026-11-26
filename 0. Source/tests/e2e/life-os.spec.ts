@@ -237,7 +237,7 @@ for (const width of [1280, 390]) {
     await page.getByLabel('다음 결제일').fill('2026-12-01');
     await page.getByLabel('결제일 (매월 일자)').fill('1');
     await page.getByRole('button', { name: '구독 등록', exact: true }).click();
-    await expect(page.getByText('ChatGPT Plus')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ChatGPT Plus', exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: '새 구독' }).click();
     await page.getByLabel('서비스명').fill('Notion 연간');

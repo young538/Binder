@@ -1,7 +1,6 @@
 import 'server-only';
-import { and, asc, between, eq, inArray, isNotNull, isNull, max } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { goals, projects, todos } from '../db/schema';
+import { and, asc, between, eq, inArray, isNotNull, isNull, lte, max, sql } from 'drizzle-orm';
+import { goals, googleCalendarConnections, googleTaskDeletions, projects, todos } from '../db/schema';
 import { Todo, TodoScope, TodoStatus } from '@/lib/types';
 import { TodoActions } from '../todos/actions';
 import type { TodoDeleteResult, TodoRolloverResult } from '@/lib/todos/contracts';
@@ -70,10 +69,6 @@ export class TodoRepository {
 
   async rollover(date: string, ids: string[]): Promise<TodoRolloverResult> {
     return new TodoActions(this.database, this.userId).rollover(date, ids);
-  }
-
-  async setStatus(id: string, status: TodoStatus): Promise<Todo | null> {
-    return this.update(id, { status });
   }
 
   async toggleDone(id: string): Promise<Todo | null> {
@@ -149,6 +144,7 @@ export class TodoRepository {
       googleTaskListId: string;
       googleTaskId: string;
       googleTaskUpdatedAt: string | null;
+      completedAt?: string;
       title: string;
       note: string | null;
       status: TodoStatus;
@@ -191,29 +187,13 @@ export class TodoRepository {
       }
 
       if (existing) {
-        const nextStatus = input.status;
-        const completedAt =
-          nextStatus === 'done' ? (existing.completedAt ?? timestamp) : null;
-        const nextParentGoalId =
-          existing.parentGoalId ?? (inheritedGoalId !== undefined ? inheritedGoalId : null);
-
-        const updated = tx
-          .update(todos)
-          .set({
-            title: input.title,
-            note: input.note,
-            status: nextStatus,
-            scope: input.scope,
-            scopeKey: input.scopeKey,
-            projectId: input.projectId,
-            parentGoalId: nextParentGoalId,
-            completedAt,
-            googleTaskUpdatedAt: input.googleTaskUpdatedAt,
-            updatedAt: timestamp,
-          })
-          .where(and(eq(todos.userId, this.userId), eq(todos.id, existing.id)))
-          .returning()
-          .get() as Todo;
+        const actions = new TodoActions(tx, this.userId, now);
+        const updated = actions.update(existing.id, {
+          ...input,
+          repeatRule: input.scope === 'day' ? existing.repeatRule : null,
+          parentGoalId: existing.parentGoalId ?? inheritedGoalId ?? null,
+        });
+        if (!updated) throw new Error('Google task disappeared during sync');
         return { action: 'updated', todo: updated };
       }
 
@@ -245,7 +225,7 @@ export class TodoRepository {
         note: input.note,
         repeatRule: null,
         sourceRetro: null,
-        completedAt: input.status === 'done' ? timestamp : null,
+        completedAt: input.status === 'done' ? input.completedAt ?? timestamp : null,
         repeatGenerated: false,
         googleTaskListId: input.googleTaskListId,
         googleTaskId: input.googleTaskId,
@@ -255,6 +235,29 @@ export class TodoRepository {
       };
       tx.insert(todos).values(inserted).run();
       return { action: 'created', todo: inserted };
+    }, { behavior: 'immediate' });
+  }
+
+  pendingGoogleDeletions(email: string) {
+    return this.database.select().from(googleTaskDeletions)
+      .where(and(eq(googleTaskDeletions.userId, this.userId), eq(googleTaskDeletions.googleEmail, email))).all();
+  }
+
+  googleDeletionReady(job: typeof googleTaskDeletions.$inferSelect, now: string): boolean {
+    return !!this.database.select({ id: googleTaskDeletions.todoId }).from(googleTaskDeletions).where(and(
+      eq(googleTaskDeletions.userId, this.userId), eq(googleTaskDeletions.googleEmail, job.googleEmail),
+      eq(googleTaskDeletions.listId, job.listId), eq(googleTaskDeletions.taskId, job.taskId),
+      eq(googleTaskDeletions.notBefore, job.notBefore), lte(googleTaskDeletions.notBefore, now),
+    )).get();
+  }
+
+  completeGoogleDeletion(job: typeof googleTaskDeletions.$inferSelect): void {
+    this.database.transaction(tx => {
+      const removed = tx.delete(googleTaskDeletions).where(and(eq(googleTaskDeletions.userId, this.userId),
+        eq(googleTaskDeletions.googleEmail, job.googleEmail), eq(googleTaskDeletions.listId, job.listId),
+        eq(googleTaskDeletions.taskId, job.taskId), eq(googleTaskDeletions.notBefore, job.notBefore))).run();
+      if (removed.changes) tx.update(googleCalendarConnections).set({ taskDeletionRevision: sql`task_deletion_revision + 1` })
+        .where(eq(googleCalendarConnections.userId, this.userId)).run();
     }, { behavior: 'immediate' });
   }
 
@@ -279,30 +282,3 @@ export class TodoRepository {
     return res.changes;
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const listTodos = async (userId: string, filters?: {
-  scope?: TodoScope;
-  scopeKey?: string;
-  parentGoalId?: string;
-}): Promise<Todo[]> =>
-  new TodoRepository(getDb(), userId).list(filters);
-
-export const listDayTodosInRange = async (userId: string, startDate: string, endDate: string): Promise<Todo[]> =>
-  new TodoRepository(getDb(), userId).listDaysInRange(startDate, endDate);
-
-export const createTodo = async (userId: string, data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Todo> =>
-  new TodoRepository(getDb(), userId).create(data);
-
-export const updateTodo = async (userId: string, id: string, patch: Partial<Omit<Todo, 'id' | 'userId' | 'createdAt'>>): Promise<Todo | null> =>
-  new TodoRepository(getDb(), userId).update(id, patch);
-
-export const deleteTodo = async (userId: string, id: string): Promise<void> => {
-  await new TodoRepository(getDb(), userId).delete(id);
-};
-
-export const setTodoStatus = async (userId: string, id: string, status: TodoStatus): Promise<Todo | null> =>
-  new TodoRepository(getDb(), userId).setStatus(id, status);
-
-export const toggleTodoDone = async (userId: string, id: string): Promise<Todo | null> =>
-  new TodoRepository(getDb(), userId).toggleDone(id);

@@ -113,6 +113,27 @@
       "when": 1795480069952,
       "tag": "0015_faulty_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1795656156085,
+      "tag": "0016_plan-confirmation",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1795658474163,
+      "tag": "0017_goal-integrity-and-calendar-deletions",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1795661048815,
+      "tag": "0018_durable-sync-and-reference-repair",
+      "breakpoints": true
     }
   ]
 }

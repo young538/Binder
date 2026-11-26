@@ -70,8 +70,13 @@ for (const width of [1280, 390]) {
 
     // 3) Toggle excluded on transaction -> totals update live
     const toggleExcludedBtn = page.getByRole('button', { name: '테스트 커피 합계 제외 전환' });
+    let transactionReads = 0;
+    page.on('request', req => {
+      if (req.method() === 'GET' && new URL(req.url()).pathname === '/api/finance/transactions') transactionReads++;
+    });
     await toggleExcludedBtn.click();
     await expect(toggleExcludedBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(transactionReads).toBe(1);
     await expect(kpi).toContainText('합계 제외 1건');
     await expect(kpi).toContainText('총 지출₩0');
 

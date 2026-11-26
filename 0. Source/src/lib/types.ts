@@ -123,6 +123,7 @@ export interface TimeBlock {
   goalId?: string | null;
   projectId?: string | null;
   todoId?: string | null;
+  sourcePlanId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

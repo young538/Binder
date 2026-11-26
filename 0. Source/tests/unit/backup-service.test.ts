@@ -5,6 +5,9 @@ import { sql } from 'drizzle-orm';
 import { BACKUP_COLLECTIONS } from '@/lib/backup';
 import { DEFAULT_SETTINGS } from '@/lib/settings';
 import { DatabaseConnection } from '@/lib/server/db/connection';
+import { UserRepositories } from '@/lib/server/repos';
+import { GoalRepository } from '@/lib/server/repos/goals';
+import { TodoActions } from '@/lib/server/todos/actions';
 import { BackupService } from '@/lib/server/backup/service';
 import { SettingsRepository } from '@/lib/server/repos/settings';
 import { GoogleCalendarConnectionRepository } from '@/lib/server/repos/googleCalendar';
@@ -58,7 +61,7 @@ describe('backup service transactions and account boundaries', () => {
     const first = backups.exportFor('a');
     expect(first).not.toHaveProperty('googleCalendarConnections');
     expect(JSON.stringify(first)).not.toContain('enc-secret-oauth-token');
-    expect(first.version).toBe(15);
+    expect(first.version).toBe(18);
     expect(first.generatedAt).toBe(now);
     expect(first.annualGoals[0].target).toBe(365);
     expect(first.annualGoals[0].monthlyActualAdjustments).toHaveLength(12);
@@ -71,6 +74,142 @@ describe('backup service transactions and account boundaries', () => {
     expect(second.settings).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
     expect(backups.exportFor('b').todos).toEqual([]);
     expect(second).not.toHaveProperty('users');
+  });
+
+  it('deletes a goal subtree atomically and round-trips every remaining linked record', async () => {
+    const data = fixture();
+    const root = data.goals[0];
+    backups.importFor('a', { mode: 'replace', data: {
+      ...data, goals: [root, { ...root, id: 'core', parentId: root.id, level: 'mandalartCore' },
+        { ...root, id: 'sub', parentId: 'core', level: 'mandalartSub' }, { ...root, id: 'keep' }],
+      todos: [{ ...data.todos[0], parentGoalId: 'sub' }],
+      habits: [{ ...data.habits[0], parentGoalId: 'core' }],
+      annualGoals: [{ ...data.annualGoals[0], parentGoalId: root.id }],
+      timeBlocks: [{ ...data.timeBlocks[0], goalId: 'sub' }],
+    } });
+    const db = connection.get();
+    await new GoalRepository(db, 'b').delete(root.id);
+    expect(backups.exportFor('a').goals).toHaveLength(4);
+    const goals = new GoalRepository(db, 'a');
+    db.run(sql.raw("CREATE TRIGGER fail_goal BEFORE DELETE ON goals BEGIN SELECT RAISE(ABORT, 'interrupted'); END"));
+    await expect(goals.delete(root.id)).rejects.toThrow();
+    expect(backups.exportFor('a').todos[0].parentGoalId).toBe('sub');
+    db.run(sql.raw('DROP TRIGGER fail_goal'));
+    await goals.delete(root.id);
+    const saved = backups.exportFor('a');
+    expect(saved.goals.map(row => row.id)).toEqual(['keep']);
+    for (const rows of [saved.todos, saved.habits, saved.annualGoals]) expect(rows[0].parentGoalId).toBeNull();
+    for (const rows of [saved.projects, saved.metrics, saved.notes, saved.lifeEvents, saved.timeBlocks]) {
+      expect(rows[0].goalId).toBeNull();
+    }
+    expect(saved.weeklyTemplates[0].blocks[0]).toMatchObject({ goalId: null, categoryId: 'category' });
+    expect(backups.importFor('a', { mode: 'replace', data: saved }).ok).toBe(true);
+  });
+
+  it('repairs dangling goal links only in legacy exports and preserves the input', () => {
+    const data = { ...fixture(), version: 16, generatedAt: now, goals: [] };
+    expect(backups.importFor('a', { mode: 'replace', data }).ok).toBe(true);
+    expect(data.weeklyTemplates[0].blocks[0].goalId).toBe('goal');
+    expect(backups.exportFor('a').todos[0].parentGoalId).toBeNull();
+    expect(() => backups.importFor('a', { mode: 'replace', data: { ...data, version: 17 } })).toThrow('Invalid reference');
+    backups.importFor('b', { mode: 'replace', data: { goals: fixture().goals } });
+    expect(() => backups.importFor('a', { mode: 'replace', data })).toThrow('Invalid reference');
+  });
+
+  it('moves category links, retains subscription expenses, and restores into an empty database', async () => {
+    const r = new UserRepositories(connection.get(), 'a');
+    const data = fixture();
+    backups.importFor('a', { mode: 'replace', data });
+    const replacement = await r.categories.create({ name: '옮길 분류', color: '#123456', order: 1 });
+    const foreign = await new UserRepositories(connection.get(), 'b').categories.create({ name: 'B', color: '#123456', order: 0 });
+    await expect(r.categories.delete('category')).rejects.toThrow('옮길 카테고리');
+    await expect(r.categories.delete('category', foreign.id)).rejects.toThrow();
+    await expect(r.categories.delete('category', 'category')).rejects.toThrow();
+    expect(backups.exportFor('a').timeBlocks[0].categoryId).toBe('category');
+    await r.categories.delete('category', replacement.id);
+    r.subscriptions.delete('sub');
+    const saved = backups.exportFor('a');
+    expect(saved.timeBlocks[0].categoryId).toBe(replacement.id);
+    expect(saved.weeklyTemplates[0].blocks[0].categoryId).toBe(replacement.id);
+    expect(saved.projects[0].categoryId).toBe(replacement.id);
+    expect(saved.financeTransactions[0]).toMatchObject({ id: 'ftx', amount: data.financeTransactions[0].amount, subscriptionId: null });
+    const fresh = new DatabaseConnection({ filename: () => ':memory:', migrationsFolder: path.resolve('drizzle') });
+    try {
+      const service = new BackupService(() => fresh.get());
+      expect(service.importFor('a', { mode: 'replace', data: saved }).ok).toBe(true);
+      expect(service.exportFor('a').weeklyTemplates).toEqual(saved.weeklyTemplates);
+    } finally {
+      fresh.close();
+    }
+  });
+
+  it('repairs pre-v18 category and subscription orphans without duplicating recovery categories on merge', () => {
+    const data = { ...fixture(), version: 17, generatedAt: now, categories: [], subscriptions: [] };
+    backups.importFor('a', { mode: 'merge', data });
+    backups.importFor('a', { mode: 'merge', data });
+    const saved = backups.exportFor('a');
+    expect(saved.categories).toHaveLength(1);
+    expect(saved.categories[0].name).toBe('기타');
+    expect(saved.weeklyTemplates[0].blocks[0].categoryId).toBe(saved.categories[0].id);
+    expect(saved.timeBlocks[0].categoryId).toBe(saved.categories[0].id);
+    expect(saved.projects[0].categoryId).toBeNull();
+    expect(saved.financeTransactions[0].subscriptionId).toBeNull();
+    expect(() => backups.importFor('a', { mode: 'replace', data: { ...data, version: 18 } })).toThrow('Invalid reference');
+  });
+
+  it('round-trips 3500 todos in one replacement transaction', () => {
+    const todos = Array.from({ length: 3500 }, (_, i) => ({
+      id: String(i), scope: 'inbox', scopeKey: 'inbox', title: 'Read', status: 'pending', order: i, ...times,
+    }));
+    backups.importFor('a', { mode: 'replace', data: { todos } });
+    const exported = backups.exportFor('a');
+    backups.importFor('a', { mode: 'replace', data: exported });
+    expect(backups.exportFor('a').todos).toHaveLength(todos.length);
+  });
+
+  it('round-trips a block after TODO deletion without breaking undo in the live database', () => {
+    backups.importFor('a', { mode: 'replace', data: fixture() });
+    const actions = new TodoActions(connection.get(), 'a');
+    actions.remove('todo');
+    const backup = backups.exportFor('a');
+    expect(backup.timeBlocks[0].todoId).toBeNull();
+    actions.restore('todo');
+    expect(backups.exportFor('a').timeBlocks[0].todoId).toBe('todo');
+    backups.importFor('a', { mode: 'replace', data: backup });
+    expect(backups.exportFor('a').timeBlocks).toEqual(backup.timeBlocks);
+  });
+
+  it('repairs old exported TODO links without modifying the input or accepting a foreign reference', () => {
+    const data = { ...fixture(), generatedAt: now, version: 15, todos: [] };
+    backups.importFor('a', { mode: 'replace', data });
+    expect(data.timeBlocks[0].todoId).toBe('todo');
+    expect(backups.exportFor('a').timeBlocks[0].todoId).toBeNull();
+    backups.importFor('b', { mode: 'merge', data: { todos: [{ ...fixture().todos[0],
+      parentGoalId: null, projectId: null }] } });
+    expect(() => backups.importFor('a', { mode: 'replace', data })).toThrow('Invalid reference');
+  });
+
+  it('preserves the current Google link when merging a legacy duplicate without dropping either todo', () => {
+    const todo = { ...fixture().todos[0], parentGoalId: null, projectId: null, googleTaskId: 'remote', googleTaskListId: 'list' };
+    backups.importFor('a', { mode: 'replace', data: { todos: [todo] } });
+    backups.importFor('a', { mode: 'merge', data: { todos: [{ ...todo, id: 'earlier', createdAt: '2026-01-01T00:00:00Z' }] } });
+    expect(backups.exportFor('a').todos.map(row => [row.id, row.googleTaskId]).sort())
+      .toEqual([['earlier', null], ['todo', 'remote']]);
+  });
+
+  it('pairs legacy plans with matching actuals only once and preserves explicit independent records', () => {
+    const data = fixture();
+    const plan = data.timeBlocks[0];
+    const blocks = [plan, { ...plan, id: 'plan2' }, { ...plan, id: 'actual1', kind: 'actual' },
+      { ...plan, id: 'actual2', kind: 'actual', sourcePlanId: null }];
+    backups.importFor('a', { mode: 'replace', data: { ...data, timeBlocks: blocks } });
+    const saved = backups.exportFor('a');
+    expect(saved.timeBlocks.filter(block => block.sourcePlanId)).toHaveLength(1);
+    backups.importFor('a', { mode: 'replace', data: saved });
+    expect(backups.exportFor('a').timeBlocks).toEqual(saved.timeBlocks);
+    const invalid = saved.timeBlocks.map(block => block.kind === 'actual' ? { ...block, sourcePlanId: block.id } : block);
+    expect(() => backups.importFor('a', { mode: 'replace', data: { ...saved, timeBlocks: invalid } })).toThrow();
+    expect(backups.exportFor('a').timeBlocks).toEqual(saved.timeBlocks);
   });
 
   it('rejects foreign IDs before replace, and stamps accepted data with the current user', () => {

@@ -163,6 +163,7 @@ export const useBlockEditor = ({
         date: initial.date,
         text,
         kind: 'actual',
+        sourcePlanId: existing.id,
         categoryId,
         goalId,
         projectId,

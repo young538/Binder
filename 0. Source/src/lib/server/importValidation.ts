@@ -1,4 +1,5 @@
 import 'server-only';
+import { newId } from '@/lib/utils/id';
 import { getDb } from './db/client';
 import { BACKUP_COLLECTIONS, type BackupCollection, type ImportBody } from '@/lib/backup';
 import { UserBackupRepository, type BackupLookup } from './backup/repository';
@@ -18,7 +19,10 @@ export function validateImport(
   if (!object(raw) || Object.keys(raw).some(key => !['mode', 'data'].includes(key))) return fail('Invalid import body');
   if (raw.mode !== 'merge' && raw.mode !== 'replace') return fail('Invalid import mode');
   if (!object(raw.data)) return fail('data must be an object');
-  const data = raw.data;
+  // Legacy repairs below must not change the caller's document.
+  const data = structuredClone(raw.data);
+  const exportVersion = timestamp(data.generatedAt) && typeof data.version === 'number' &&
+    Number.isInteger(data.version) && data.version >= 1 ? data.version : Infinity;
   if (Object.keys(data).some(key => ![...names, 'settings', 'version', 'updatedAt', 'generatedAt'].includes(key))) fail('Unknown import collection');
   const ids = new Map<Name, Set<string>>();
   for (const name of names) {
@@ -79,23 +83,50 @@ export function validateImport(
       if (owner !== undefined && owner !== userId) fail(`Invalid ${name} id`);
     }
   }
+  const mode = raw.mode;
+  let recoveredCategory: string | undefined;
+  function recoveryCategoryId(): string {
+    if (recoveredCategory) return recoveredCategory;
+    const categories = (data.categories ??= []) as Record<string, unknown>[];
+    const imported = categories.find(category => category.name === '기타');
+    recoveredCategory = imported?.id as string | undefined;
+    if (!recoveredCategory && mode === 'merge') recoveredCategory = lookup.recoveryCategoryId();
+    if (!recoveredCategory) {
+      recoveredCategory = newId();
+      categories.push({ id: recoveredCategory, name: '기타', color: '#9ca3af', order: categories.length });
+    }
+    return recoveredCategory;
+  }
+  function validateReference(name: Name, row: Record<string, unknown>, field: string, target: Name) {
+    const id = row[field];
+    if (typeof id !== 'string' || ids.get(target)?.has(id)) return;
+    const owner = lookup.ownerOf(target, id);
+    if (mode === 'merge' && owner === userId) return;
+    if (target === 'categories' && exportVersion <= 17 && (owner === undefined || owner === userId)) {
+      row[field] = name === 'timeBlocks' || name === 'weeklyTemplates' ? recoveryCategoryId() : null;
+      return;
+    }
+    const legacyOrphan = (target === 'subscriptions' && exportVersion <= 17) ||
+      (target === 'goals' && exportVersion <= 16) ||
+      (name === 'timeBlocks' && field === 'todoId' && exportVersion <= 15);
+    if (legacyOrphan && (owner === undefined || owner === userId)) {
+      row[field] = null;
+      return;
+    }
+    fail(`Invalid reference: ${name}.${field}`);
+  }
+
   for (const name of names) {
     const rows = data[name] as Record<string, unknown>[] | undefined;
     for (const row of rows ?? []) {
       if (name === 'weeklyTemplates') {
         for (const block of row.blocks as Record<string, unknown>[]) {
-          for (const [field, target] of [['categoryId', 'categories'], ['goalId', 'goals']] as const) {
-            const id = block[field];
-            if (typeof id !== 'string' || ids.get(target)?.has(id)) continue;
-            if (raw.mode !== 'merge' || lookup.ownerOf(target, id) !== userId) fail(`Invalid reference: weeklyTemplates.${field}`);
-          }
+          validateReference(name, block, 'categoryId', 'categories');
+          validateReference(name, block, 'goalId', 'goals');
         }
       }
       for (const [field, target] of Object.entries(referenceFields[name] ?? {})) {
-        const id = row[field];
-        if (typeof id !== 'string' || ids.get(target)?.has(id)) continue;
-        const owner = raw.mode === 'merge' ? lookup.ownerOf(target, id) : undefined;
-        if (owner !== userId) fail(`Invalid reference: ${name}.${field}`);
+        validateReference(name, row, field, target);
       }
     }
   }
@@ -103,5 +134,29 @@ export function validateImport(
     validateFields('settings', data.settings);
     validateRelationships('settings', data.settings as Record<string, unknown>);
   }
-  return raw as unknown as ImportBody;
+  if (Array.isArray(data.timeBlocks)) linkLegacyActuals(data.timeBlocks);
+  return { mode: raw.mode, data } as ImportBody;
+}
+
+function linkLegacyActuals(blocks: Record<string, unknown>[]): void {
+  if (!blocks.some(block => block.kind === 'actual' && !Object.hasOwn(block, 'sourcePlanId'))) return;
+  const linked = new Set(blocks.map(block => block.sourcePlanId));
+  const key = (block: Record<string, unknown>) => JSON.stringify([
+    block.date, block.startMin, block.endMin, block.text, block.categoryId, block.goalId, block.projectId, block.todoId,
+  ]);
+  const ordered = [...blocks].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) ||
+    String(a.id).localeCompare(String(b.id)));
+  const available = new Map<string, unknown[]>();
+  for (const block of ordered) {
+    if (block.kind !== 'plan' || linked.has(block.id)) continue;
+    const signature = key(block);
+    const group = available.get(signature) ?? [];
+    group.push(block.id);
+    available.set(signature, group);
+  }
+  for (const actual of ordered) {
+    if (actual.kind === 'actual' && !Object.hasOwn(actual, 'sourcePlanId')) {
+      actual.sourcePlanId = available.get(key(actual))?.shift() ?? null;
+    }
+  }
 }

@@ -6,7 +6,7 @@
 
 ## 1. 현재 테스트 구성
 
-[vitest.config.ts](../0.%20Source/vitest.config.ts)는 jsdom, React 플러그인, 공통 setup, `server-only` 테스트 대체 모듈을 사용합니다. [playwright.config.ts](../0.%20Source/playwright.config.ts)는 Chromium, localhost:3100, `tmp-test/e2e.sqlite`와 테스트 계정을 사용합니다. CI가 아니면 기존 3100 서버를 재사용할 수 있습니다.
+[vitest.config.ts](../0.%20Source/vitest.config.ts)는 jsdom, React 플러그인, 공통 setup, `server-only` 테스트 대체 모듈을 사용합니다. [playwright.config.ts](../0.%20Source/playwright.config.ts)는 Chromium과 3100 포트의 전용 프로덕션 빌드 서버를 사용합니다. 테스트 서버와 계정 CLI는 실행마다 새로 만든 `test-results/<실행 ID>/e2e.sqlite` 경로를 공유합니다.
 
 | 단위 테스트 파일 | 확인하려는 내용 |
 |---|---|
@@ -41,7 +41,7 @@
 | weekly-efficiency.spec.ts | 범위 조회 공유, 반응형 전환, 습관·통계 배치 |
 | settings-import.spec.ts | 가져오기 후 카테고리·설정이 페이지 재접속 없이 갱신 |
 
-daily-visual은 PNG를 저장하며 기준 이미지와 비교하는 `toHaveScreenshot` 회귀 테스트는 아닙니다. `_helpers.ts`의 resetDb는 과거 IndexedDB를 지우는 코드여서 SQLite 전체 초기화가 아닙니다. 각 시나리오의 계정·데이터 정리 로직을 함께 확인해야 합니다.
+daily-visual은 PNG를 저장하며 기준 이미지와 비교하는 `toHaveScreenshot` 회귀 테스트는 아닙니다. 한 번의 실행 안에서 같은 계정을 사용하는 시나리오는 테스트 데이터 준비 순서를 함께 확인합니다.
 
 실행은 `npm test`, `npm run e2e`입니다. 테스트 DB와 3100 서버가 운영 DB를 사용하지 않는지 먼저 확인합니다. 문서의 개수나 예전 README의 고정 테스트 수보다 현재 테스트 파일과 실행 결과를 기준으로 판단합니다.
 

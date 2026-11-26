@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { ensureUserExists, loginAs, resetDb } from './_helpers';
+import { ensureUserExists, loginAs } from './_helpers';
 
 test.beforeAll(async () => {
   await ensureUserExists('e2e-daily-tracker', 'pwTest123*');
 });
 
 test('daily page loads, seeds preset habits, and keeps per-date checks', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-daily-tracker', 'pwTest123*');
 
   await page.goto('/daily');
@@ -91,7 +91,7 @@ test('daily page loads, seeds preset habits, and keeps per-date checks', async (
 });
 
 test('routine category can be cleared to none and persists', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-daily-tracker', 'pwTest123*');
 
   await page.goto('/daily');
@@ -166,7 +166,7 @@ test('removed daily memo stays in storage and free memo remains editable', async
 });
 
 test('daily reading saves book, pages, memo per date', async ({ page }) => {
-  await resetDb(page);
+
   await loginAs(page, 'e2e-daily-tracker', 'pwTest123*');
 
   await page.goto('/daily');

@@ -9,6 +9,7 @@ import type { GoogleCalendarSyncResult, LifeEvent } from '@/lib/types';
 import { toIsoDate } from '@/lib/utils/date';
 import { UserRepositories } from '../repos';
 import type { GoogleCalendarConnectionRow } from '../repos/googleCalendar';
+import type { GoogleEventDeletion } from '../repos/lifeEvents';
 import { GoogleCalendarApiClient } from './client';
 import { getGoogleOAuthConfig, type GoogleOAuthConfig } from './config';
 import { decryptSecret, encryptSecret } from './crypto';
@@ -74,6 +75,25 @@ export class GoogleCalendarSyncService {
 
     try {
       const accessToken = await this.ensureAccessToken(conn);
+      // Retry independently of list permissions or errors on other calendars.
+      const deletions = this.repos.lifeEvents.pendingGoogleDeletions(conn.googleEmail);
+      let writeFailure: Error | undefined;
+      for (const deletion of deletions) {
+        try {
+          await this.sendDeletion(accessToken, deletion);
+        } catch (error) {
+          writeFailure = error instanceof Error ? error : new Error('Google 일정 삭제 동기화 실패');
+        }
+      }
+
+      const updates = this.repos.lifeEvents.pendingGoogleUpdates(conn.googleEmail);
+      for (const update of updates) {
+        try {
+          await this.sendUpdate(accessToken, conn.googleEmail, update.id);
+        } catch (error) {
+          writeFailure = error instanceof Error ? error : new Error('Google 일정 수정 동기화 실패');
+        }
+      }
       const calendarMeta = await this.apiClient.listCalendars(accessToken);
       if (calendarMeta.length > 0) {
         this.repos.googleCalendar.updateCalendarMeta(calendarMeta);
@@ -96,26 +116,10 @@ export class GoogleCalendarSyncService {
 
       for (const calendarId of targetCalendarIds) {
         const meta = calMap.get(calendarId);
-        const rawEvents = await this.apiClient.listEvents(
-          accessToken,
-          calendarId,
-          window.timeMin,
-          window.timeMax,
-        );
-        const mapped: MappedGoogleEvent[] = [];
-        for (const item of rawEvents) {
-          const converted = googleEventToLifeEventInput(
-            calendarId,
-            meta?.backgroundColor ?? null,
-            item,
-          );
-          if (converted) mapped.push(converted);
-        }
-        const diff = this.repos.lifeEvents.reconcileGoogleCalendarWindow(
-          calendarId,
-          window.startDate,
-          window.endDate,
-          mapped,
+        const deletedIds = new Set(deletions.filter(item => item.calendarId === calendarId).map(item => item.eventId));
+        const updatedIds = new Set(updates.flatMap(u => u.calendarId === calendarId && u.eventId ? [u.eventId] : []));
+        const diff = await this.pullCalendar(
+          accessToken, conn.googleEmail, calendarId, meta?.backgroundColor ?? null, window, deletedIds, updatedIds,
         );
         pulledCreated += diff.created;
         pulledUpdated += diff.updated;
@@ -145,6 +149,8 @@ export class GoogleCalendarSyncService {
           pushedCreated++;
         }
       }
+
+      if (writeFailure) throw writeFailure;
 
       const syncedAt = this.now().toISOString();
       this.repos.googleCalendar.recordSyncStatus({ lastSyncedAt: syncedAt, lastSyncError: null });
@@ -206,26 +212,9 @@ export class GoogleCalendarSyncService {
       return event;
     }
 
-    const calMeta = conn.calendarMeta.find(c => c.id === event.googleCalendarId);
-    if (calMeta && calMeta.accessRole !== 'owner' && calMeta.accessRole !== 'writer') {
-      return event;
-    }
-
     try {
-      const accessToken = await this.ensureAccessToken(conn);
-      const result = await this.apiClient.updateEvent(
-        accessToken,
-        event.googleCalendarId,
-        event.googleEventId,
-        lifeEventToGoogleEventBody(event),
-      );
-      const updated = this.repos.lifeEvents.setGoogleLink(event.id, {
-        googleCalendarId: event.googleCalendarId,
-        googleEventId: result.id,
-        googleUpdatedAt: result.updated,
-      });
-      this.repos.googleCalendar.recordSyncStatus({ lastSyncError: null });
-      return updated ?? event;
+      await this.sendUpdate(await this.ensureAccessToken(conn), conn.googleEmail, event.id);
+      return this.repos.lifeEvents.getById(event.id) ?? event;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Google 일정 수정 동기화 실패';
       this.repos.googleCalendar.recordSyncStatus({ lastSyncError: message });
@@ -233,20 +222,53 @@ export class GoogleCalendarSyncService {
     }
   }
 
-  async pushDeletedEvent(event: LifeEvent): Promise<void> {
-    if (!event.googleEventId || !event.googleCalendarId) return;
-    const conn = this.repos.googleCalendar.get();
-    if (!conn || !conn.syncEnabled) return;
-
-    const calMeta = conn.calendarMeta.find(c => c.id === event.googleCalendarId);
-    if (calMeta && calMeta.accessRole !== 'owner' && calMeta.accessRole !== 'writer') {
-      return;
-    }
-
+  private async sendUpdate(token: string, email: string, id: string): Promise<void> {
+    const claim = this.repos.lifeEvents.claimGoogleUpdate(email, id);
+    if (!claim) return;
+    const { event, job } = claim;
     try {
-      const accessToken = await this.ensureAccessToken(conn);
-      await this.apiClient.deleteEvent(accessToken, event.googleCalendarId, event.googleEventId);
-      this.repos.googleCalendar.recordSyncStatus({ lastSyncError: null });
+      const result = await this.apiClient.updateEvent(token, event.googleCalendarId!, event.googleEventId!, lifeEventToGoogleEventBody(event));
+      this.repos.lifeEvents.finishGoogleUpdate(job, result);
+    } catch (error) {
+      this.repos.lifeEvents.finishGoogleUpdate(job);
+      throw error;
+    }
+  }
+
+  private async pullCalendar(
+    token: string, email: string, calendarId: string, color: string | null,
+    window: ReturnType<typeof buildDefaultSyncWindow>, deletedIds: ReadonlySet<string>, updatedIds: ReadonlySet<string>,
+  ) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const version = this.repos.googleCalendar.get();
+      if (version?.googleEmail !== email) throw new GoogleSyncNotConnectedError();
+      const events = await this.apiClient.listEvents(token, calendarId, window.timeMin, window.timeMax);
+      const mapped: MappedGoogleEvent[] = [];
+      for (const event of events) {
+        if (event.id && deletedIds.has(event.id)) continue;
+        const item = googleEventToLifeEventInput(calendarId, color, event);
+        if (item) mapped.push(item);
+      }
+      const result = this.repos.lifeEvents.reconcileGoogleCalendarWindow(
+        calendarId, window.startDate, window.endDate, mapped, version, updatedIds,
+      );
+      if (result) return result;
+    }
+    throw new Error('일정 변경이 진행 중입니다. 다음 동기화에서 다시 조회합니다.');
+  }
+
+  private async sendDeletion(token: string, deletion: GoogleEventDeletion): Promise<void> {
+    await this.apiClient.deleteEvent(token, deletion.calendarId, deletion.eventId);
+    this.repos.lifeEvents.completeGoogleDeletion(deletion);
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    const deletion = this.repos.lifeEvents.delete(id);
+    if (!deletion) return;
+    const conn = this.repos.googleCalendar.get();
+    if (!conn?.syncEnabled || conn.googleEmail !== deletion.googleEmail) return;
+    try {
+      await this.sendDeletion(await this.ensureAccessToken(conn), deletion);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Google 일정 삭제 동기화 실패';
       this.repos.googleCalendar.recordSyncStatus({ lastSyncError: message });

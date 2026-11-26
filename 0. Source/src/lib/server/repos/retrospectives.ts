@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
 import { retrospectives } from '../db/schema';
 import { Retrospective, RetroType } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
@@ -62,10 +61,3 @@ export class RetrospectiveRepository {
     }, { behavior: 'immediate' });
   }
 }
-
-// Compatibility functions for existing callers. New services can inject the repository.
-export const getRetrospective = async (userId: string, type: RetroType, dateOrWeek: string): Promise<Retrospective | null> =>
-  new RetrospectiveRepository(getDb(), userId).get(type, dateOrWeek);
-
-export const upsertRetrospective = async (userId: string, type: RetroType, dateOrWeek: string, data: Partial<Omit<Retrospective, 'id' | 'userId' | 'type' | 'dateOrWeek' | 'createdAt' | 'updatedAt'>>): Promise<Retrospective> =>
-  new RetrospectiveRepository(getDb(), userId).upsert(type, dateOrWeek, data);

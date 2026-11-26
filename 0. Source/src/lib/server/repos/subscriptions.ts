@@ -4,7 +4,7 @@ import type { Subscription } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
 import type { BinderDatabase } from '../db/connection';
 import { stripUndefined } from '../db/patch';
-import { subscriptions } from '../db/schema';
+import { financeTransactions, subscriptions } from '../db/schema';
 
 type NewSubscription = Omit<Subscription, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 type SubscriptionPatch = Partial<NewSubscription>;
@@ -57,9 +57,10 @@ export class SubscriptionRepository {
   }
 
   delete(id: string): void {
-    this.database
-      .delete(subscriptions)
-      .where(and(eq(subscriptions.userId, this.userId), eq(subscriptions.id, id)))
-      .run();
+    this.database.transaction(tx => {
+      tx.update(financeTransactions).set({ subscriptionId: null, updatedAt: this.now().toISOString() })
+        .where(and(eq(financeTransactions.userId, this.userId), eq(financeTransactions.subscriptionId, id))).run();
+      tx.delete(subscriptions).where(and(eq(subscriptions.userId, this.userId), eq(subscriptions.id, id))).run();
+    }, { behavior: 'immediate' });
   }
 }

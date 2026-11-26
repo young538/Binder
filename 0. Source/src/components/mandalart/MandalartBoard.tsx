@@ -99,15 +99,7 @@ export const MandalartBoard = () => {
   const remove = async () => {
     if (!edit?.goal) return;
     if (!confirm('삭제할까요? 하위 목표도 함께 삭제돼요.')) return;
-    const toDelete = [edit.goal.id];
-    const collectChildren = (id: string) => {
-      goals.filter(g => g.parentId === id).forEach(g => {
-        toDelete.push(g.id);
-        collectChildren(g.id);
-      });
-    };
-    collectChildren(edit.goal.id);
-    for (const id of toDelete) await deleteGoal(id);
+    await deleteGoal(edit.goal.id);
     await reload();
     setEdit(null);
   };

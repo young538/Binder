@@ -1,5 +1,7 @@
 import type { LifeMetric, LifeMetricEntry } from './types';
 
+export const METRIC_CHART_ENTRIES = 20;
+
 export interface LifeMetricWithEntries {
   metric: LifeMetric;
   entries: LifeMetricEntry[];
