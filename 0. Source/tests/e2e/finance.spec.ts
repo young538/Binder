@@ -18,6 +18,14 @@ async function checkNoHorizontalOverflow(page: Page) {
   }
 }
 
+async function previewUploadedFile(page: Page) {
+  const [response] = await Promise.all([
+    page.waitForResponse(res => res.request().method() === 'POST' && new URL(res.url()).pathname === '/api/finance/import'),
+    page.getByRole('dialog').getByRole('button', { name: '파일 미리보기' }).click(),
+  ]);
+  expect(response.ok()).toBe(true);
+}
+
 async function createSampleBankSaladXlsx(
   monthPrefix: string,
   includeSignedVariants = false,
@@ -106,7 +114,7 @@ for (const width of [1280, 390]) {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: xlsxBuffer,
     });
-    await importDialog.getByRole('button', { name: '파일 미리보기' }).click();
+    await previewUploadedFile(page);
     await expect(importDialog.getByText('을밀대 평양냉면')).toBeVisible();
     await expect(importDialog.getByText('을밀대 부분취소')).toBeVisible();
     await importDialog.getByRole('button', { name: /신규 4건 가져오기 확정/ }).click();
@@ -132,7 +140,7 @@ for (const width of [1280, 390]) {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: xlsxBuffer,
     });
-    await reimportDialog.getByRole('button', { name: '파일 미리보기' }).click();
+    await previewUploadedFile(page);
     await expect(reimportDialog.getByRole('button', { name: /신규 거래 없음/ })).toBeDisabled();
     await reimportDialog.getByRole('button', { name: '닫기', exact: true }).click();
 
