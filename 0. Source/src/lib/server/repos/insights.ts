@@ -6,7 +6,6 @@ import * as schema from '../db/schema';
 import type { Goal, Habit, HabitLog, TimeBlock, Todo } from '@/lib/types';
 import {
   normalizeBookTitle,
-  parseReadingEntry,
   type BookHistory,
   type BookLinkDailyResult,
   type BookReadingStats,
@@ -15,30 +14,27 @@ import {
 } from '@/lib/reading';
 import { reviewGoals } from '@/lib/planning/insights';
 import { toIsoDate } from '@/lib/utils/date';
+import { listDailyReadings, updateDailyReading } from './dailyReadings';
 import { DomainError } from '../errors';
 
 export class InsightsRepository {
   constructor(private readonly db: BinderDatabase, private readonly userId: string) {}
 
   bookHistory(id: string): BookHistory {
-    const book = this.db.select().from(schema.books).where(and(eq(schema.books.id, id), eq(schema.books.userId, this.userId))).get();
-    if (!book) throw new DomainError('책을 찾을 수 없습니다.', 404);
-    const rows = this.db.select({ date: schema.retrospectives.dateOrWeek, template: schema.retrospectives.template })
-      .from(schema.retrospectives).where(and(eq(schema.retrospectives.userId, this.userId), eq(schema.retrospectives.type, 'daily')))
-      .orderBy(asc(schema.retrospectives.dateOrWeek)).all();
-    const entries = rows.map(row => ({ ...parseReadingEntry(row.template.reading, 0), date: row.date })).filter(entry => entry.bookId === id);
-    return { bookId: id, title: book.title, entries, totalPages: entries.reduce((sum, entry) => sum + entry.pages, 0), readingDays: new Set(entries.map(entry => entry.date)).size };
+    return this.db.transaction(tx => {
+      const book = tx.select({ title: schema.books.title }).from(schema.books)
+        .where(and(eq(schema.books.id, id), eq(schema.books.userId, this.userId))).get();
+      if (!book) throw new DomainError('책을 찾을 수 없습니다.', 404);
+      const entries = listDailyReadings(tx, this.userId)
+        .filter(row => row.entry.bookId === id).map(({ date, entry }) => ({ ...entry, date }));
+      return { bookId: id, title: book.title, entries,
+        totalPages: entries.reduce((sum, entry) => sum + entry.pages, 0),
+        readingDays: new Set(entries.map(entry => entry.date)).size };
+    });
   }
 
   readingSummary(): ReadingSummary {
-    const rows = this.db
-      .select({ date: schema.retrospectives.dateOrWeek, template: schema.retrospectives.template })
-      .from(schema.retrospectives)
-      .where(and(eq(schema.retrospectives.userId, this.userId), eq(schema.retrospectives.type, 'daily')))
-      .orderBy(asc(schema.retrospectives.dateOrWeek))
-      .all();
-
-    const byBookId: Record<string, BookReadingStats> = {};
+    const byBookId = new Map<string, BookReadingStats>();
     const datesByBookId = new Map<string, Set<string>>();
     const unlinkedMap = new Map<string, {
       normalizedTitle: string;
@@ -49,27 +45,23 @@ export class InsightsRepository {
       lastReadDate: string;
     }>();
 
-    for (const row of rows) {
-      const readingRaw = row.template?.reading;
-      if (typeof readingRaw !== 'string' || readingRaw.trim() === '') continue;
-      const entry = parseReadingEntry(readingRaw, 0);
-
+    for (const { date, entry } of listDailyReadings(this.db, this.userId)) {
       if (entry.bookId) {
-        let stats = byBookId[entry.bookId];
+        let stats = byBookId.get(entry.bookId);
         if (!stats) {
           stats = { bookId: entry.bookId, totalPages: 0, readingDays: 0, lastReadDate: null };
-          byBookId[entry.bookId] = stats;
+          byBookId.set(entry.bookId, stats);
         }
         let dateSet = datesByBookId.get(entry.bookId);
         if (!dateSet) {
           dateSet = new Set();
           datesByBookId.set(entry.bookId, dateSet);
         }
-        dateSet.add(row.date);
+        dateSet.add(date);
         stats.totalPages += entry.pages;
         stats.readingDays = dateSet.size;
-        if (!stats.lastReadDate || row.date > stats.lastReadDate) {
-          stats.lastReadDate = row.date;
+        if (!stats.lastReadDate || date > stats.lastReadDate) {
+          stats.lastReadDate = date;
         }
         continue;
       }
@@ -85,18 +77,18 @@ export class InsightsRepository {
           normalizedTitle: normalized,
           title: trimmedTitle,
           rawTitles: new Set([trimmedTitle]),
-          dates: new Set([row.date]),
+          dates: new Set([date]),
           totalPages: entry.pages,
-          lastReadDate: row.date,
+          lastReadDate: date,
         };
         unlinkedMap.set(normalized, group);
       } else {
-        if (row.date >= group.lastReadDate) {
+        if (date >= group.lastReadDate) {
           group.title = trimmedTitle;
-          group.lastReadDate = row.date;
+          group.lastReadDate = date;
         }
         group.rawTitles.add(trimmedTitle);
-        group.dates.add(row.date);
+        group.dates.add(date);
         group.totalPages += entry.pages;
       }
     }
@@ -116,7 +108,7 @@ export class InsightsRepository {
       })
       .sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate) || a.title.localeCompare(b.title));
 
-    return { byBookId, unlinkedGroups };
+    return { byBookId: Object.fromEntries(byBookId), unlinkedGroups };
   }
 
   linkDailyReadings(bookId: string, options: { dates?: string[]; matchTitle?: string }): BookLinkDailyResult {
@@ -128,29 +120,16 @@ export class InsightsRepository {
         .get();
       if (!book) throw new DomainError('책을 찾을 수 없습니다.', 404);
 
-      const rows = tx
-        .select({
-          id: schema.retrospectives.id,
-          date: schema.retrospectives.dateOrWeek,
-          template: schema.retrospectives.template,
-        })
-        .from(schema.retrospectives)
-        .where(and(eq(schema.retrospectives.userId, this.userId), eq(schema.retrospectives.type, 'daily')))
-        .orderBy(asc(schema.retrospectives.dateOrWeek))
-        .all();
-
       const dateSet = new Set(options.dates ?? []);
       const normalizedTarget = options.matchTitle ? normalizeBookTitle(options.matchTitle) : '';
       const now = new Date().toISOString();
       const linkedDates: string[] = [];
 
-      for (const row of rows) {
-        const readingRaw = row.template?.reading;
-        if (typeof readingRaw !== 'string' || readingRaw.trim() === '') continue;
-        const entry = parseReadingEntry(readingRaw, 0);
+      const rows = listDailyReadings(tx, this.userId, normalizedTarget ? undefined : [...dateSet]);
+      for (const { id, date, entry } of rows) {
         if (entry.bookId) continue;
 
-        const matchesDate = dateSet.has(row.date);
+        const matchesDate = dateSet.has(date);
         const matchesTitle =
           normalizedTarget !== '' &&
           entry.bookTitle.trim() !== '' &&
@@ -158,21 +137,10 @@ export class InsightsRepository {
 
         if (!matchesDate && !matchesTitle) continue;
 
-        tx.update(schema.retrospectives)
-          .set({
-            template: {
-              ...row.template,
-              reading: JSON.stringify({
-                ...entry,
-                bookId: book.id,
-                bookTitle: book.title.trim() || entry.bookTitle,
-              }),
-            },
-            updatedAt: now,
-          })
-          .where(and(eq(schema.retrospectives.userId, this.userId), eq(schema.retrospectives.id, row.id)))
-          .run();
-        linkedDates.push(row.date);
+        updateDailyReading(tx, this.userId, id, {
+          ...entry, bookId: book.id, bookTitle: book.title.trim() || entry.bookTitle,
+        }, now);
+        linkedDates.push(date);
       }
 
       return {

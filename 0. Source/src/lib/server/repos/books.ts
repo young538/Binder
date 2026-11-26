@@ -1,8 +1,8 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import { books, retrospectives } from '../db/schema';
+import { books } from '../db/schema';
 import { Book } from '@/lib/types';
-import { parseReadingEntry } from '@/lib/reading';
+import { listDailyReadings, updateDailyReading } from './dailyReadings';
 import { newId } from '@/lib/utils/id';
 import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
@@ -40,38 +40,16 @@ export class BookRepository {
     const userId = this.userId;
     return this.database.transaction(tx => {
       const now = new Date().toISOString();
-      tx.update(books)
+      const row = tx.update(books)
         .set({ ...stripUndefined(patch), updatedAt: now })
-        .where(and(eq(books.userId, userId), eq(books.id, id)))
-        .run();
-      const row = tx
-        .select()
-        .from(books)
-        .where(and(eq(books.userId, userId), eq(books.id, id)))
-        .get();
+        .where(and(eq(books.userId, userId), eq(books.id, id))).returning().get();
       if (!row) return null;
 
       if (typeof patch.title === 'string' && patch.title.trim() !== '') {
-        const retros = tx
-          .select({ id: retrospectives.id, template: retrospectives.template })
-          .from(retrospectives)
-          .where(and(eq(retrospectives.userId, userId), eq(retrospectives.type, 'daily')))
-          .all();
-        for (const retro of retros) {
-          const readingRaw = retro.template?.reading;
-          if (typeof readingRaw !== 'string' || readingRaw.trim() === '') continue;
-          const entry = parseReadingEntry(readingRaw, 0);
-          if (entry.bookId !== id || entry.bookTitle === row.title) continue;
-          tx.update(retrospectives)
-            .set({
-              template: {
-                ...retro.template,
-                reading: JSON.stringify({ ...entry, bookTitle: row.title }),
-              },
-              updatedAt: now,
-            })
-            .where(and(eq(retrospectives.userId, userId), eq(retrospectives.id, retro.id)))
-            .run();
+        for (const reading of listDailyReadings(tx, userId)) {
+          if (reading.entry.bookId === id && reading.entry.bookTitle !== row.title) {
+            updateDailyReading(tx, userId, reading.id, { ...reading.entry, bookTitle: row.title }, now);
+          }
         }
       }
 

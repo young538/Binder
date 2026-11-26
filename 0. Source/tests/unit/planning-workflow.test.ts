@@ -145,6 +145,17 @@ describe('planning workflow', () => {
     expect(backups.exportFor('a').todos).toHaveLength(1);
   });
 
+  it('links legacy plain-text reading notes by date without changing other retrospective fields', async () => {
+    const book = await repos().books.create({ title: 'New book', year: '2026', order: 0 });
+    const date = '2026-12-30';
+    await repos().retrospectives.upsert('daily', date, { template: { good: 'keep', reading: 'legacy memo' } });
+    await repos().retrospectives.upsert('daily', '2026-12-31', { template: { reading: 'another memo' } });
+    expect(repos().insights.linkDailyReadings(book.id, { dates: [date] }).linkedDates).toEqual([date]);
+    expect(repos().insights.bookHistory(book.id).entries).toMatchObject([{ date, pages: 0, memo: 'legacy memo' }]);
+    expect((await repos().retrospectives.get('daily', date))?.template.good).toBe('keep');
+    expect((await repos().retrospectives.get('daily', '2026-12-31'))?.template.reading).toBe('another memo');
+  });
+
   it('collects same-book reading across years without mixing identical titles or owners', async () => {
     const book = await repos().books.create({ title: '같은 제목', year: '2026', order: 0 });
     const other = await repos().books.create({ title: '같은 제목', year: '2027', order: 1 });
