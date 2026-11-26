@@ -1,3 +1,4 @@
+import { toSeoulDateAndMinutes } from './utils/seoulTime';
 import { addDays, parseISO } from 'date-fns';
 import { toIsoDate } from './utils/date';
 
@@ -25,24 +26,6 @@ interface ParsedDateTime {
   date: string;
   allDay: boolean;
   minutes: number | null;
-}
-
-function toSeoulDateAndMinutes(utcDate: Date): { date: string; minutes: number } {
-  const datePart = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(utcDate);
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Seoul',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(utcDate);
-  const hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0');
-  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
-  return { date: datePart, minutes: (hour % 24) * 60 + minute };
 }
 
 function isValidIsoDate(value: string): boolean {

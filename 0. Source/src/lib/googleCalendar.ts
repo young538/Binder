@@ -1,3 +1,4 @@
+import { SEOUL_TZ, toSeoulDateAndMinutes } from './utils/seoulTime';
 import { eventEndDate } from './lifeEvents';
 import type { LifeEvent } from './types';
 
@@ -34,7 +35,6 @@ export interface GoogleCalendarWriteBody {
   end: { date: string } | { dateTime: string; timeZone: string };
 }
 
-const SEOUL_TZ = 'Asia/Seoul';
 const HEX_COLOR_RE = /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i;
 
 function isValidIsoDate(value: string): boolean {
@@ -64,24 +64,6 @@ export function buildDefaultSyncWindow(today: string): {
     timeMin: `${startDate}T00:00:00+09:00`,
     timeMax: `${exclusiveEndDate}T00:00:00+09:00`,
   };
-}
-
-function toSeoulDateAndMinutes(utcDate: Date): { date: string; minutes: number } {
-  const datePart = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: SEOUL_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(utcDate);
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: SEOUL_TZ,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(utcDate);
-  const hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0');
-  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
-  return { date: datePart, minutes: (hour % 24) * 60 + minute };
 }
 
 function formatSeoulRfc3339(date: string, minutes: number): string {

@@ -5,6 +5,7 @@ import { addDays, format, parseISO } from 'date-fns';
 import type { Todo } from '@/lib/types';
 import { TODO_UNDO_MS, type TodoDeleteResult, type TodoRolloverResult } from '@/lib/todos/contracts';
 import { isDate } from '@/lib/validation/mutations';
+import { toSeoulDate } from '@/lib/utils/seoulTime';
 import { newId } from '@/lib/utils/id';
 import { nextRepeatDate } from '@/lib/todos/planning';
 import { stripUndefined } from '../db/patch';
@@ -79,7 +80,7 @@ export class TodoActions {
       if (toggle) row.status = existing.status === 'done' ? 'pending' : 'done';
       if (row.status !== existing.status) row.completedAt = row.status === 'done' ? patch.completedAt ?? timestamp : null;
       if (row.status === 'done' && existing.status !== 'done' && row.repeatRule && !existing.repeatGenerated) {
-        const completedDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date(row.completedAt ?? timestamp));
+        const completedDate = toSeoulDate(new Date(row.completedAt ?? timestamp));
         const date = nextRepeatDate(row.scopeKey, row.repeatRule, completedDate);
         if (!isDate(date)) throw new DomainError('다음 반복 날짜를 만들 수 없습니다.', 400);
         const last = tx.select({ order: max(todos.order) }).from(todos).where(and(

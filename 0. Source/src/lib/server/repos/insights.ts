@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, between, eq } from 'drizzle-orm';
+import { and, asc, between, eq, inArray, isNotNull } from 'drizzle-orm';
 import { addDays, parseISO } from 'date-fns';
 import type { BinderDatabase } from '../db/connection';
 import * as schema from '../db/schema';
@@ -155,10 +155,12 @@ export class InsightsRepository {
     const start = toIsoDate(addDays(parseISO(end), -13));
     return this.db.transaction(tx => {
       const goals = tx.select().from(schema.goals).where(eq(schema.goals.userId, this.userId)).orderBy(asc(schema.goals.order)).all() as Goal[];
-      const todos = tx.select().from(schema.todos).where(eq(schema.todos.userId, this.userId)).all() as Todo[];
-      const habits = tx.select().from(schema.habits).where(eq(schema.habits.userId, this.userId)).all() as Habit[];
+      const todos = tx.select().from(schema.todos).where(and(eq(schema.todos.userId, this.userId),
+        isNotNull(schema.todos.parentGoalId), inArray(schema.todos.status, ['pending', 'postponed', 'done']))).all() as Todo[];
+      const habits = tx.select().from(schema.habits).where(and(eq(schema.habits.userId, this.userId), isNotNull(schema.habits.parentGoalId))).all() as Habit[];
       const logs = tx.select().from(schema.habitLogs).where(and(eq(schema.habitLogs.userId, this.userId), between(schema.habitLogs.date, start, end))).all() as HabitLog[];
-      const blocks = tx.select().from(schema.timeBlocks).where(and(eq(schema.timeBlocks.userId, this.userId), between(schema.timeBlocks.date, start, end))).all() as TimeBlock[];
+      const blocks = tx.select().from(schema.timeBlocks).where(and(eq(schema.timeBlocks.userId, this.userId),
+        isNotNull(schema.timeBlocks.goalId), eq(schema.timeBlocks.kind, 'actual'), between(schema.timeBlocks.date, start, end))).all() as TimeBlock[];
       return { start, end, goals: reviewGoals(goals, todos, habits, logs, blocks, start, end) };
     });
   }

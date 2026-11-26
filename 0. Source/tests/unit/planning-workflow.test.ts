@@ -181,6 +181,22 @@ describe('planning workflow', () => {
     expect(reviewGoals([{ ...goal, parentId: child.id }, child], [], [], [], [], '2026-12-18', '2026-12-31')[0].descendantCount).toBe(1);
   });
 
+  it('rolls Seoul completion dates and distinct habit days into every goal in a cycle once', async () => {
+    const a = repos();
+    const root = await a.goals.create({ title: 'Root', level: 'oneThing', order: 0 });
+    const child = await a.goals.create({ title: 'Child', level: 'mandalartCore', parentId: root.id, order: 1 });
+    const goals = [{ ...root, parentId: child.id }, child];
+    const pending = actions().create({ ...draft, parentGoalId: root.id });
+    const done = actions().create({ ...draft, parentGoalId: child.id, status: 'done' });
+    const habit = await a.habits.create({ name: 'Walk', color: '#123456', order: 0, parentGoalId: child.id });
+    const log = { id: 'check', userId: 'a', habitId: habit.id, date: '2027-01-01', ...times };
+    const todos = [pending, done, { ...done, id: 'old', completedAt: null }];
+    for (const review of reviewGoals(goals, todos, [habit], [log, { ...log, id: 'duplicate' }], [], log.date, log.date)) {
+      expect(review).toMatchObject({ descendantCount: 1, completedTodos: 1, inactive: false,
+        pendingTodos: [{ id: pending.id }], habits: [{ id: habit.id, checks: 1 }] });
+    }
+  });
+
   it('does not expose another account in goal review', async () => {
     await repos().goals.create({ title: 'private', level: 'oneThing', order: 0 });
     expect(repos('b').insights.goalReview('2026-12-31').goals).toEqual([]);
