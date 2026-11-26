@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, between, eq, inArray, isNotNull, lte, max } from 'drizzle-orm';
+import { and, asc, between, eq, inArray, isNotNull, lte } from 'drizzle-orm';
 import { addDays, parseISO } from 'date-fns';
 import { isContactDue } from '@/lib/lifeEvents';
 import type {
@@ -14,6 +14,7 @@ import { sortProjectTodos } from '@/lib/projects';
 import { upcomingItemsFor } from '@/lib/upcomingItems';
 import type { BinderNote, LifeEvent, Person, Project, Subscription, Todo } from '@/lib/types';
 import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
+import { moveActiveTodos } from '../todos/move';
 import type { BinderDatabase } from '../db/connection';
 import { binderNotes, focusNotes, lifeEvents, people, projects, subscriptions, todos } from '../db/schema';
 
@@ -202,96 +203,14 @@ export class MorningBootRepository {
   }
 
   apply(input: MorningBootApplyInput): MorningBootApplyResult {
-    const toToday = [...new Set(input.moveToTodayIds ?? [])];
-    const toInbox = [...new Set(input.moveToInboxIds ?? [])];
-
     return this.database.transaction(tx => {
       const timestamp = this.now().toISOString();
-      let movedToToday = 0;
-      let movedToInbox = 0;
-
-      if (toToday.length > 0) {
-        const rows = (
-          tx
-            .select()
-            .from(todos)
-            .where(
-              and(
-                eq(todos.userId, this.userId),
-                inArray(todos.id, toToday),
-                inArray(todos.status, [...ACTIVE_STATUSES]),
-              ),
-            )
-            .orderBy(asc(todos.scopeKey), asc(todos.order), asc(todos.id))
-            .all() as Todo[]
-        ).filter(row => !(row.scope === 'day' && row.scopeKey === input.targetDate));
-
-        if (rows.length > 0) {
-          const lastToday =
-            tx
-              .select({ order: max(todos.order) })
-              .from(todos)
-              .where(
-                and(eq(todos.userId, this.userId), eq(todos.scope, 'day'), eq(todos.scopeKey, input.targetDate)),
-              )
-              .get()?.order ?? -1;
-
-          rows.forEach((row, index) => {
-            tx.update(todos)
-              .set({
-                scope: 'day',
-                scopeKey: input.targetDate,
-                order: lastToday + index + 1,
-                updatedAt: timestamp,
-              })
-              .where(and(eq(todos.userId, this.userId), eq(todos.id, row.id)))
-              .run();
-          });
-          movedToToday = rows.length;
-        }
-      }
-
-      if (toInbox.length > 0) {
-        const rows = (
-          tx
-            .select()
-            .from(todos)
-            .where(
-              and(
-                eq(todos.userId, this.userId),
-                inArray(todos.id, toInbox),
-                inArray(todos.status, [...ACTIVE_STATUSES]),
-              ),
-            )
-            .orderBy(asc(todos.scopeKey), asc(todos.order), asc(todos.id))
-            .all() as Todo[]
-        ).filter(row => !(row.scope === 'inbox' && row.scopeKey === 'inbox'));
-
-        if (rows.length > 0) {
-          const lastInbox =
-            tx
-              .select({ order: max(todos.order) })
-              .from(todos)
-              .where(and(eq(todos.userId, this.userId), eq(todos.scope, 'inbox'), eq(todos.scopeKey, 'inbox')))
-              .get()?.order ?? -1;
-
-          rows.forEach((row, index) => {
-            tx.update(todos)
-              .set({
-                scope: 'inbox',
-                scopeKey: 'inbox',
-                // Inbox TODOs cannot have repeat rules; clear when deferring back to inbox.
-                repeatRule: null,
-                order: lastInbox + index + 1,
-                updatedAt: timestamp,
-              })
-              .where(and(eq(todos.userId, this.userId), eq(todos.id, row.id)))
-              .run();
-          });
-          movedToInbox = rows.length;
-        }
-      }
-
+      const movedToToday = moveActiveTodos(tx, this.userId, {
+        ids: input.moveToTodayIds, destination: { day: input.targetDate }, orderByScopeKey: true,
+      }, timestamp);
+      const movedToInbox = moveActiveTodos(tx, this.userId, {
+        ids: input.moveToInboxIds, destination: 'inbox', orderByScopeKey: true,
+      }, timestamp);
       return { movedToToday, movedToInbox };
     }, { behavior: 'immediate' });
   }

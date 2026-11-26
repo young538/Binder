@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { and, asc, eq, inArray, lte, max, sql } from 'drizzle-orm';
+import { and, eq, lte, max, sql } from 'drizzle-orm';
 import { addDays, format, parseISO } from 'date-fns';
 import type { Todo } from '@/lib/types';
 import { TODO_UNDO_MS, type TodoDeleteResult, type TodoRolloverResult } from '@/lib/todos/contracts';
@@ -10,6 +10,7 @@ import { nextRepeatDate } from '@/lib/todos/planning';
 import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
 import { categories, goals, googleCalendarConnections, googleTaskDeletions, projects, todos, todoCreateRequests, todoTrash } from '../db/schema';
+import { moveActiveTodos } from './move';
 import { DomainError } from '../errors';
 
 type NewTodo = Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
@@ -159,16 +160,10 @@ export class TodoActions {
     const target = format(addDays(parseISO(date), 1), 'yyyy-MM-dd');
     if (!isDate(target)) throw new DomainError('다음 날짜로 이동할 수 없습니다.', 400);
     return this.db.transaction(tx => {
-      const selected = tx.select().from(todos).where(and(
-        eq(todos.userId, this.userId), eq(todos.scope, 'day'), eq(todos.scopeKey, date),
-        inArray(todos.status, ['pending', 'postponed']), inArray(todos.id, [...new Set(ids)]),
-      )).orderBy(asc(todos.order), asc(todos.id)).all();
-      const last = tx.select({ order: max(todos.order) }).from(todos).where(and(
-        eq(todos.userId, this.userId), eq(todos.scope, 'day'), eq(todos.scopeKey, target),
-      )).get()?.order ?? -1;
-      selected.forEach((row, index) => tx.update(todos).set({ scopeKey: target, order: last + index + 1, updatedAt: this.now().toISOString() })
-        .where(and(eq(todos.userId, this.userId), eq(todos.id, row.id))).run());
-      return { moved: selected.length, date: target };
+      const moved = moveActiveTodos(tx, this.userId, {
+        ids, sourceDay: date, destination: { day: target },
+      }, this.now().toISOString());
+      return { moved, date: target };
     }, { behavior: 'immediate' });
   }
 }
