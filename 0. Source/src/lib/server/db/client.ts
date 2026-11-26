@@ -5,7 +5,7 @@ import { ensureUserCategories, initializeUsers } from './bootstrap';
 
 // The application shares one initialized SQLite connection.
 const connection = new DatabaseConnection({
-  filename: () => process.env.DB_PATH ?? path.join(process.cwd(), 'data', 'binder.sqlite'),
+  filename: () => process.env.DB_PATH ?? 'data/binder.sqlite',
   migrationsFolder: path.join(process.cwd(), 'drizzle'),
   initialize: db => initializeUsers(db, {
     username: process.env.APP_USERNAME ?? 'admin',

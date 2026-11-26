@@ -113,7 +113,7 @@ docker compose -p binder exec -T app node scripts/users.mjs passwd '아이디' '
 
 ## 6. Docker 배포
 
-[Dockerfile](../0.%20Source/Dockerfile)은 의존성 설치 → 앱 빌드 → 실행 이미지의 3단계입니다. [next.config.ts](../0.%20Source/next.config.ts)는 standalone 결과를 생성하고 네이티브 패키지를 serverExternalPackages로 지정합니다. 실행 이미지에 standalone·정적 파일·public·drizzle·scripts와 필요한 네이티브 패키지를 복사하며 비root 사용자로 실행합니다.
+[Dockerfile](../0.%20Source/Dockerfile)은 의존성 설치 → 앱 빌드 → 실행 이미지의 3단계입니다. [next.config.ts](../0.%20Source/next.config.ts)는 standalone 결과를 생성하고 네이티브 패키지를 serverExternalPackages로 지정합니다. 실행 이미지에 standalone·정적 파일·public·drizzle·scripts와 필요한 네이티브 패키지를 복사하며 비root 사용자로 실행합니다. 로컬 standalone 빌드에서도 사용자 DB와 백업 폴더를 제외합니다. Playwright는 빌드 산출물에 기본 DB 파일이 들어갔는지 검사하고, 정적 자산을 갖춘 standalone 서버를 별도 DB로 기동합니다.
 
 [docker-compose.yml](../0.%20Source/docker-compose.yml)의 구성:
 

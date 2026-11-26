@@ -16,12 +16,13 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run build && npm run start',
+    command: 'npm run build && node scripts/start-e2e.mjs',
     url: 'http://localhost:3100',
     reuseExistingServer: false,
     timeout: 180000,
     env: {
-      // Production container occupies host:3000; route the test dev server to 3100.
+      // Keep the standalone test server on loopback, apart from production.
+      HOSTNAME: '127.0.0.1',
       PORT: '3100',
       // Isolated DB so tests can't pollute production data.
       DB_PATH: database,
