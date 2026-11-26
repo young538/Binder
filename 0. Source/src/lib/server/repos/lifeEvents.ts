@@ -152,7 +152,7 @@ export class LifeEventRepository {
       const claim = and(eq(googleEventUpdates.userId, this.userId), eq(googleEventUpdates.localId, job.localId),
         eq(googleEventUpdates.googleEmail, job.googleEmail), eq(googleEventUpdates.lease, job.lease!));
       if (result && tx.delete(googleEventUpdates).where(and(claim, eq(googleEventUpdates.revision, job.revision))).run().changes) {
-        tx.update(lifeEvents).set({ googleUpdatedAt: result.updated }).where(eq(lifeEvents.id, job.localId)).run();
+        tx.update(lifeEvents).set({ googleUpdatedAt: result.updated }).where(and(eq(lifeEvents.userId, this.userId), eq(lifeEvents.id, job.localId))).run();
         tx.update(googleCalendarConnections).set({ eventSyncRevision: sql`event_deletion_revision + 1` })
           .where(eq(googleCalendarConnections.userId, this.userId)).run();
       } else {
@@ -237,10 +237,8 @@ export class LifeEventRepository {
     link: { googleCalendarId: string; googleEventId: string; googleUpdatedAt: string | null },
   ): LifeEvent | null {
     const predicate = and(eq(lifeEvents.userId, this.userId), eq(lifeEvents.id, id));
-    const existing = this.database.select().from(lifeEvents).where(predicate).get() as LifeEvent | undefined;
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
-    return this.database
+    const updated = this.database
       .update(lifeEvents)
       .set({
         googleCalendarId: link.googleCalendarId,
@@ -251,7 +249,8 @@ export class LifeEventRepository {
       })
       .where(predicate)
       .returning()
-      .get() as LifeEvent;
+      .get();
+    return (updated as LifeEvent | undefined) ?? null;
   }
 
   listUnpushedEvents(startDate: string): LifeEvent[] {

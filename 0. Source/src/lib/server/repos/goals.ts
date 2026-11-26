@@ -29,15 +29,11 @@ export class GoalRepository {
   async update(id: string, patch: Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>): Promise<Goal | null> {
     const userId = this.userId;
     const db = this.database;
-    await db
+    const row = db
       .update(goals)
       .set({ ...stripUndefined(patch), updatedAt: new Date().toISOString() })
       .where(and(eq(goals.userId, userId), eq(goals.id, id)))
-      .run();
-    const row = await db
-      .select()
-      .from(goals)
-      .where(and(eq(goals.userId, userId), eq(goals.id, id)))
+      .returning()
       .get();
     return (row as Goal | undefined) ?? null;
   }

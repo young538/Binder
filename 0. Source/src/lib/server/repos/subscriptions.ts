@@ -41,19 +41,14 @@ export class SubscriptionRepository {
 
   update(id: string, patch: SubscriptionPatch): Subscription | null {
     const predicate = and(eq(subscriptions.userId, this.userId), eq(subscriptions.id, id));
-    const existing = this.database
-      .select()
-      .from(subscriptions)
-      .where(predicate)
-      .get() as Subscription | undefined;
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
-    return this.database
+    const updated = this.database
       .update(subscriptions)
       .set({ ...stripUndefined(patch), updatedAt: timestamp })
       .where(predicate)
       .returning()
-      .get() as Subscription;
+      .get();
+    return (updated as Subscription | undefined) ?? null;
   }
 
   delete(id: string): void {

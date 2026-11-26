@@ -67,15 +67,14 @@ export class NoteRepository {
 
   update(id: string, patch: NotePatch): BinderNote | null {
     const predicate = and(eq(binderNotes.userId, this.userId), eq(binderNotes.id, id));
-    const existing = this.database.select().from(binderNotes).where(predicate).get() as BinderNote | undefined;
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
-    return this.database
+    const updated = this.database
       .update(binderNotes)
       .set({ ...stripUndefined(patch), updatedAt: timestamp })
       .where(predicate)
       .returning()
-      .get() as BinderNote;
+      .get();
+    return (updated as BinderNote | undefined) ?? null;
   }
 
   delete(id: string): void {

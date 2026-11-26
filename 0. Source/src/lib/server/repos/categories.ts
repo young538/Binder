@@ -33,15 +33,11 @@ export class CategoryRepository {
   async update(id: string, patch: Partial<Omit<Category, 'id' | 'userId'>>): Promise<Category | null> {
     const userId = this.userId;
     const db = this.database;
-    await db
+    const row = db
       .update(categories)
       .set(patch)
       .where(and(eq(categories.userId, userId), eq(categories.id, id)))
-      .run();
-    const row = await db
-      .select()
-      .from(categories)
-      .where(and(eq(categories.userId, userId), eq(categories.id, id)))
+      .returning()
       .get();
     return (row as Category | undefined) ?? null;
   }

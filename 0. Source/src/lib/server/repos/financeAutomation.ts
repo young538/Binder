@@ -200,11 +200,6 @@ export class FinanceAutomationRepository {
 
   revokeToken(endpointUrl: string): FinanceAutomationStatus {
     const timestamp = this.now().toISOString();
-    const existing = this.getRow();
-    if (!existing) {
-      return toStatus(null, endpointUrl);
-    }
-
     const updated = this.database
       .update(financeAutomationConfigs)
       .set({

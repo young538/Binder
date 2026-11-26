@@ -41,15 +41,14 @@ export class PersonRepository {
 
   update(id: string, patch: PersonPatch): Person | null {
     const predicate = and(eq(people.userId, this.userId), eq(people.id, id));
-    const existing = this.database.select().from(people).where(predicate).get() as Person | undefined;
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
-    return this.database
+    const updated = this.database
       .update(people)
       .set({ ...stripUndefined(patch), updatedAt: timestamp })
       .where(predicate)
       .returning()
-      .get() as Person;
+      .get();
+    return (updated as Person | undefined) ?? null;
   }
 
   delete(id: string): void {

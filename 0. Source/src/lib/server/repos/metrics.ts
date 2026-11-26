@@ -72,15 +72,14 @@ export class MetricRepository {
 
   update(id: string, patch: MetricPatch): LifeMetric | null {
     const predicate = and(eq(metrics.userId, this.userId), eq(metrics.id, id));
-    const existing = this.database.select().from(metrics).where(predicate).get() as LifeMetric | undefined;
-    if (!existing) return null;
     const timestamp = this.now().toISOString();
-    return this.database
+    const updated = this.database
       .update(metrics)
       .set({ ...stripUndefined(patch), updatedAt: timestamp })
       .where(predicate)
       .returning()
-      .get() as LifeMetric;
+      .get();
+    return (updated as LifeMetric | undefined) ?? null;
   }
 
   delete(id: string): void {

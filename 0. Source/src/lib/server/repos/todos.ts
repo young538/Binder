@@ -124,10 +124,8 @@ export class TodoRepository {
     },
   ): Todo | null {
     const predicate = and(eq(todos.userId, this.userId), eq(todos.id, id));
-    const existing = this.database.select().from(todos).where(predicate).get() as Todo | undefined;
-    if (!existing) return null;
     // Do not advance updatedAt here so subsequent delta syncs don't misread link storage as a newer local edit.
-    return this.database
+    const updated = this.database
       .update(todos)
       .set({
         googleTaskListId: link.googleTaskListId,
@@ -136,7 +134,8 @@ export class TodoRepository {
       })
       .where(predicate)
       .returning()
-      .get() as Todo;
+      .get();
+    return (updated as Todo | undefined) ?? null;
   }
 
   upsertFromGoogleTask(
