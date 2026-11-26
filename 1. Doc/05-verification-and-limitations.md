@@ -6,7 +6,7 @@
 
 ## 1. 현재 테스트 구성
 
-[vitest.config.ts](../0.%20Source/vitest.config.ts)는 jsdom, React 플러그인, 공통 setup, `server-only` 테스트 대체 모듈을 사용합니다. [playwright.config.ts](../0.%20Source/playwright.config.ts)는 Chromium과 3100 포트의 전용 프로덕션 빌드 서버를 사용합니다. 테스트 서버와 계정 CLI는 실행마다 새로 만든 `test-results/<실행 ID>/e2e.sqlite` 경로를 공유합니다.
+[vitest.config.mts](../0.%20Source/vitest.config.mts)는 jsdom, React 플러그인, 공통 setup, `server-only` 테스트 대체 모듈을 사용하며, 워커를 최대 4개로 제한합니다. [playwright.config.ts](../0.%20Source/playwright.config.ts)는 Chromium과 3100 포트의 전용 프로덕션 빌드 서버를 사용합니다. 테스트 서버와 계정 CLI는 실행마다 새로 만든 `test-results/<실행 ID>/e2e.sqlite` 경로를 공유합니다.
 
 | 단위 테스트 파일 | 확인하려는 내용 |
 |---|---|

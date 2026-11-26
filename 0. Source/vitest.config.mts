@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    maxWorkers: 4,
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     passWithNoTests: true,
@@ -15,8 +16,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-      'server-only': path.resolve(__dirname, 'tests/stubs/server-only.ts'),
+      '@': path.resolve(import.meta.dirname, 'src'),
+      'server-only': path.resolve(import.meta.dirname, 'tests/stubs/server-only.ts'),
     },
   },
 });
