@@ -15,10 +15,15 @@ export function useAsyncResource<T>(key: string, load: () => Promise<T>, initial
   const dirtyKey = dirty.join(',');
 
   useEffect(() => {
-    void refresh();
+    // Effect replay or an immediate mutation can supersede the first read before it starts.
+    let active = true;
+    const beforeLoad = resource.snapshot();
+    queueMicrotask(() => {
+      if (active && resource.snapshot() === beforeLoad) void refresh();
+    });
     const names = dirtyKey.split(',');
     const unsubscribe = onDirty(name => { if (names.includes(name ?? '') || names.includes('*')) void refresh(); });
-    return () => { resource.cancel(); unsubscribe(); };
+    return () => { active = false; resource.cancel(); unsubscribe(); };
   }, [resource, refresh, dirtyKey]);
 
   const setValue = useCallback((update: T | ((previous: T) => T)) => {

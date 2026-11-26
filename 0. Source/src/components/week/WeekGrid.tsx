@@ -5,8 +5,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from 'date-fns';
 import { weekDates, toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import { weekKeyFromString } from '@/lib/utils/period';
-import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
-import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { FocusNoteEditor } from '@/components/common/FocusNoteEditor';
 import { TodoListSection } from '@/components/common/TodoListSection';
 import { TimeGrid } from '@/components/common/TimeGrid';
@@ -20,16 +18,8 @@ interface Props {
 }
 
 export const WeekGrid = ({ isoweek }: Props) => {
-  const { blocks } = useWeeklyData();
+  const { blocks, weekEvents } = useWeeklyData();
   const dates = weekDates(isoweek);
-  const startDate = toIsoDate(dates[0]);
-  const endDate = toIsoDate(dates[6]);
-  const { value: weekEvents } = useAsyncResource(
-    `week-events:${startDate}:${endDate}`,
-    () => listLifeEvents({ startDate, endDate }),
-    [],
-    ['lifeEvents'],
-  );
   const prevWeek = toIsoWeek(addDays(dates[0], -7));
   const nextWeek = toIsoWeek(addDays(dates[0], 7));
 

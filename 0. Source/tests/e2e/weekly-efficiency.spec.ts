@@ -21,13 +21,14 @@ test('weekly views share range queries with habits above weekly todos and visibl
   const queries: URL[] = [];
   page.on('request', request => {
     const url = new URL(request.url());
-    if (request.method() === 'GET' && ['/api/todos', '/api/time-blocks'].includes(url.pathname)) queries.push(url);
+    if (request.method() === 'GET' && ['/api/todos', '/api/time-blocks', '/api/events'].includes(url.pathname)) queries.push(url);
   });
   await page.goto('/week/2026-W37');
   await expect(page.getByTestId('time-slot').first()).toBeVisible();
   const rangeQueries = (path: string) => queries.filter(url => url.pathname === path && url.searchParams.get('startDate') === '2026-09-07');
   await expect.poll(() => rangeQueries('/api/todos').length).toBe(1);
   await expect.poll(() => rangeQueries('/api/time-blocks').length).toBe(1);
+  await expect.poll(() => rangeQueries('/api/events').length).toBe(1);
   expect(queries.filter(url => url.searchParams.get('scope') === 'day')).toHaveLength(0);
 
   const calendar = page.getByRole('region', { name: '주간 습관 체크' });

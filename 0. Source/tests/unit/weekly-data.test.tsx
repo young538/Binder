@@ -3,11 +3,13 @@ import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WeeklyDataProvider, useWeeklyData } from '@/components/week/WeeklyDataProvider';
 import { getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
+import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { listDayTodosInRange } from '@/lib/repo/todos';
 import { notifyMutation } from '@/lib/repo/events';
 import type { Todo } from '@/lib/types';
 
 vi.mock('@/lib/repo/timeBlocks', () => ({ getTimeBlocksInRange: vi.fn() }));
+vi.mock('@/lib/repo/lifeEvents', () => ({ listLifeEvents: vi.fn() }));
 vi.mock('@/lib/repo/todos', () => ({ listDayTodosInRange: vi.fn() }));
 
 function Consumer({ name }: { name: string }) {
@@ -16,6 +18,7 @@ function Consumer({ name }: { name: string }) {
 }
 
 beforeEach(() => {
+  vi.mocked(listLifeEvents).mockReset().mockResolvedValue([]);
   vi.mocked(getTimeBlocksInRange).mockReset().mockResolvedValue([]);
   vi.mocked(listDayTodosInRange).mockReset().mockResolvedValue([]);
 });
@@ -33,6 +36,9 @@ describe('weekly shared queries', () => {
     expect(screen.getByTestId('mobile')).toHaveTextContent('수정한 할 일');
     expect(getTimeBlocksInRange).toHaveBeenCalledTimes(1);
     expect(listDayTodosInRange).toHaveBeenCalledTimes(2);
+    expect(listLifeEvents).toHaveBeenCalledTimes(1);
+    await act(async () => notifyMutation('lifeEvents'));
+    expect(listLifeEvents).toHaveBeenCalledTimes(2);
     await act(async () => notifyMutation());
     expect(listDayTodosInRange).toHaveBeenCalledTimes(2);
   });
@@ -41,6 +47,7 @@ describe('weekly shared queries', () => {
     let resolveOld!: (todos: Todo[]) => void;
     vi.mocked(listDayTodosInRange).mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }));
     render(<WeeklyDataProvider isoweek="2026-W37"><Consumer name="view" /></WeeklyDataProvider>);
+    await waitFor(() => expect(listDayTodosInRange).toHaveBeenCalledTimes(1));
     vi.mocked(listDayTodosInRange).mockResolvedValue([{ title: '최신' } as Todo]);
     await act(async () => notifyMutation('todos'));
     await act(async () => resolveOld([{ title: '이전' } as Todo]));

@@ -11,8 +11,6 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useBinder } from '@/store';
-import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
-import { listLifeEvents } from '@/lib/repo/lifeEvents';
 import { weekDates, toIsoDate, minutesToTimeStr } from '@/lib/utils/date';
 import { useWeeklyData } from './WeeklyDataProvider';
 import { LifeEvent, TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
@@ -42,7 +40,7 @@ export const DayListView = (props: Props) => <DayListSession key={props.isoweek}
 
 const DayListSession = ({ isoweek }: Props) => {
   const { categories, settings } = useBinder();
-  const { blocks, todos } = useWeeklyData();
+  const { blocks, todos, weekEvents } = useWeeklyData();
 
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroOpen, setRetroOpen] = useState(false);
@@ -52,14 +50,6 @@ const DayListSession = ({ isoweek }: Props) => {
   const lastTap = useRef<{ id: string; time: number } | null>(null);
 
   const dates = weekDates(isoweek);
-  const weekStart = toIsoDate(dates[0]);
-  const weekEnd = toIsoDate(dates[6]);
-  const { value: weekEvents } = useAsyncResource(
-    `week-events:${weekStart}:${weekEnd}`,
-    () => listLifeEvents({ startDate: weekStart, endDate: weekEnd }),
-    [],
-    ['lifeEvents'],
-  );
   const today = toIsoDate(new Date());
   const todayIdx = dates.findIndex((d) => toIsoDate(d) === today);
 

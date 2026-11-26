@@ -23,6 +23,7 @@ describe('client read and preference adapters', () => {
     const oldRead = vi.fn(() => new Promise<string>(done => { resolve = done; }));
     const nextRead = vi.fn().mockResolvedValue('new date');
     const view = render(<Query date="one" read={oldRead} />);
+    await waitFor(() => expect(oldRead).toHaveBeenCalledTimes(1));
     view.rerender(<Query date="two" read={nextRead} />);
     await screen.findByText('new date');
     await act(async () => resolve('old date'));
