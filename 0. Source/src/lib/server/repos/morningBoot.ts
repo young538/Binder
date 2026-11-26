@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, between, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { and, asc, between, eq, inArray, ne, or } from 'drizzle-orm';
 import { addDays, parseISO } from 'date-fns';
 import { isContactDue } from '@/lib/lifeEvents';
 import type {
@@ -11,12 +11,15 @@ import type {
   MorningBootUpcomingEvent,
 } from '@/lib/morningBoot';
 import { sortProjectTodos } from '@/lib/projects';
+import { listTodosByProject } from './projectOverview';
+import { listDueDecisions } from './notes';
+import { listEventsInRange } from './lifeEvents';
 import { upcomingItemsFor } from '@/lib/upcomingItems';
-import type { BinderNote, LifeEvent, Person, Project, Subscription, Todo } from '@/lib/types';
+import type { Person, Project, Subscription, Todo } from '@/lib/types';
 import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import { moveActiveTodos } from '../todos/move';
 import type { BinderDatabase } from '../db/connection';
-import { binderNotes, focusNotes, lifeEvents, people, projects, subscriptions, todos } from '../db/schema';
+import { focusNotes, people, projects, subscriptions, todos } from '../db/schema';
 
 const ACTIVE_STATUSES = ['pending', 'postponed'] as const;
 
@@ -30,6 +33,7 @@ export class MorningBootRepository {
 
   snapshot(date: string): MorningBootSnapshot {
     const baseDate = parseISO(date);
+    const daysAhead = 3;
     const overdueStart = toIsoDate(addDays(baseDate, -7));
     const overdueEnd = toIsoDate(addDays(baseDate, -1));
     const isoWeek = toIsoWeek(baseDate);
@@ -91,17 +95,13 @@ export class MorningBootRepository {
         .orderBy(asc(projects.order), asc(projects.createdAt), asc(projects.id))
         .all() as Project[];
 
-      const activeProjectIds = activeProjectRows.map(item => item.id);
-      const projectTodos = activeProjectIds.length
-        ? (tx
-            .select()
-            .from(todos)
-            .where(and(eq(todos.userId, this.userId), inArray(todos.projectId, activeProjectIds)))
-            .all() as Todo[])
-        : [];
+      const projectTodos = listTodosByProject(tx, this.userId, 'active', or(
+        inArray(todos.status, [...ACTIVE_STATUSES]),
+        and(eq(todos.scope, 'day'), eq(todos.scopeKey, date), ne(todos.status, 'cancelled')),
+      ));
 
       const activeProjects: MorningBootProjectItem[] = activeProjectRows.map(project => {
-        const linked = projectTodos.filter(item => item.projectId === project.id);
+        const linked = projectTodos.get(project.id) ?? [];
         const activeAll = linked.filter(item => item.status === 'pending' || item.status === 'postponed');
         const candidateTodos = sortProjectTodos(
           activeAll.filter(item => !(item.scope === 'day' && item.scopeKey === date)),
@@ -129,12 +129,9 @@ export class MorningBootRepository {
         )
         .get();
 
-      const eventRows = tx
-        .select()
-        .from(lifeEvents)
-        .where(eq(lifeEvents.userId, this.userId))
-        .orderBy(asc(lifeEvents.date), asc(lifeEvents.id))
-        .all() as LifeEvent[];
+      const eventRows = listEventsInRange(tx, this.userId, {
+        startDate: date, endDate: toIsoDate(addDays(baseDate, daysAhead)),
+      });
 
       const peopleRows = tx
         .select()
@@ -151,7 +148,7 @@ export class MorningBootRepository {
         .all() as Subscription[];
 
       const upcomingEvents: MorningBootUpcomingEvent[] = upcomingItemsFor(
-        date, 3, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} 결제 (${price})`,
+        date, daysAhead, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} 결제 (${price})`,
       ).map(({ id, title, kind, date, daysLeft, personId, subscriptionId }) => ({
         id, title, kind, date, daysLeft, personId, subscriptionId,
       }));
@@ -171,20 +168,7 @@ export class MorningBootRepository {
       }
       duePeople.sort((a, b) => b.overdueDays - a.overdueDays || a.name.localeCompare(b.name));
 
-      const dueDecisionRows = tx
-        .select()
-        .from(binderNotes)
-        .where(
-          and(
-            eq(binderNotes.userId, this.userId),
-            eq(binderNotes.kind, 'decision'),
-            isNotNull(binderNotes.reviewDate),
-            lte(binderNotes.reviewDate, date),
-          ),
-        )
-        .orderBy(asc(binderNotes.reviewDate), asc(binderNotes.id))
-        .all() as BinderNote[];
-      const dueDecisions = dueDecisionRows.filter(note => !note.decisionOutcome || !note.decisionOutcome.trim());
+      const dueDecisions = listDueDecisions(tx, this.userId, date);
 
       return {
         date,

@@ -1,5 +1,5 @@
 import { addDays, parseISO } from 'date-fns';
-import { annualOccurrenceForYear } from './lifeEvents';
+import { eventEndDate, annualOccurrenceForYear } from './lifeEvents';
 import { expandSubscriptionBillingDates, formatCurrency } from './subscriptions';
 import type { AnnualGoal, LifeEvent, Person, Project, Subscription } from './types';
 import { toIsoDate } from './utils/date';
@@ -74,7 +74,7 @@ export function buildCalendarMarkers(
       continue;
     }
 
-    const evEnd = ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date;
+    const evEnd = eventEndDate(ev);
     const clampedStart = ev.date > startDate ? ev.date : startDate;
     const clampedEnd = evEnd < endDate ? evEnd : endDate;
     if (clampedStart > clampedEnd) continue;

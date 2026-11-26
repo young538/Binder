@@ -20,6 +20,10 @@ export function nextAnnualOccurrence(monthDay: string, today: string): { date: s
   };
 }
 
+export function eventEndDate(event: Pick<LifeEvent, 'date' | 'endDate'>): string {
+  return event.endDate && event.endDate >= event.date ? event.endDate : event.date;
+}
+
 export function describeEventDday(
   event: Pick<LifeEvent, 'date' | 'endDate' | 'kind'>,
   today: string,
@@ -34,7 +38,7 @@ export function describeEventDday(
     };
   }
 
-  const end = event.endDate && event.endDate >= event.date ? event.endDate : event.date;
+  const end = eventEndDate(event);
   if (today >= event.date && today <= end) {
     return {
       targetDate: event.date,

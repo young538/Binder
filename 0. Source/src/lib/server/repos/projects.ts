@@ -1,8 +1,9 @@
 import 'server-only';
-import { and, asc, eq, isNotNull, or } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { binderNotes, lifeEvents, projects, timeBlocks, todos } from '../db/schema';
-import type { Project, TimeBlock, Todo } from '@/lib/types';
-import { buildProjectOverview, type ProjectOverviewResponse } from '@/lib/projects';
+import type { Project } from '@/lib/types';
+import { sortProjectTodos, type ProjectOverviewResponse } from '@/lib/projects';
+import { listProjectSummaries, listTodosByProject } from './projectOverview';
 import { newId } from '@/lib/utils/id';
 import { stripUndefined } from '../db/patch';
 import type { BinderDatabase } from '../db/connection';
@@ -84,29 +85,11 @@ export class ProjectRepository {
 
   overview(): ProjectOverviewResponse {
     return this.database.transaction(tx => {
-      const projectRows = tx
-        .select()
-        .from(projects)
-        .where(eq(projects.userId, this.userId))
-        .orderBy(asc(projects.order), asc(projects.createdAt), asc(projects.id))
-        .all() as Project[];
-      const todoRows = tx
-        .select()
-        .from(todos)
-        .where(and(eq(todos.userId, this.userId), isNotNull(todos.projectId)))
-        .all() as Todo[];
-      const blockRows = tx
-        .select()
-        .from(timeBlocks)
-        .where(
-          and(
-            eq(timeBlocks.userId, this.userId),
-            eq(timeBlocks.kind, 'actual'),
-            or(isNotNull(timeBlocks.projectId), isNotNull(timeBlocks.todoId)),
-          ),
-        )
-        .all() as TimeBlock[];
-      return { projects: buildProjectOverview(projectRows, todoRows, blockRows) };
+      const summaries = listProjectSummaries(tx, this.userId);
+      const todosByProject = listTodosByProject(tx, this.userId);
+      return { projects: summaries.map(summary => ({
+        ...summary, todos: sortProjectTodos(todosByProject.get(summary.project.id) ?? []),
+      })) };
     });
   }
 }

@@ -1,3 +1,4 @@
+import { eventEndDate } from './lifeEvents';
 import type { LifeEvent } from './types';
 
 export interface GoogleCalendarEventResource {
@@ -199,7 +200,7 @@ export function lifeEventToGoogleEventBody(
   const description = event.note?.trim() ? event.note : undefined;
 
   if (event.allDay || event.startMin == null || event.endMin == null) {
-    const endInclusive = event.endDate && event.endDate >= event.date ? event.endDate : event.date;
+    const endInclusive = eventEndDate(event);
     return {
       summary: event.title,
       description,
@@ -208,7 +209,7 @@ export function lifeEventToGoogleEventBody(
     };
   }
 
-  const endDateBase = event.endDate && event.endDate > event.date ? event.endDate : event.date;
+  const endDateBase = eventEndDate(event);
   return {
     summary: event.title,
     description,

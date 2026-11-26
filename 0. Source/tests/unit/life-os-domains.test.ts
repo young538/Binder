@@ -184,6 +184,41 @@ describe('life OS phase 1-4 domains', () => {
     expect(a.metrics.listWithEntries()).toEqual([]);
   });
 
+  it('keeps inclusive ranges, open bounds and recurring anniversaries across calendar views', () => {
+    const a = repos();
+    const event = { kind: 'event' as const, allDay: true };
+    a.lifeEvents.create({ ...event, title: 'leap', date: '2020-02-29', kind: 'anniversary' });
+    a.lifeEvents.create({ ...event, title: 'old', date: '2025-02-24' });
+    a.lifeEvents.create({ ...event, title: 'ongoing', date: '2025-02-25', endDate: '2025-02-28' });
+    a.lifeEvents.create({ ...event, title: 'legacy end', date: '2025-02-28', endDate: '2025-02-26' });
+    a.lifeEvents.create({ ...event, title: 'later', date: '2025-03-07' });
+    repos('b').lifeEvents.create({ ...event, title: 'other user', date: '2025-02-28' });
+
+    const date = '2025-02-28';
+    expect(a.lifeEvents.list({ startDate: date, endDate: date }).map(e => e.title))
+      .toEqual(['leap', 'ongoing', 'legacy end']);
+    expect(a.lifeEvents.list({ startDate: date }).map(e => e.title))
+      .toEqual(['leap', 'ongoing', 'legacy end', 'later']);
+    expect(a.lifeEvents.list({ endDate: '2025-02-25' }).map(e => e.title)).toEqual(['leap', 'old', 'ongoing']);
+    expect(a.lifeEvents.list().map(e => e.title)).toEqual(['leap', 'old', 'ongoing', 'legacy end', 'later']);
+    const dashboard = a.dashboard.snapshot(date);
+    expect(dashboard.todayEvents.map(e => e.title).sort()).toEqual(['leap', 'legacy end', 'ongoing']);
+    expect(dashboard.upcomingItems.map(e => e.title).sort()).toEqual(['later', 'leap', 'legacy end', 'ongoing']);
+    expect(a.morningBoot.snapshot(date).upcomingEvents.map(e => e.title).sort()).toEqual(['leap', 'legacy end', 'ongoing']);
+  });
+
+  it('agrees on pending decisions for legacy whitespace, future reviews and other accounts', () => {
+    const a = repos();
+    const note = { kind: 'decision' as const, title: 'Review', pinned: false, body: '', reviewDate: '2026-11-20' };
+    const empty = a.notes.create({ ...note, decisionOutcome: '\t\n\u00a0\u3000' });
+    a.notes.create({ ...note, decisionOutcome: ' 결과 ' });
+    a.notes.create({ ...note, reviewDate: '2026-11-21' });
+    repos('b').notes.create(note);
+    expect(a.notes.listDueDecisions(note.reviewDate).map(row => row.id)).toEqual([empty.id]);
+    expect(a.morningBoot.snapshot(note.reviewDate).dueDecisions.map(row => row.id)).toEqual([empty.id]);
+    expect(a.dashboard.snapshot(note.reviewDate).attention.dueDecisionsCount).toBe(1);
+  });
+
   it('tracks notes, due decisions, people, .ics idempotent imports, calendar markers, and morning boot context', async () => {
     const a = repos('a');
     const proj = await a.projects.create({ title: '이사 준비', status: 'active', deadline: '2026-11-22', order: 0 });

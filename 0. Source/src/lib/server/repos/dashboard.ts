@@ -1,6 +1,6 @@
 import 'server-only';
 import { addDays, parseISO } from 'date-fns';
-import { and, asc, desc, between, eq, inArray, isNotNull, lte, or } from 'drizzle-orm';
+import { and, asc, count, desc, between, eq, inArray, or } from 'drizzle-orm';
 import type {
   DashboardMetricItem,
   DashboardProjectItem,
@@ -14,23 +14,22 @@ import {
   normalizeFinanceCycleStartDay,
   summarizeMonthFinance,
 } from '@/lib/finance';
-import { annualOccurrenceForYear, isContactDue } from '@/lib/lifeEvents';
+import { eventEndDate, annualOccurrenceForYear, isContactDue } from '@/lib/lifeEvents';
 import { METRIC_CHART_ENTRIES, summarizeMetric } from '@/lib/metrics';
+import { dueDecisionFilter } from './notes';
+import { listEventsInRange } from './lifeEvents';
 import { upcomingItemsFor } from '@/lib/upcomingItems';
-import { buildProjectOverview } from '@/lib/projects';
+import { listProjectSummaries } from './projectOverview';
 import { summarizeSubscriptions } from '@/lib/subscriptions';
 import type {
-  BinderNote,
   DailyCheckin,
   FinanceBudget,
   FinanceTransaction,
   Habit,
   HabitLog,
-  LifeEvent,
   LifeMetric,
   LifeMetricEntry,
   Person,
-  Project,
   Subscription,
   TimeBlock,
   Todo,
@@ -47,11 +46,9 @@ import {
   googleCalendarConnections,
   habitLogs,
   habits,
-  lifeEvents,
   metricEntries,
   metrics,
   people,
-  projects,
   settings,
   subscriptions,
   timeBlocks,
@@ -69,6 +66,7 @@ export class DashboardRepository {
 
   snapshot(date: string): DashboardSnapshot {
     const baseDate = parseISO(date);
+    const daysAhead = 7;
     const isoWeek = toIsoWeek(baseDate);
     const yyyymm = date.slice(0, 7);
     const weekDays = weekDates(isoWeek);
@@ -104,8 +102,8 @@ export class DashboardRepository {
         .orderBy(asc(todos.order), asc(todos.id))
         .all() as Todo[];
 
-      const overdueTodoRows = tx
-        .select({ id: todos.id })
+      const overdueTodosCount = tx
+        .select({ total: count() })
         .from(todos)
         .where(
           and(
@@ -115,7 +113,7 @@ export class DashboardRepository {
             inArray(todos.status, [...ACTIVE_TODO_STATUSES]),
           ),
         )
-        .all();
+        .get()!.total;
 
       const todayBlocks = tx
         .select()
@@ -151,12 +149,9 @@ export class DashboardRepository {
         weekDays[6],
       ).percent;
 
-      const eventRows = tx
-        .select()
-        .from(lifeEvents)
-        .where(eq(lifeEvents.userId, this.userId))
-        .orderBy(asc(lifeEvents.date), asc(lifeEvents.startMin), asc(lifeEvents.id))
-        .all() as LifeEvent[];
+      const eventRows = listEventsInRange(tx, this.userId, {
+        startDate: date, endDate: toIsoDate(addDays(baseDate, daysAhead)),
+      });
 
       const peopleRows = tx
         .select()
@@ -178,7 +173,7 @@ export class DashboardRepository {
         const isToday =
           ev.kind === 'anniversary'
             ? annualOccurrenceForYear(ev.date.slice(5, 10), yearNum) === date
-            : ev.date <= date && (ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date) >= date;
+            : ev.date <= date && eventEndDate(ev) >= date;
 
         if (isToday) {
           todayEvents.push({
@@ -203,72 +198,20 @@ export class DashboardRepository {
 
       const duePeopleCount = peopleRows.filter(person => isContactDue(person, date).due).length;
       const upcomingItems: DashboardUpcomingItem[] = upcomingItemsFor(
-        date, 7, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} (${price})`,
+        date, daysAhead, eventRows, peopleRows, subscriptionRows, (name, price) => `💳 ${name} (${price})`,
       ).map(({ id, title, kind, date, daysLeft, label, isGoogle }) => ({
         id, title, kind, date, daysLeft, label, isGoogle,
       }));
 
       const subscriptionSummary = summarizeSubscriptions(subscriptionRows, date);
 
-      const activeProjectRows = tx
-        .select()
-        .from(projects)
-        .where(and(eq(projects.userId, this.userId), eq(projects.status, 'active')))
-        .orderBy(asc(projects.order), asc(projects.createdAt), asc(projects.id))
-        .all() as Project[];
-
-      const activeIds = activeProjectRows.map(p => p.id);
-      const linkedTodos = activeIds.length
-        ? (tx
-            .select()
-            .from(todos)
-            .where(and(eq(todos.userId, this.userId), inArray(todos.projectId, activeIds)))
-            .all() as Todo[])
-        : [];
-      const linkedTodoIds = linkedTodos.map(t => t.id);
-
-      const projectActualBlocks = activeIds.length
-        ? (tx
-            .select()
-            .from(timeBlocks)
-            .where(
-              and(
-                eq(timeBlocks.userId, this.userId),
-                eq(timeBlocks.kind, 'actual'),
-                linkedTodoIds.length > 0
-                  ? or(inArray(timeBlocks.projectId, activeIds), inArray(timeBlocks.todoId, linkedTodoIds))
-                  : inArray(timeBlocks.projectId, activeIds),
-              ),
-            )
-            .all() as TimeBlock[])
-        : [];
-
-      const projectOverview = buildProjectOverview(activeProjectRows, linkedTodos, projectActualBlocks);
-      const activeProjects: DashboardProjectItem[] = projectOverview.map(item => ({
-        project: item.project,
-        totalTodos: item.totalTodos,
-        doneTodos: item.doneTodos,
-        activeTodos: item.activeTodos,
-        progressPercent: item.totalTodos > 0 ? Math.round((item.doneTodos / item.totalTodos) * 100) : 0,
-        actualMinutes: item.actualMinutes,
-        needsNextAction: item.needsNextAction,
+      const projectSummaries = listProjectSummaries(tx, this.userId, 'active');
+      const activeProjects: DashboardProjectItem[] = projectSummaries.slice(0, 6).map(item => ({
+        ...item, progressPercent: item.totalTodos > 0 ? Math.round((item.doneTodos / item.totalTodos) * 100) : 0,
       }));
 
-      const dueDecisionRows = tx
-        .select()
-        .from(binderNotes)
-        .where(
-          and(
-            eq(binderNotes.userId, this.userId),
-            eq(binderNotes.kind, 'decision'),
-            isNotNull(binderNotes.reviewDate),
-            lte(binderNotes.reviewDate, date),
-          ),
-        )
-        .all() as BinderNote[];
-      const dueDecisionsCount = dueDecisionRows.filter(
-        note => !note.decisionOutcome || !note.decisionOutcome.trim(),
-      ).length;
+      const dueDecisionsCount = tx.select({ total: count() }).from(binderNotes)
+        .where(dueDecisionFilter(this.userId, date)).get()!.total;
 
       const metricRows = tx
         .select()
@@ -366,13 +309,13 @@ export class DashboardRepository {
         weeklyHabitPercent,
         todayEvents,
         upcomingItems: upcomingItems.slice(0, 12),
-        activeProjects: activeProjects.slice(0, 6),
+        activeProjects,
         subscriptionSummary,
         monthFinance,
         metrics: dashboardMetrics,
         attention: {
-          overdueTodosCount: overdueTodoRows.length,
-          projectsWithoutNextAction: activeProjects.filter(p => p.needsNextAction).length,
+          overdueTodosCount,
+          projectsWithoutNextAction: projectSummaries.filter(p => p.needsNextAction).length,
           duePeopleCount,
           dueDecisionsCount,
           upcomingBillsCount: subscriptionSummary.upcomingWithin7Days.length,

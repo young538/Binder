@@ -1,13 +1,30 @@
 import 'server-only';
-import { and, asc, desc, eq, isNotNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 import type { BinderNote, NoteKind } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
-import type { BinderDatabase } from '../db/connection';
+import type { BinderDatabase, DatabaseSession } from '../db/connection';
 import { stripUndefined } from '../db/patch';
 import { binderNotes } from '../db/schema';
 
 type NewNote = Omit<BinderNote, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 type NotePatch = Partial<NewNote>;
+
+// SQLite trim defaults to ASCII space. Imported notes can contain any JS trim whitespace.
+const trimWhitespace = '\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff';
+
+export function dueDecisionFilter(userId: string, today: string) {
+  return and(
+    eq(binderNotes.userId, userId),
+    eq(binderNotes.kind, 'decision'),
+    lte(binderNotes.reviewDate, today),
+    or(isNull(binderNotes.decisionOutcome), sql`trim(${binderNotes.decisionOutcome}, ${trimWhitespace}) = ''`),
+  );
+}
+
+export function listDueDecisions(db: DatabaseSession, userId: string, today: string): BinderNote[] {
+  return db.select().from(binderNotes).where(dueDecisionFilter(userId, today))
+    .orderBy(asc(binderNotes.reviewDate), asc(binderNotes.id)).all() as BinderNote[];
+}
 
 /** User-scoped permanent notes (principles, decisions, insights, references). */
 export class NoteRepository {
@@ -32,21 +49,7 @@ export class NoteRepository {
   }
 
   listDueDecisions(today: string): BinderNote[] {
-    const rows = this.database
-      .select()
-      .from(binderNotes)
-      .where(
-        and(
-          eq(binderNotes.userId, this.userId),
-          eq(binderNotes.kind, 'decision'),
-          isNotNull(binderNotes.reviewDate),
-          lte(binderNotes.reviewDate, today),
-        ),
-      )
-      .orderBy(asc(binderNotes.reviewDate), asc(binderNotes.id))
-      .all() as BinderNote[];
-
-    return rows.filter(row => !row.decisionOutcome || !row.decisionOutcome.trim());
+    return listDueDecisions(this.database, this.userId, today);
   }
 
   create(data: NewNote): BinderNote {

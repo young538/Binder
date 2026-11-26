@@ -140,11 +140,19 @@ describe('projects domain and execution links', () => {
       { id: 'b2', userId: 'a', date: '2026-11-20', startMin: 600, endMin: 720, text: '계획만', kind: 'plan', categoryId: 'cat', todoId: nextTodo.id, createdAt: ts, updatedAt: ts },
     ]).run();
 
+    // A direct project link wins even if the TODO belongs to a different project.
+    db.insert(schema.timeBlocks).values([
+      { id: 'direct', userId: 'a', date: '2026-11-19', startMin: 540, endMin: 555, text: 'Direct', kind: 'actual', categoryId: 'cat', projectId: emptyActive.id, todoId: doneTodo.id, createdAt: ts, updatedAt: ts },
+      { id: 'foreign', userId: 'b', date: '2026-11-19', startMin: 540, endMin: 600, text: 'Foreign', kind: 'actual', categoryId: 'cat', todoId: doneTodo.id, createdAt: ts, updatedAt: ts },
+    ]).run();
+    const dashboard = repos('a').dashboard.snapshot('2026-11-20');
+    expect(dashboard.activeProjects.map(item => [item.project.id, item.actualMinutes]))
+      .toEqual([[emptyActive.id, 15], [working.id, 90]]);
     const { projects } = projectRepo('a').overview();
     expect(projects.find(item => item.project.id === emptyActive.id)).toMatchObject({
       needsNextAction: true,
       totalTodos: 0,
-      actualMinutes: 0,
+      actualMinutes: 15,
     });
     expect(projects.find(item => item.project.id === planned.id)?.needsNextAction).toBe(false);
     expect(projects.find(item => item.project.id === working.id)).toMatchObject({

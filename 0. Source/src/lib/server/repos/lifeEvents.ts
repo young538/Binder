@@ -1,10 +1,10 @@
 import 'server-only';
-import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { MappedGoogleEvent } from '@/lib/googleCalendar';
 import type { ParsedIcsEvent } from '@/lib/ics';
 import type { LifeEvent } from '@/lib/types';
 import { newId } from '@/lib/utils/id';
-import type { BinderDatabase } from '../db/connection';
+import type { BinderDatabase, DatabaseSession } from '../db/connection';
 import { stripUndefined } from '../db/patch';
 import { googleCalendarConnections, googleEventDeletions, googleEventUpdates, lifeEvents } from '../db/schema';
 
@@ -14,6 +14,22 @@ type CalendarReadVersion = { googleEmail: string; eventSyncRevision: number };
 type NewLifeEvent = Omit<LifeEvent, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 type LifeEventPatch = Partial<NewLifeEvent>;
 
+type EventRange = { startDate?: string; endDate?: string };
+
+export function listEventsInRange(db: DatabaseSession, userId: string, range?: EventRange): LifeEvent[] {
+  const { startDate, endDate } = range ?? {};
+  // Recurring anniversaries are projected into the requested year by the caller.
+  const overlap = startDate || endDate ? or(
+    eq(lifeEvents.kind, 'anniversary'),
+    and(
+      endDate !== undefined ? lte(lifeEvents.date, endDate) : undefined,
+      startDate !== undefined ? or(gte(lifeEvents.date, startDate), gte(lifeEvents.endDate, startDate)) : undefined,
+    ),
+  ) : undefined;
+  return db.select().from(lifeEvents).where(and(eq(lifeEvents.userId, userId), overlap))
+    .orderBy(asc(lifeEvents.date), asc(lifeEvents.startMin), asc(lifeEvents.id)).all() as LifeEvent[];
+}
+
 /** User-scoped life events, D-Days, anniversaries, and idempotent .ics imports. */
 export class LifeEventRepository {
   constructor(
@@ -22,22 +38,8 @@ export class LifeEventRepository {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  list(filters?: { startDate?: string; endDate?: string }): LifeEvent[] {
-    const rows = this.database
-      .select()
-      .from(lifeEvents)
-      .where(eq(lifeEvents.userId, this.userId))
-      .orderBy(asc(lifeEvents.date), asc(lifeEvents.startMin), asc(lifeEvents.id))
-      .all() as LifeEvent[];
-
-    if (!filters?.startDate && !filters?.endDate) return rows;
-    const start = filters.startDate ?? '0000-01-01';
-    const end = filters.endDate ?? '9999-12-31';
-    return rows.filter(row => {
-      if (row.kind === 'anniversary') return true;
-      const rowEnd = row.endDate && row.endDate >= row.date ? row.endDate : row.date;
-      return row.date <= end && rowEnd >= start;
-    });
+  list(range?: EventRange): LifeEvent[] {
+    return listEventsInRange(this.database, this.userId, range);
   }
 
   getById(id: string): LifeEvent | null {
