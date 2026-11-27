@@ -10,14 +10,20 @@ describe('shared time grid geometry', () => {
     expect(grid.totalRows).toBe(36);
     expect(grid.range(3, 1)).toEqual({ startMin: 390, endMin: 480 });
     expect(grid.range(35)).toEqual({ startMin: 1410, endMin: 1440 });
-    expect(grid.blockPosition({ startMin: 390, endMin: 450 })).toEqual({ top: 33, height: 62 });
+    expect(grid.visiblePosition({ startMin: 390, endMin: 450 })).toEqual({ top: 33, height: 62 });
   });
 
   it('clamps dragging within the configured grid while keeping duration', () => {
     const grid = new TimeGridGeometry({ dayStartHour: 6, dayEndHour: 23, gridMinutes: 60 });
     const block = { startMin: 540, endMin: 660 };
-    expect(grid.dragRow(-100, block)).toBe(0);
-    expect(grid.dragRow(10000, block)).toBe(15);
+    expect(grid.dragStart(block, -100)).toBe(360);
+    expect(grid.dragStart(block, 100)).toBe(1260);
+    expect(grid.dragStart({ startMin: 570, endMin: 630 }, 0)).toBe(570);
+    expect(grid.dragStart({ startMin: 330, endMin: 390 }, 0)).toBe(330);
+    expect(grid.visiblePosition({ startMin: 300, endMin: 360 })).toBeNull();
+    expect(grid.visiblePosition({ startMin: 1380, endMin: 1410 })).toBeNull();
+    expect(grid.visiblePosition({ startMin: 330, endMin: 390 })).toEqual({ top: 1, height: 14 });
+    expect(grid.visiblePosition({ startMin: 1350, endMin: 1410 })).toEqual({ top: 529, height: 14 });
     expect(grid.minuteAt(15) + block.endMin - block.startMin).toBe(1380);
   });
 });

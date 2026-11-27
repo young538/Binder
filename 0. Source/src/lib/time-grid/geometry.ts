@@ -31,23 +31,20 @@ export class TimeGridGeometry {
     };
   }
 
-  durationRows(block: Interval): number {
-    return Math.max(1, Math.round((block.endMin - block.startMin) / this.gridMinutes));
+  dragStart(block: Interval, rowDelta: number): number {
+    const duration = block.endMin - block.startMin;
+    // A clipped block can still move horizontally at its original time.
+    const earliest = Math.min(this.startMin, block.startMin);
+    const latest = Math.max(this.endMin - duration, block.startMin);
+    return Math.min(latest, Math.max(earliest, block.startMin + rowDelta * this.gridMinutes));
   }
 
-  fitRow(row: number, block: Interval): number {
-    const maximum = Math.max(0, this.totalRows - this.durationRows(block));
-    return Math.min(maximum, Math.max(0, row));
-  }
-
-  dragRow(offsetY: number, block: Interval): number {
-    return this.fitRow(Math.floor(offsetY / this.rowHeight), block);
-  }
-
-  blockPosition(block: Interval): { top: number; height: number } {
-    return {
-      top: this.rowAt(block.startMin) * this.rowHeight + 1,
-      height: (block.endMin - block.startMin) / this.gridMinutes * this.rowHeight - 2,
-    };
+  visiblePosition(block: Interval): { top: number; height: number } | null {
+    const start = Math.max(this.startMin, block.startMin);
+    const end = Math.min(this.endMin, block.endMin);
+    if (end <= start) return null;
+    const pixels = (end - start) / this.gridMinutes * this.rowHeight;
+    const inset = pixels > 2 ? 1 : 0;
+    return { top: this.rowAt(start) * this.rowHeight + inset, height: pixels - inset * 2 };
   }
 }

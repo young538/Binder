@@ -190,10 +190,39 @@ test('desktop timeline block click edits, moves, and Alt-copies across columns',
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
+  await source.scrollIntoViewIfNeeded();
+  const box = (await source.boundingBox())!;
+  const tomorrow = page.locator('[data-time-column][data-date="2026-09-08"][data-kind="actual"]');
+  const column = (await tomorrow.boundingBox())!;
+  const grabY = box.y + box.height / 2;
+  const startX = box.x + box.width / 2;
+  const endX = column.x + column.width / 2;
+  const writes: string[] = [];
+  page.on('request', req => {
+    if (req.url().includes('/api/time-blocks') && req.method() !== 'GET') writes.push(req.method());
+  });
+  await page.mouse.move(startX, grabY);
+  await page.mouse.down();
+  await page.mouse.move(endX, grabY, { steps: 8 });
+  await page.mouse.move(1, 1);
+  await page.mouse.up();
+  expect(await listBlocks(page)).toContainEqual(seeded);
+  expect(writes).toEqual([]);
+
+  await page.mouse.move(startX, grabY);
+  await page.mouse.down();
+  await page.mouse.move(endX, grabY, { steps: 8 });
+  await page.mouse.up();
+  await expect(tomorrow.locator(`[data-block-id="${seeded.id}"]`)).toBeVisible();
+  const across = await page.request.get('/api/time-blocks?startDate=2026-09-08&endDate=2026-09-08');
+  expect(await across.json()).toContainEqual(expect.objectContaining({
+    id: seeded.id, startMin: 540, endMin: 630, kind: 'actual',
+  }));
+
   await dragCenters(page, source, row(page, 'plan', 720));
   await expect
     .poll(async () => (await listBlocks(page)).find(block => block.id === seeded.id))
-    .toMatchObject({ startMin: 720, endMin: 810, kind: 'plan' });
+    .toMatchObject({ startMin: 690, endMin: 780, kind: 'plan' });
 
   const moved = page.locator(`[data-block-id="${seeded.id}"]`);
   await expect(moved).toBeVisible();
@@ -210,14 +239,14 @@ test('desktop timeline block click edits, moves, and Alt-copies across columns',
   const persisted = await listBlocks(page);
   expect(persisted.find(block => block.id === seeded.id)).toMatchObject({
     date: DATE,
-    startMin: 720,
-    endMin: 810,
+    startMin: 690,
+    endMin: 780,
     kind: 'plan',
   });
   expect(persisted.find(block => block.id !== seeded.id && block.text === seeded.text)).toMatchObject({
     date: DATE,
-    startMin: 840,
-    endMin: 930,
+    startMin: 810,
+    endMin: 900,
     kind: 'actual',
   });
 

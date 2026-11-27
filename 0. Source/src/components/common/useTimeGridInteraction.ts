@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import type { TimeBlock, TimeBlockKind } from '@/lib/types';
 import { createTimeBlock, updateTimeBlock } from '@/lib/repo/timeBlocks';
 import { TimeGridGeometry } from '@/lib/time-grid/geometry';
-import { TimeBlockCommands } from '@/lib/time-grid/commands';
+import { TimeBlockCommands, type BlockDestination } from '@/lib/time-grid/commands';
 
 const BLOCK_DRAG_THRESHOLD = 4;
 const blockCommands = new TimeBlockCommands({ create: createTimeBlock, update: updateTimeBlock });
@@ -20,9 +20,8 @@ interface BlockDragState {
   block: TimeBlock;
   startClientX: number;
   startClientY: number;
-  targetDate: string;
-  targetKind: TimeBlockKind;
-  targetRow: number;
+  grabRow: number;
+  target: BlockDestination | null;
   mode: 'move' | 'copy';
   hasMoved: boolean;
 }
@@ -71,8 +70,8 @@ export function useTimeGridInteraction(
   const resolveBlockDragTarget = (
     clientX: number,
     clientY: number,
-    block: TimeBlock,
-  ) => {
+    state: BlockDragState,
+  ): BlockDestination | null => {
     const element = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
     const column = element?.closest<HTMLElement>('[data-time-column]');
     const date = column?.dataset.date;
@@ -83,16 +82,8 @@ export function useTimeGridInteraction(
     return {
       date,
       kind,
-      row: geometry.dragRow(clientY - rect.top, block),
+      startMin: geometry.dragStart(state.block, Math.floor((clientY - rect.top) / geometry.rowHeight) - state.grabRow),
     };
-  };
-
-  const commitBlockDrag = async (state: BlockDragState) => {
-    const { block, targetDate, targetKind, targetRow, mode } = state;
-    await blockCommands.transfer(block, {
-      date: targetDate, kind: targetKind, startMin: geometry.minuteAt(targetRow),
-    }, mode);
-
   };
 
   const handleColumnPointerDown = (e: ReactPointerEvent<HTMLElement>, dateStr: string, kind: TimeBlockKind) => {
@@ -175,7 +166,9 @@ export function useTimeGridInteraction(
     e.stopPropagation();
     if (e.pointerType === 'touch' || e.button !== 0) return;
     if (drag || blockDragRef.current) return;
-    const targetRow = geometry.fitRow(Math.round(geometry.rowAt(b.startMin)), b);
+    const column = e.currentTarget.closest('[data-time-column]');
+    if (!column) return;
+    const grabRow = Math.floor((e.clientY - column.getBoundingClientRect().top) / geometry.rowHeight);
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch { /* pointer may already be captured */ }
@@ -184,9 +177,8 @@ export function useTimeGridInteraction(
       block: b,
       startClientX: e.clientX,
       startClientY: e.clientY,
-      targetDate: b.date,
-      targetKind: b.kind ?? 'plan',
-      targetRow,
+      grabRow,
+      target: null,
       mode: e.altKey || e.ctrlKey || e.metaKey ? 'copy' : 'move',
       hasMoved: false,
     } satisfies BlockDragState;
@@ -203,18 +195,12 @@ export function useTimeGridInteraction(
       current.hasMoved ||
       Math.hypot(e.clientX - current.startClientX, e.clientY - current.startClientY) >=
       BLOCK_DRAG_THRESHOLD;
-    const target = resolveBlockDragTarget(e.clientX, e.clientY, current.block);
+    const target = resolveBlockDragTarget(e.clientX, e.clientY, current);
     const nextDrag = {
       ...current,
       hasMoved: moved,
       mode: e.altKey || e.ctrlKey || e.metaKey ? 'copy' : 'move',
-      ...(target
-        ? {
-          targetDate: target.date,
-          targetKind: target.kind,
-          targetRow: target.row,
-        }
-        : {}),
+      target,
     } satisfies BlockDragState;
     blockDragRef.current = nextDrag;
     setBlockDrag(nextDrag);
@@ -233,20 +219,7 @@ export function useTimeGridInteraction(
       current.hasMoved ||
       Math.hypot(e.clientX - current.startClientX, e.clientY - current.startClientY) >=
       BLOCK_DRAG_THRESHOLD;
-    const target = resolveBlockDragTarget(e.clientX, e.clientY, current.block);
-    const finalState: BlockDragState = {
-      ...current,
-      hasMoved: moved,
-      mode: e.altKey || e.ctrlKey || e.metaKey ? 'copy' : 'move',
-      ...(target
-        ? {
-          targetDate: target.date,
-          targetKind: target.kind,
-          targetRow: target.row,
-        }
-        : {}),
-    };
-
+    const target = resolveBlockDragTarget(e.clientX, e.clientY, current);
     blockDragRef.current = null;
     setBlockDrag(null);
     if (!moved) return;
@@ -258,7 +231,9 @@ export function useTimeGridInteraction(
       }
     }, 0);
 
-    void commitBlockDrag(finalState).catch(() => {
+    if (!target) return;
+    const mode = e.altKey || e.ctrlKey || e.metaKey ? 'copy' : 'move';
+    void blockCommands.transfer(b, target, mode).catch(() => {
       alert('블록을 옮기지 못했어요');
     });
   };

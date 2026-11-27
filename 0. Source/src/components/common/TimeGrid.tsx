@@ -112,9 +112,6 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
 
   const handleSaved = () => {};
 
-  const blockDurationRows = (block: TimeBlock) =>
-    geometry.durationRows(block);
-
   const closeEditor = () => {
     setEditor(null);
   };
@@ -326,7 +323,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                 data-date={dateStr}
                 data-kind={kind}
                 data-day-index={col}
-                className={`relative touch-manipulation select-none
+                className={`relative overflow-clip touch-manipulation select-none
                   ${isToday ? 'bg-zinc-50 dark:bg-zinc-900/30' : ''}
                   ${kind === 'plan'
                     ? 'border-r border-zinc-100/70 dark:border-zinc-900'
@@ -406,8 +403,10 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                   );
                 })()}
 
-                {blockDrag && blockDrag.targetDate === dateStr && blockDrag.targetKind === kind && (() => {
-                  const heightRows = blockDurationRows(blockDrag.block);
+                {blockDrag?.hasMoved && blockDrag.target?.date === dateStr && blockDrag.target.kind === kind && (() => {
+                  const { startMin } = blockDrag.target;
+                  const pos = geometry.visiblePosition({ startMin, endMin: startMin + blockDrag.block.endMin - blockDrag.block.startMin });
+                  if (!pos) return null;
                   return (
                     <div
                       aria-hidden
@@ -416,21 +415,14 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                           ? 'border-emerald-500 bg-emerald-100/60 dark:bg-emerald-900/30'
                           : 'border-blue-500 bg-blue-100/60 dark:bg-blue-900/30'
                       }`}
-                      style={{
-                        top: blockDrag.targetRow * ROW_HEIGHT + 1,
-                        height: heightRows * ROW_HEIGHT - 2,
-                      }}
+                      style={pos}
                     />
                   );
                 })()}
 
                 {timedCalendarEvents.map(ev => {
-                  if (ev.endMin! <= geometry.startMin || ev.startMin! >= geometry.endMin) return null;
-                  const visStart = Math.max(geometry.startMin, ev.startMin!);
-                  const visEnd = Math.min(geometry.endMin, ev.endMin!);
-                  if (visEnd <= visStart) return null;
-                  const pos = geometry.blockPosition({ startMin: visStart, endMin: visEnd });
-                  const height = Math.max(18, pos.height);
+                  const pos = geometry.visiblePosition({ startMin: ev.startMin!, endMin: ev.endMin! });
+                  if (!pos) return null;
                   const alreadyPlanned = subBlocks.some(
                     b => b.startMin === ev.startMin && b.endMin === ev.endMin && b.text === ev.title,
                   );
@@ -461,7 +453,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                           ? 'border-indigo-300/60 bg-indigo-50/35 opacity-60 dark:border-indigo-800/60 dark:bg-indigo-950/20'
                           : 'border-indigo-400 bg-indigo-50/80 hover:bg-indigo-100/90 dark:border-indigo-600 dark:bg-indigo-950/45 dark:hover:bg-indigo-900/60'
                       }`}
-                      style={{ top: pos.top, height }}
+                      style={pos}
                       title={`${ev.title} · 클릭해 계획 블록으로 가져오기`}
                     >
                       <div className="px-1.5 py-0.5">
@@ -469,7 +461,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                           {alreadyPlanned ? '✓ ' : '📅 '}
                           {ev.title}
                         </div>
-                        {height >= 34 && (
+                        {pos.height >= 34 && (
                           <div className="truncate text-[10px] text-indigo-600/80 dark:text-indigo-300/80">
                             {minutesToTimeStr(ev.startMin!)}–{minutesToTimeStr(ev.endMin!)}
                           </div>
@@ -480,7 +472,8 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                 })}
 
                 {subBlocks.map((b) => {
-                  const spanRows = (b.endMin - b.startMin) / gridMinutes;
+                  const pos = geometry.visiblePosition(b);
+                  if (!pos) return null;
                   const color = catColor(b.categoryId);
                   const isPlan = (b.kind ?? 'plan') === 'plan';
                   const isDraggingThis = blockDrag?.block.id === b.id && blockDrag.hasMoved;
@@ -525,7 +518,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                           : 'border-2 border-solid shadow-sm hover:shadow-md'}
                       `}
                       style={{
-                        ...geometry.blockPosition(b),
+                        ...pos,
                         background: tint.soft(color, isPlan ? 0.10 : 0.24),
                         borderColor: tint.bar(color),
                         borderLeftWidth: 3,
@@ -538,7 +531,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
                         <div className={`text-[12px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100 ${fitToWidth ? 'line-clamp-2 break-all sm:block sm:truncate' : 'truncate'}`}>
                           {b.text || '(내용 없음)'}
                         </div>
-                        {spanRows >= 2 && (
+                        {pos.height >= 2 * ROW_HEIGHT - 2 && (
                           <div className={`mt-0.5 truncate text-[10px] text-zinc-600 dark:text-zinc-400 ${fitToWidth ? 'hidden sm:block' : ''}`}>
                             {minutesToTimeStr(b.startMin)}–{minutesToTimeStr(b.endMin)}
                           </div>
