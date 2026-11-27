@@ -38,7 +38,7 @@ export class HttpClient {
 
   get = <T>(url: string) => this.request<T>('GET', url);
   post = <T>(url: string, body?: unknown, headers?: Record<string, string>) => this.request<T>('POST', url, body ?? {}, headers);
-  put = <T>(url: string, body: unknown) => this.request<T>('PUT', url, body);
+  put = <T>(url: string, body: unknown, headers?: Record<string, string>) => this.request<T>('PUT', url, body, headers);
   patch = <T>(url: string, body: unknown) => this.request<T>('PATCH', url, body);
-  del = <T = void>(url: string) => this.request<T>('DELETE', url);
+  del = <T = void>(url: string, headers?: Record<string, string>) => this.request<T>('DELETE', url, undefined, headers);
 }

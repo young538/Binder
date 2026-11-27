@@ -24,6 +24,8 @@ import type {
   WeeklyTemplate,
 } from '@/lib/types';
 
+import type { PenInput, EntryInput } from '@/lib/injections';
+
 type Writable<T> = Omit<T, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 export interface MutationPayloads {
   projects: Omit<Writable<Project>, 'completedAt'>;
@@ -53,6 +55,8 @@ export interface MutationPayloads {
   retrospectives: Pick<Retrospective, 'type' | 'dateOrWeek'> & Partial<Pick<Retrospective, 'rating' | 'template' | 'freeText'>>;
   dailyCheckins: Writable<DailyCheckin>;
   metrics: Writable<LifeMetric>;
+  injectionPens: PenInput;
+  injectionEntries: EntryInput;
   metricEntries: Writable<LifeMetricEntry>;
   notes: Writable<BinderNote>;
   people: Writable<Person>;
@@ -164,6 +168,14 @@ const rules: Record<MutationKind, Rules> = {
   retrospectives: { fields: { type: oneOf('daily', 'weekly', 'monthly', 'yearly'), dateOrWeek: identifier, rating: oneOf(1, 2, 3, 4, 5), template, freeText: str }, required: ['type', 'dateOrWeek'] },
   dailyCheckins: { fields: { date: isDate, sleepHours: nullable(sleepHoursValue), energy: nullable(ratingValue), stress: nullable(ratingValue), mood: optionalText }, required: ['date'] },
   metrics: { fields: { name: identifier, unit: str, direction: oneOf('up', 'down', 'target'), targetValue: nullable(number), goalId: optionalId, color, order: integer(0) }, required: ['name', 'unit', 'direction', 'color', 'order'] },
+  injectionPens: { fields: {
+    drug: oneOf('semaglutide', 'tirzepatide'), name: v => typeof v === 'string' && !!v.trim() && v.length <= 80,
+    capacityMcg: integer(1, 1000000), closed: v => typeof v === 'boolean',
+  }, required: ['drug', 'name', 'capacityMcg', 'closed'] },
+  injectionEntries: { fields: {
+    penId: identifier, amountMcg: integer(1, 1000000),
+    takenAt: v => typeof v === 'string' && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v && Date.parse(v) <= Date.now(),
+  }, required: ['penId', 'amountMcg', 'takenAt'] },
   metricEntries: { fields: { metricId: identifier, date: isDate, value: number, note: optionalText }, required: ['metricId', 'date', 'value'] },
   notes: { fields: { kind: oneOf('principle', 'decision', 'insight', 'reference'), title: identifier, body: str, pinned: bool, reviewDate: nullable(isDate), decisionOutcome: optionalText, goalId: optionalId, projectId: optionalId, sourceRetro: nullable(sourceRetro) }, required: ['kind', 'title', 'body', 'pinned'] },
   people: { fields: { name: identifier, relationship: optionalText, cadenceDays: nullable(integer(1, 365)), lastContactAt: nullable(isDate), birthday: nullable(isDate), giftIdeas: optionalText, note: optionalText, order: integer(0) }, required: ['name', 'order'] },
@@ -283,7 +295,7 @@ export function validateRelationships(kind: MutationKind, value: Record<string, 
   }
 }
 
-export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'projects' | 'todos' | 'annualGoals' | 'habits' | 'metrics' | 'people' | 'subscriptions'>>> = {
+export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals' | 'categories' | 'projects' | 'todos' | 'annualGoals' | 'habits' | 'metrics' | 'people' | 'subscriptions' | 'injectionPens'>>> = {
   goals: { parentId: 'goals' },
   projects: { goalId: 'goals', categoryId: 'categories' },
   todos: { parentGoalId: 'goals', categoryId: 'categories', projectId: 'projects' },
@@ -292,6 +304,7 @@ export const referenceFields: Partial<Record<MutationKind, Record<string, 'goals
   annualGoals: { parentGoalId: 'goals' },
   habitLogs: { habitId: 'habits' },
   metrics: { goalId: 'goals' },
+  injectionEntries: { penId: 'injectionPens' },
   metricEntries: { metricId: 'metrics' },
   notes: { goalId: 'goals', projectId: 'projects' },
   lifeEvents: { personId: 'people', projectId: 'projects', goalId: 'goals' },

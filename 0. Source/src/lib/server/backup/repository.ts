@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
 import type { BackupCollection } from '@/lib/backup';
 import { ValidationError } from '@/lib/validation/mutations';
+import { usedByPen } from '@/lib/injections';
 import { DEFAULT_SETTINGS } from '@/lib/settings';
 import type { DatabaseSession } from '../db/connection';
 import * as schema from '../db/schema';
@@ -9,6 +10,7 @@ import { actualAdjustments, automaticMonthlyActuals, preserveAnnualActualBaselin
 
 const tables = {
   goals: schema.goals, categories: schema.categories, projects: schema.projects,
+  injectionPens: schema.injectionPens, injectionEntries: schema.injectionEntries,
   people: schema.people, metrics: schema.metrics, metricEntries: schema.metricEntries,
   dailyCheckins: schema.dailyCheckins, notes: schema.binderNotes, lifeEvents: schema.lifeEvents,
   subscriptions: schema.subscriptions, financeTransactions: schema.financeTransactions, financeBudgets: schema.financeBudgets,
@@ -57,6 +59,7 @@ export class UserBackupRepository implements BackupLookup {
     } : null;
     return {
       goals: this.list('goals'), categories: this.list('categories'), projects: this.list('projects'),
+      injectionPens: this.list('injectionPens'), injectionEntries: this.list('injectionEntries'),
       people: this.list('people'), metrics: this.list('metrics'), metricEntries: this.list('metricEntries'),
       dailyCheckins: this.list('dailyCheckins'), notes: this.list('notes'), lifeEvents: this.list('lifeEvents'),
       subscriptions: this.list('subscriptions'),
@@ -78,7 +81,7 @@ export class UserBackupRepository implements BackupLookup {
     // Do not let undo restore rows removed by a later full replacement.
     this.db.delete(schema.todoTrash).where(eq(schema.todoTrash.userId, this.userId)).run();
     const order: BackupCollection[] = [
-      'metricEntries', 'metrics', 'financeTransactions', 'financeBudgets', 'lifeEvents', 'subscriptions', 'people', 'notes', 'dailyCheckins',
+      'injectionEntries', 'injectionPens', 'metricEntries', 'metrics', 'financeTransactions', 'financeBudgets', 'lifeEvents', 'subscriptions', 'people', 'notes', 'dailyCheckins',
       'habitLogs', 'habits', 'annualGoals', 'todos', 'projects', 'focusNotes',
       'retrospectives', 'timeBlocks', 'books', 'weeklyTemplates', 'categories', 'goals',
     ];
@@ -96,6 +99,15 @@ export class UserBackupRepository implements BackupLookup {
     for (let offset = 0; offset < incoming.length; offset += batchSize) {
       const batch = incoming.slice(offset, offset + batchSize).map(row => ({ ...row, userId: this.userId }));
       this.db.insert(table).values(batch as typeof table.$inferInsert[]).onConflictDoNothing(collection === 'timeBlocks' ? { target: table.id } : undefined).run();
+    }
+  }
+
+  checkInjectionInventory(imported: Record<string, unknown>[]): void {
+    const incoming = new Map(imported.map(pen => [pen.id, pen.drug]));
+    const used = usedByPen(this.list('injectionEntries'));
+    for (const pen of this.list('injectionPens')) {
+      if (incoming.has(pen.id) && incoming.get(pen.id) !== pen.drug) throw new ValidationError('같은 펜 ID에 서로 다른 약물이 지정됐습니다.');
+      if ((used.get(pen.id) ?? 0) > pen.capacityMcg) throw new ValidationError('주사 기록 합계가 펜 총량을 초과합니다.');
     }
   }
 

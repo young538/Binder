@@ -82,6 +82,10 @@ Google 일정 수정은 최신 로컬 내용을 저장하고 쓰기 가능한 �
 
 이월은 현재 사용자의 지정 날짜 day TODO 중 선택 ID의 pending·postponed만 다음 날 끝으로 이동합니다. ID·카테고리·목표·상태는 유지하고 시간블록은 옮기지 않습니다. IDs는 1~500개이며 재요청 시 이미 이동한 행은 0개 처리합니다. 삭제·복원 재요청도 중복 행을 만들지 않습니다. 복원 시 삭제된 카테고리·목표 연결은 null이 됩니다.
 
+## 주사 기록
+
+`GET /api/injections`는 현재 사용자의 펜과 투여 이력을 반환합니다. `PUT /api/injections/pens/[id]`는 약물·펜 이름·총량(capacityMcg)·사용 종료(closed)를, `PUT /api/injections/entries/[id]`는 penId·UTC 일시(takenAt)·실제 투여량(amountMcg)을 저장합니다. mg 입력값은 정수 마이크로그램으로 저장합니다. 생성 시 클라이언트가 동일 요청에 같은 ID를 사용합니다. 수정과 DELETE는 조회한 updatedAt을 X-Record-Version 헤더로 보내며 충돌 시 409를 반환합니다. 주사 기록이 있는 펜은 삭제할 수 없습니다. 사용자 내보내기 v19에서 injectionPens와 injectionEntries를 지원합니다.
+
 ## 전체 검색
 
 수집함 TODO도 동일한 검색에 포함되며 결과는 `/inbox`로 이동합니다.
@@ -134,9 +138,10 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 ```json
 {
-  "version": 18,
+  "version": 19,
   "generatedAt": "ISO 시각",
   "goals": [], "categories": [], "projects": [], "people": [], "metrics": [], "metricEntries": [],
+  "injectionPens": [], "injectionEntries": [], "financeTransactions": [], "financeBudgets": [],
   "dailyCheckins": [], "notes": [], "lifeEvents": [], "subscriptions": [], "timeBlocks": [],
   "retrospectives": [], "todos": [], "focusNotes": [],
   "annualGoals": [], "habits": [], "habitLogs": [], "books": [], "weeklyTemplates": [],

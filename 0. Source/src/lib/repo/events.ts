@@ -15,6 +15,8 @@ export type MutationResource =
   | 'settings'
   | 'weeklyTemplates'
   | 'dailyCheckins'
+  | 'injectionPens'
+  | 'injectionEntries'
   | 'metrics'
   | 'metricEntries'
   | 'notes'

@@ -1,0 +1,69 @@
+// @vitest-environment node
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import path from 'node:path';
+import { DatabaseConnection } from '@/lib/server/db/connection';
+import { InjectionRepository } from '@/lib/server/repos/injections';
+import { BackupService } from '@/lib/server/backup/service';
+import { residualTrend, type InjectionEntry } from '@/lib/injections';
+import { validateFields } from '@/lib/validation/mutations';
+
+const date = '2020-01-01T00:00:00.000Z';
+const pen = { name: '테스트 펜', drug: 'semaglutide' as const, capacityMcg: 1000, closed: false };
+const dose = { penId: 'p', amountMcg: 350, takenAt: date };
+let connection: DatabaseConnection;
+let repo: InjectionRepository;
+beforeEach(() => {
+  connection = new DatabaseConnection({ filename: () => ':memory:', migrationsFolder: path.resolve('drizzle') });
+  repo = new InjectionRepository(connection.get(), 'a');
+});
+afterEach(() => connection.close());
+
+describe('injection journal', () => {
+  it('keeps retries, corrections, closure and remaining inventory consistent', () => {
+    const p = repo.savePen('p', pen, null);
+    const first = repo.saveEntry('a1', dose, null);
+    repo.saveEntry('a1', dose, null);
+    expect(repo.journal().entries).toHaveLength(1);
+    repo.saveEntry('a2', { ...dose, amountMcg: 650 }, null);
+    expect(() => repo.saveEntry('a3', dose, null)).toThrow();
+    expect(() => repo.savePen('p', { ...pen, drug: 'tirzepatide' }, p.updatedAt)).toThrow();
+    const changed = repo.saveEntry('a1', { ...dose, amountMcg: 125 }, first.updatedAt);
+    expect(() => repo.saveEntry('a1', dose, first.updatedAt)).toThrow();
+    expect(() => repo.remove('entries', 'a1', first.updatedAt)).toThrow();
+    repo.savePen('p', { ...pen, closed: true }, p.updatedAt);
+    expect(() => repo.saveEntry('a3', { ...dose, amountMcg: 10 }, null)).toThrow();
+    repo.remove('entries', 'a1', changed.updatedAt);
+    expect(repo.journal().entries).toHaveLength(1);
+  });
+
+  it('isolates accounts and rolls back an import that exceeds capacity', () => {
+    const p = repo.savePen('p', pen, null);
+    const e = repo.saveEntry('e', dose, null);
+    const other = new InjectionRepository(connection.get(), 'b');
+    expect(other.journal()).toEqual({ pens: [], entries: [] });
+    expect(() => other.savePen('p', pen, p.updatedAt)).toThrow();
+    expect(() => other.saveEntry('other', dose, null)).toThrow();
+    other.remove('entries', e.id, e.updatedAt);
+    const backup = new BackupService(() => connection.get());
+    const data = backup.exportFor('a');
+    expect(() => backup.importFor('a', { mode: 'replace', data: { ...data, injectionPens: [{ ...p, capacityMcg: 1 }] } })).toThrow();
+    expect(repo.journal().entries).toEqual([e]);
+    expect(repo.journal().pens).toEqual([p]);
+  });
+
+  it('rejects fractional inventory units, ambiguous local times and future records', () => {
+    for (const invalid of [{ amountMcg: 0.6 }, { amountMcg: 0 }, { takenAt: '2020-01-01T16:00' }, { takenAt: '2999-01-01T01:00:00.000Z' }]) {
+      expect(() => validateFields('injectionEntries', { ...dose, ...invalid })).toThrow();
+    }
+  });
+
+  it.each([['semaglutide', 7], ['tirzepatide', 5]] as const)('preserves the historical baseline and half-life for %s', (drug, days) => {
+    const end = Date.parse(date) + days * 86400000;
+    const rows = [{ ...dose } as InjectionEntry];
+    expect(residualTrend(rows, drug, end, 1).at(-1)?.value).toBeCloseTo(50);
+    expect(residualTrend(rows, drug, end, 28).at(-1)?.value).toBeCloseTo(50);
+    const repeated = residualTrend([...rows, { ...rows[0], takenAt: new Date(end).toISOString() }], drug, end, 28);
+    expect(repeated.at(-2)?.value).toBeCloseTo(100 / 3);
+    expect(repeated.at(-1)?.value).toBe(100);
+  });
+});

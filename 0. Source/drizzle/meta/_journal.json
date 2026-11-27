@@ -134,6 +134,13 @@
       "when": 1795661048815,
       "tag": "0018_durable-sync-and-reference-repair",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1795759327102,
+      "tag": "0019_injection_journal",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,8 @@ const fixture = () => ({
   people: [{ id: 'person', name: '민수', relationship: '친구', cadenceDays: 30, lastContactAt: '2026-10-20', birthday: '1990-05-05', giftIdeas: '커피', note: '메모', order: 0, ...times }],
   metrics: [{ id: 'metric', name: '체중', unit: 'kg', direction: 'down', targetValue: 70, goalId: 'goal', color: '#2563eb', order: 0, ...times }],
   metricEntries: [{ id: 'entry', metricId: 'metric', date: '2026-10-29', value: 73.5, note: '아침', ...times }],
+  injectionPens: [{ id: 'pen', drug: 'semaglutide', name: '펜', capacityMcg: 1000, closed: false, ...times }],
+  injectionEntries: [{ id: 'dose', penId: 'pen', takenAt: '2020-01-01T00:00:00.000Z', amountMcg: 100, ...times }],
   dailyCheckins: [{ id: 'checkin', date: '2026-10-29', sleepHours: 7.5, energy: 4, stress: 2, mood: '좋음', ...times }],
   notes: [{ id: 'binderNote', kind: 'principle', title: '원칙', body: '본문', pinned: true, reviewDate: null, decisionOutcome: null, goalId: 'goal', projectId: 'project', sourceRetro: null, ...times }],
   lifeEvents: [{ id: 'event', title: '기념일', date: '2026-10-29', endDate: null, kind: 'anniversary', allDay: true, startMin: null, endMin: null, color: null, personId: 'person', projectId: 'project', goalId: 'goal', externalUid: null, googleCalendarId: null, googleEventId: null, googleUpdatedAt: null, note: '메모', ...times }],
@@ -61,7 +63,7 @@ describe('backup service transactions and account boundaries', () => {
     const first = backups.exportFor('a');
     expect(first).not.toHaveProperty('googleCalendarConnections');
     expect(JSON.stringify(first)).not.toContain('enc-secret-oauth-token');
-    expect(first.version).toBe(18);
+    expect(first.version).toBe(19);
     expect(first.generatedAt).toBe(now);
     expect(first.annualGoals[0].target).toBe(365);
     expect(first.annualGoals[0].monthlyActualAdjustments).toHaveLength(12);

@@ -13,7 +13,7 @@ export class BackupService {
 
   exportFor(userId: string) {
     return this.database().transaction(tx => ({
-      version: 18 as const,
+      version: 19 as const,
       generatedAt: this.now().toISOString(),
       ...new UserBackupRepository(tx, userId).exportData(),
     }));
@@ -33,6 +33,7 @@ export class BackupService {
         repository.insert(name, rows);
         counts[name] = rows.length;
       }
+      if (data.injectionEntries?.length || data.injectionPens?.length) repository.checkInjectionInventory(data.injectionPens ?? []);
       if (data.timeBlocks?.length) repository.checkPlanLinks();
       repository.reconcileAnnualGoals();
       if (data.settings) {

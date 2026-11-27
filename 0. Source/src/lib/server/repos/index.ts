@@ -18,6 +18,7 @@ import { InsightsRepository } from './insights';
 import { MorningBootRepository } from './morningBoot';
 import { EveningShutdownRepository } from './eveningShutdown';
 import { DailyCheckinRepository } from './dailyCheckins';
+import { InjectionRepository } from './injections';
 import { MetricRepository } from './metrics';
 import { NoteRepository } from './notes';
 import { PersonRepository } from './people';
@@ -47,6 +48,7 @@ export class UserRepositories {
   readonly morningBoot: MorningBootRepository;
   readonly eveningShutdown: EveningShutdownRepository;
   readonly dailyCheckins: DailyCheckinRepository;
+  readonly injections: InjectionRepository;
   readonly metrics: MetricRepository;
   readonly notes: NoteRepository;
   readonly people: PersonRepository;
@@ -75,6 +77,7 @@ export class UserRepositories {
     this.morningBoot = new MorningBootRepository(database, userId);
     this.eveningShutdown = new EveningShutdownRepository(database, userId);
     this.dailyCheckins = new DailyCheckinRepository(database, userId);
+    this.injections = new InjectionRepository(database, userId);
     this.metrics = new MetricRepository(database, userId);
     this.notes = new NoteRepository(database, userId);
     this.people = new PersonRepository(database, userId);

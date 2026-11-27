@@ -2,6 +2,29 @@ import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from
 import { PENDING_ADMIN_USER_ID } from './constants';
 import type { GoogleCalendarInfo, GoogleTaskListInfo, Todo, TodoRepeatRule, RetroSource, WeeklyTemplateBlock } from '@/lib/types';
 
+import type { Drug } from '@/lib/injections';
+
+export const injectionPens = sqliteTable('injection_pens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  drug: text('drug').$type<Drug>().notNull(),
+  name: text('name').notNull(),
+  capacityMcg: integer('capacity_mcg').notNull(),
+  closed: integer('closed', { mode: 'boolean' }).notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [index('injection_pens_owner').on(t.userId)]);
+
+export const injectionEntries = sqliteTable('injection_entries', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  penId: text('pen_id').notNull(),
+  takenAt: text('taken_at').notNull(),
+  amountMcg: integer('amount_mcg').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, t => [index('injection_entries_owner_pen').on(t.userId, t.penId)]);
+
 // Users — auth identities. Seeded from APP_USERNAME/APP_PASSWORD_HASH on first boot.
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
