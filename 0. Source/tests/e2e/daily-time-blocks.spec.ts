@@ -25,12 +25,14 @@ for (const width of [1280, 390]) {
 
     // Both daily views must still show the event if the independent marker request fails.
     await page.route('**/api/annual-goals?*', route => route.fulfill({ status: 503, json: { error: 'test' } }));
-    await page.route('**/api/events?startDate=2026-09-07&endDate=2026-09-07', route => route.fulfill({ json: [{
+    await page.route('**/api/events?startDate=2026-09-06&endDate=2026-09-08', route => route.fulfill({ json: [{
       id: 'shared-event', title: '일간 회의', kind: 'event', date: '2026-09-07', allDay: false, startMin: 590, endMin: 620,
     }] }));
     await page.goto('/daily/2026-09-07');
     await page.getByRole('button', { name: '목록', exact: true }).click();
-    await expect(page.getByLabel('오늘 일정 및 마감').getByText('일간 회의', { exact: false })).toBeVisible();
+    const summary = page.getByRole('article', { name: '2026-09-07' });
+    await expect(summary.getByRole('link', { name: /일간 회의/ })).toBeVisible();
+    await expect(summary.getByRole('listitem').filter({ hasText: '일간 회의' })).toContainText('09:50');
     await expect(page.getByRole('region', { name: '하루 계획과 실제', exact: true }).getByText('일간 회의', { exact: false })).toBeVisible();
     const plans = page.getByRole('region', { name: '하루 계획', exact: true });
     const actuals = page.getByRole('region', { name: '실제 진행', exact: true });

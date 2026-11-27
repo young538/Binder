@@ -10,24 +10,19 @@ import {
   Settings2,
 } from 'lucide-react';
 import {
-  addDays,
   format,
   parseISO,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { buildCalendarMarkers } from '@/lib/calendarMarkers';
-import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
-import { listByYear as listAnnualGoalsByYear } from '@/lib/repo/annualGoals';
-import { listLifeEvents } from '@/lib/repo/lifeEvents';
-import { listPeople } from '@/lib/repo/people';
-import { listSubscriptions } from '@/lib/repo/subscriptions';
 import { toIsoDate } from '@/lib/utils/date';
 import {
   habitScheduleLabel,
 } from '@/lib/utils/habitSchedule';
 import { tint } from '@/lib/utils/color';
 import { useBinder } from '@/store';
-import { TodoListSection } from '@/components/common/TodoListSection';
+import { TodoListContent } from '@/components/common/TodoListSection';
+import { DailyAgenda } from './DailyAgenda';
+import { useDailyAgenda } from './useDailyAgenda';
 import { useDailyTracker } from './useDailyTracker';
 import { HabitCheckRow } from './HabitCheckRow';
 import { DailyCheckinBar } from '@/components/daily/DailyCheckinBar';
@@ -56,7 +51,7 @@ const LoadingRows = () => (
 export const DailyPage = (props: Props) => <DailyPageSession key={props.date} {...props} />;
 
 const DailyPageSession = ({ date }: Props) => {
-  const { categories, projects } = useBinder();
+  const categories = useBinder(state => state.categories);
   const selectedDate = useMemo(() => parseISO(date), [date]);
   const today = toIsoDate(new Date());
   const [routineOpen, setRoutineOpen] = useState(false);
@@ -64,39 +59,8 @@ const DailyPageSession = ({ date }: Props) => {
     fixedHabits, flexibleHabits, completedToday, fixedDone, fixedPercent,
     toggle, addTrackerPreset, flexibleProgress } = useDailyTracker(date, categories);
 
-  const { value: dayEvents } = useAsyncResource(
-    `day-events:${date}`,
-    () => listLifeEvents({ startDate: date, endDate: date }),
-    [], ['lifeEvents'],
-  );
-  const { value: dayExtras } = useAsyncResource(
-    `daily-markers:${date}`,
-    async () => {
-      const [annualGoals, people, subscriptions] = await Promise.all([
-        listAnnualGoalsByYear(date.slice(0, 4)),
-        listPeople(),
-        listSubscriptions(),
-      ]);
-      return { annualGoals, people, subscriptions };
-    },
-    { annualGoals: [], people: [], subscriptions: [] },
-    ['annualGoals', 'people', 'subscriptions'],
-  );
-
-  const dayMarkers = useMemo(
-    () =>
-      buildCalendarMarkers(date, date, {
-        projects,
-        annualGoals: dayExtras.annualGoals,
-        lifeEvents: dayEvents,
-        people: dayExtras.people,
-        subscriptions: dayExtras.subscriptions,
-      }).get(date) ?? [],
-    [date, projects, dayExtras, dayEvents],
-  );
-
-  const previousDate = toIsoDate(addDays(selectedDate, -1));
-  const nextDate = toIsoDate(addDays(selectedDate, 1));
+  const agenda = useDailyAgenda(date);
+  const [previous, selected, next] = agenda.days;
   const isToday = date === today;
 
   return (
@@ -105,7 +69,7 @@ const DailyPageSession = ({ date }: Props) => {
         <header className="mb-5 rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:px-6">
           <div className="flex items-center gap-3">
             <Link
-              href={`/daily/${previousDate}`}
+              href={`/daily/${previous.date}`}
               aria-label="이전 날"
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
@@ -121,26 +85,13 @@ const DailyPageSession = ({ date }: Props) => {
               <div className="mt-1 text-xs text-zinc-500">{format(selectedDate, 'yyyy년')}</div>
             </div>
             <Link
-              href={`/daily/${nextDate}`}
+              href={`/daily/${next.date}`}
               aria-label="다음 날"
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               <ChevronRight size={20} />
             </Link>
           </div>
-          {dayMarkers.length > 0 && (
-            <div className="mt-3 flex flex-wrap justify-center gap-1.5" aria-label="오늘 일정 및 마감">
-              {dayMarkers.map(marker => (
-                <Link
-                  key={marker.id}
-                  href={marker.href}
-                  className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300"
-                >
-                  {marker.label}
-                </Link>
-              ))}
-            </div>
-          )}
           {!isToday && (
             <div className="mt-3 flex justify-center">
               <Link
@@ -151,13 +102,16 @@ const DailyPageSession = ({ date }: Props) => {
               </Link>
             </div>
           )}
+          <DailyAgenda days={agenda.days} today={today} loading={agenda.loading}
+            onRetry={agenda.failed.length ? () => agenda.failed.forEach(resource => void resource.refresh(true)) : undefined} />
         </header>
 
         {isToday && <MorningBootBanner date={date} />}
 
         <DailyCheckinBar key={`checkin-${date}`} date={date} />
 
-        <DailyTimeBlocks key={date} date={date} dayEvents={dayEvents} />
+        <DailyTimeBlocks date={date} dayEvents={agenda.events} blocks={selected.blocks}
+          loading={agenda.blocks.loading} loadError={Boolean(agenda.blocks.error)} onRetry={() => void agenda.blocks.refresh(true)} />
 
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.85fr)]">
           <div className="space-y-5">
@@ -346,7 +300,7 @@ const DailyPageSession = ({ date }: Props) => {
           </div>
 
           <aside className="space-y-5">
-            <TodoListSection scope="day" scopeKey={date} title="오늘 할 일" />
+            <TodoListContent scope="day" scopeKey={date} title={isToday ? '오늘 할 일' : '이날 할 일'} todos={selected.todos} />
             <DailyReading key={`reading-${date}`} date={date} />
           </aside>
         </div>

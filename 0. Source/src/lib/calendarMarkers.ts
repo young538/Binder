@@ -11,6 +11,7 @@ export interface CalendarMarker {
   label: string;
   href: string;
   color?: string | null;
+  startMin?: number | null;
 }
 
 export function buildCalendarMarkers(
@@ -87,6 +88,7 @@ export function buildCalendarMarkers(
         date: dateStr,
         kind: ev.kind === 'dday' ? 'dday' : 'event',
         label: ev.kind === 'dday' ? `📌 ${ev.title}` : `📅 ${ev.title}`,
+        startMin: dateStr === ev.date && !ev.allDay ? ev.startMin : undefined,
         href: '/life?tab=events',
         color: ev.color,
       });

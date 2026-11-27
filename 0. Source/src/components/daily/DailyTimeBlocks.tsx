@@ -4,9 +4,8 @@ import { useMemo, useState } from 'react';
 import { CheckCheck, Plus, RotateCcw } from 'lucide-react';
 import { BlockEditor } from '@/components/week/BlockEditor';
 import { TimeGrid } from '@/components/common/TimeGrid';
-import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { unconfirmedPlansForDay } from '@/lib/time-grid/confirmation';
-import { confirmPlansAsActual, getTimeBlocksInRange } from '@/lib/repo/timeBlocks';
+import { confirmPlansAsActual } from '@/lib/repo/timeBlocks';
 import { minutesToTimeStr } from '@/lib/utils/date';
 import type { LifeEvent, TimeBlock, TimeBlockKind } from '@/lib/types';
 import { useBinder } from '@/store';
@@ -14,6 +13,10 @@ import { useBinder } from '@/store';
 interface Props {
   date: string;
   dayEvents: LifeEvent[];
+  blocks: TimeBlock[];
+  loading: boolean;
+  loadError: boolean;
+  onRetry: () => void;
 }
 
 interface EditorState {
@@ -36,10 +39,7 @@ const formatDuration = (minutes: number) => {
   return rest ? `${hours}시간 ${rest}분` : `${hours}시간`;
 };
 
-const sortBlocks = (a: TimeBlock, b: TimeBlock) =>
-  a.startMin - b.startMin || a.endMin - b.endMin || a.id.localeCompare(b.id);
-
-export const DailyTimeBlocks = ({ date, dayEvents }: Props) => {
+export const DailyTimeBlocks = ({ date, dayEvents, blocks, loading, loadError, onRetry }: Props) => {
   const dates = useMemo(() => {
     const [year, month, day] = date.split('-').map(Number);
     return [new Date(year, month - 1, day)];
@@ -49,11 +49,6 @@ export const DailyTimeBlocks = ({ date, dayEvents }: Props) => {
   const [view, setView] = useState<'timeline' | 'list'>('timeline');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState('');
-  const { value: blocks, loading, error: loadError, refresh: load } = useAsyncResource(
-    date,
-    () => getTimeBlocksInRange(date, date).then(rows => rows.filter(block => block.date === date).sort(sortBlocks)),
-    [], ['timeBlocks'],
-  );
   const error = loadError ? '하루 계획과 실제 기록을 불러오지 못했어요. 다시 시도해 주세요.' : '';
 
   // Older imported rows may not have kind; retain the historical plan default.
@@ -240,7 +235,7 @@ export const DailyTimeBlocks = ({ date, dayEvents }: Props) => {
       ) : error ? (
         <div role="alert" className="flex items-center justify-center gap-3 px-5 py-8 text-sm text-rose-600 dark:text-rose-400">
           <span>{error}</span>
-          <button type="button" onClick={() => void load(true)} className="inline-flex items-center gap-1 font-semibold underline">
+          <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 font-semibold underline">
             <RotateCcw size={14} /> 다시 시도
           </button>
         </div>

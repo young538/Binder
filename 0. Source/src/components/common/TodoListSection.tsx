@@ -26,29 +26,29 @@ interface Props {
   title: string;
 }
 
-export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
+export const TodoListSection = (props: Props) => {
+  const { scope, scopeKey } = props;
+  const { value: todos } = useAsyncResource(
+    `${scope}:${scopeKey}`, () => listByScope(scope, scopeKey), [], ['todos'],
+  );
+  return <TodoListContent {...props} todos={todos} />;
+};
+
+export const TodoListContent = ({ scope, scopeKey, title, todos }: Props & { todos: Todo[] }) => {
   const { goals, categories, projects = [] } = useBinder();
   const [adding, setAdding] = useState(false);
 
-  const { value: todos, refresh } = useAsyncResource(
-    `${scope}:${scopeKey}`, () => listByScope(scope, scopeKey), [], ['todos'],
-  );
-  const reload = () => refresh();
-
   const editTitle = async (t: Todo, nextTitle: string) => {
     await updateTodo(t.id, { title: nextTitle });
-    reload();
   };
 
   const setCategory = async (id: string, categoryId: string | null) => {
     await updateTodo(id, { categoryId });
-    reload();
   };
 
   const remove = async (id: string) => {
     if (!confirm('삭제할까요?')) return;
     await deleteTodo(id);
-    reload();
   };
 
   const goalTitle = (id?: string | null) =>
@@ -93,7 +93,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
                   <TodoStatusButton
                     status={t.status}
                     onChange={(next) => {
-                      setStatus(t.id, next).then(reload);
+                      void setStatus(t.id, next);
                     }}
                   />
                 </div>
@@ -171,7 +171,7 @@ export const TodoListSection = ({ scope, scopeKey, title }: Props) => {
           onCreate={(title, requestKey) => createTodo({
             title, scope, scopeKey, status: 'pending', order: todos.length,
           }, requestKey)}
-          onDone={() => { setAdding(false); void reload(); }}
+          onDone={() => setAdding(false)}
           className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       ) : (

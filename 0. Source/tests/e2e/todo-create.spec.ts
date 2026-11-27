@@ -20,7 +20,7 @@ for (const scenario of cases) {
       await page.getByRole('button', { name: '2026-10-29 할 일', exact: true }).click();
       await page.getByRole('button', { name: 'TODO 추가', exact: true }).click();
     } else if (scenario.path.startsWith('/daily')) {
-      await page.locator('section').filter({ has: page.getByRole('heading', { name: '오늘 할 일', exact: true }) })
+      await page.locator('section').filter({ has: page.getByRole('heading', { name: /^(오늘|이날) 할 일$/ }) })
         .getByRole('button', { name: '추가', exact: true }).click();
     } else {
       await page.getByRole('button', { name: '추가', exact: true }).first().click();
