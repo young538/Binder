@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { getDb, closeDb, schema } from '@/lib/server/db/client';
 import { validateFields, validateRelationships } from '@/lib/server/validation';
 import { POST as createTodoRoute } from '@/app/api/todos/route';
-import { PATCH as patchTodoRoute } from '@/app/api/todos/[id]/route';
+import { GET as getTodoRoute, PATCH as patchTodoRoute } from '@/app/api/todos/[id]/route';
 import { POST as createBlockRoute } from '@/app/api/time-blocks/route';
 import { PATCH as patchBlockRoute } from '@/app/api/time-blocks/[id]/route';
 import { POST as logHabitRoute } from '@/app/api/habit-logs/route';
@@ -48,6 +48,16 @@ describe('mutation request boundary', () => {
   it.each([null, [], 'body', { ...todo, id: 'injected' }, { ...todo, userId: 'other' }, { ...todo, createdAt: now }, { ...todo, updatedAt: now }, { ...todo, googleTaskId: 'gt-1' }, { ...todo, googleTaskListId: 'gl-1' }, { ...todo, googleTaskUpdatedAt: now }, { ...todo, surprise: 1 }, { ...todo, status: 'bad' }, { ...todo, order: 0.5 }, { ...todo, priority: 4 }, { ...todo, scopeKey: '2026-02-30' }])('rejects malformed create payload %# without writing', async body => {
     expect((await createTodoRoute(request(body))).status).toBe(400);
     expect(getDb().select().from(schema.todos).all()).toHaveLength(0);
+  });
+
+  it('loads a linked TODO only for its owner', async () => {
+    const created = await (await createTodoRoute(request(todo))).json();
+    const read = () => getTodoRoute(new Request('http://localhost/api/todos/' + created.id), ctx(created.id));
+    const response = await read();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ...todo, id: created.id, userId: auth.userId });
+    auth.userId = 'other-user';
+    expect((await read()).status).toBe(404);
   });
 
   it('returns 400 for malformed JSON', async () => {

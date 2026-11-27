@@ -45,6 +45,7 @@ describe('life OS phase 1-4 domains', () => {
     const actual = { ...plan, kind: 'actual' as const, sourcePlanId: one.id, endMin: 630, text: 'Edited' };
     const saved = await a.timeBlocks.create(actual);
     expect((await a.timeBlocks.create(actual)).id).toBe(saved.id);
+    await expect(a.timeBlocks.create({ ...actual, text: 'New draft' })).rejects.toMatchObject({ status: 409 });
     expect(a.eveningShutdown.snapshot(plan.date).unconfirmedPlans.map(p => p.id)).toEqual([two.id]);
     expect(a.eveningShutdown.apply({ date: plan.date, confirmBlockIds: [two.id] }).confirmedBlocks).toBe(1);
     expect(a.timeBlocks.confirmPlansAsActual(plan.date)).toEqual({ created: 0 });

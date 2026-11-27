@@ -1,5 +1,11 @@
 type Transport = typeof fetch;
 
+export class HttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
 /** Same-origin JSON transport with injectable network and authentication handling. */
 export class HttpClient {
   constructor(
@@ -24,7 +30,7 @@ export class HttpClient {
         const json = await response.json();
         if (json?.error) message = `${method} ${url}: ${json.error}`;
       } catch { /* Preserve the HTTP status when the response is not JSON. */ }
-      throw new Error(message);
+      throw new HttpError(response.status, message);
     }
     if (response.status === 204) return undefined as T;
     return await response.json() as T;

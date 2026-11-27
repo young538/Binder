@@ -261,6 +261,7 @@ function DayRecords({ day: { date, blocks }, dayEvents, label, showList }: DayRe
             todoId: editor.todoId,
           }}
           existing={editor.existing}
+          alreadyConfirmed={!!editor.existing && blocks.some(block => block.sourcePlanId === editor.existing?.id)}
           prefilledText={editor.prefilledText}
           onClose={() => setEditor(null)}
           onSaved={() => undefined}

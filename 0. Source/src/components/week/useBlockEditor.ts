@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TimeBlock, TimeBlockKind, Todo } from '@/lib/types';
 import { createTimeBlock, updateTimeBlock, deleteTimeBlock } from '@/lib/repo/timeBlocks';
-import { listByScope } from '@/lib/repo/todos';
+import { HttpError } from '@/lib/client/HttpClient';
+import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { getTodo, listByScope } from '@/lib/repo/todos';
 import { useBinder } from '@/store';
 import { minutesToTimeStr, timeStrToMinutes, snapToGrid } from '@/lib/utils/date';
 import { useLatest } from '@/lib/hooks/useLatest';
@@ -20,6 +22,7 @@ export interface BlockEditorProps {
     todoId?: string | null;
   };
   existing?: TimeBlock;
+  alreadyConfirmed?: boolean;
   prefilledTodoId?: string;
   prefilledText?: string;
   onClose: () => void;
@@ -30,6 +33,7 @@ export interface BlockEditorProps {
 export const useBlockEditor = ({
   initial,
   existing,
+  alreadyConfirmed,
   prefilledTodoId,
   prefilledText,
   onClose,
@@ -47,9 +51,8 @@ export const useBlockEditor = ({
   const [kind, setKind] = useState<TimeBlockKind>(
     existing?.kind ?? initial.kind ?? 'plan',
   );
-  const [todoId, setTodoId] = useState<string | null>(
-    existing?.todoId ?? initial.todoId ?? prefilledTodoId ?? null,
-  );
+  const originalTodoId = existing?.todoId ?? initial.todoId ?? prefilledTodoId ?? null;
+  const [todoId, setTodoId] = useState<string | null>(originalTodoId);
   const [startStr, setStartStr] = useState(
     minutesToTimeStr(existing?.startMin ?? initial.startMin),
   );
@@ -58,17 +61,18 @@ export const useBlockEditor = ({
       ? '00:00'
       : minutesToTimeStr(existing?.endMin ?? initial.endMin),
   );
-  const [dayTodos, setDayTodos] = useState<Todo[]>([]);
+  const todos = useAsyncResource<Todo[]>(`block-editor-todos:${initial.date}:${originalTodoId ?? ''}`, async () => {
+    const day = await listByScope('day', initial.date);
+    if (!originalTodoId || day.some(todo => todo.id === originalTodoId)) return day;
+    const linked = await getTodo(originalTodoId);
+    return linked ? [...day, linked] : day;
+  }, [], ['todos']);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingRef = useRef(false);
   const close = () => {
     if (!pendingRef.current) onClose();
   };
-
-  useEffect(() => {
-    listByScope('day', initial.date).then(setDayTodos);
-  }, [initial.date]);
 
   const parseTimes = () => {
     const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -81,11 +85,10 @@ export const useBlockEditor = ({
       return null;
     }
     const grid = settings?.gridMinutes === 60 ? 60 : 30;
-    const startMin = Math.max(0, Math.min(1440 - grid, snapToGrid(timeStrToMinutes(startStr), grid)));
-    const endMin = Math.max(
-      0,
-      Math.min(1440, snapToGrid(endStr === '00:00' ? 1440 : timeStrToMinutes(endStr), grid)),
-    );
+    const start = timeStrToMinutes(startStr);
+    const end = endStr === '00:00' ? 1440 : timeStrToMinutes(endStr);
+    const startMin = start === existing?.startMin ? start : Math.min(1440 - grid, snapToGrid(start, grid));
+    const endMin = end === existing?.endMin ? end : Math.min(1440, snapToGrid(end, grid));
     if (endMin <= startMin) {
       setError('종료는 시작보다 늦어야 해요.');
       return null;
@@ -96,7 +99,7 @@ export const useBlockEditor = ({
   const selectTodo = (nextTodoId: string | null) => {
     setTodoId(nextTodoId);
     if (!nextTodoId) return;
-    const t = dayTodos.find(item => item.id === nextTodoId);
+    const t = todos.value.find(item => item.id === nextTodoId);
     if (!t) return;
     if (!text) setText(t.title);
     if (!projectId && t.projectId) setProjectId(t.projectId);
@@ -152,7 +155,7 @@ export const useBlockEditor = ({
   };
 
   const confirmAsActual = async () => {
-    if (!existing || pendingRef.current) return;
+    if (!existing || alreadyConfirmed || pendingRef.current) return;
     setError(null);
     const parsed = parseTimes();
     if (!parsed) return;
@@ -173,37 +176,29 @@ export const useBlockEditor = ({
       });
       onSaved();
       onClose();
-    } catch {
-      setError('실제 기록으로 저장하지 못했어요. 다시 시도해 주세요.');
+    } catch (cause) {
+      setError(cause instanceof HttpError && cause.status === 409
+        ? '이미 확정한 기록이에요. 실제 블록에서 수정해 주세요.'
+        : '실제 기록으로 저장하지 못했어요. 다시 시도해 주세요.');
     } finally {
       pendingRef.current = false;
       setPending(false);
     }
   };
 
-  // 키보드 단축키: ESC = 취소, Enter = 저장.
-  // save/onClose 는 매 렌더 새로 만들어지므로 ref 로 latest 유지 →
-  // useEffect 는 [] 한 번만 등록/해제.
-  const saveRef = useLatest(save);
   const closeRef = useLatest(close);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         closeRef.current();
-        return;
-      }
-      if (e.key === 'Enter') {
-        if (e.target instanceof HTMLTextAreaElement) return;
-        if (e.isComposing) return;
-        e.preventDefault();
-        saveRef.current();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [saveRef, closeRef]);
+  }, [closeRef]);
 
   const remove = async () => {
     if (!existing || pendingRef.current) return;
@@ -240,7 +235,7 @@ export const useBlockEditor = ({
     setStartStr,
     endStr,
     setEndStr,
-    dayTodos,
+    todos,
     projects,
     pending,
     error,

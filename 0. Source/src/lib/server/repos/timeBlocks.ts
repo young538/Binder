@@ -57,9 +57,15 @@ export class TimeBlockRepository {
           eq(timeBlocks.id, planId), eq(timeBlocks.date, data.date), eq(timeBlocks.kind, 'plan'))).get();
         if (!plan || data.kind !== 'actual') throw new DomainError('원본 계획을 찾을 수 없습니다.', 400);
         const created = recordPlanActual(tx, plan as TimeBlock, now, data);
-        return created ?? tx.select().from(timeBlocks).where(and(
+        if (created) return created;
+        const previous = tx.select().from(timeBlocks).where(and(
           eq(timeBlocks.userId, userId), eq(timeBlocks.sourcePlanId, planId),
         )).get() as TimeBlock;
+        const fields = ['text', 'startMin', 'endMin', 'categoryId', 'goalId', 'projectId', 'todoId'] as const;
+        if (fields.some(field => (previous[field] ?? null) !== (data[field] ?? null))) {
+          throw new DomainError('이미 확정한 기록이에요. 실제 블록에서 수정해 주세요.', 409);
+        }
+        return previous;
       }, { behavior: 'immediate' });
     }
     const row: TimeBlock = {

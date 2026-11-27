@@ -561,6 +561,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitTo
             todoId: editor.prefilledTodoId,
           }}
           existing={editor.existing}
+          alreadyConfirmed={!!editor.existing && blocks.some(block => block.sourcePlanId === editor.existing?.id)}
           prefilledTodoId={editor.prefilledTodoId}
           prefilledText={editor.prefilledText}
           onClose={closeEditor}

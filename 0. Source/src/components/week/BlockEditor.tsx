@@ -1,6 +1,6 @@
 'use client';
 import { useId } from 'react';
-import { X, Trash2, Link2, Copy, CheckCircle2 } from 'lucide-react';
+import { X, Trash2, Copy, CheckCircle2 } from 'lucide-react';
 import { minutesToTimeStr } from '@/lib/utils/date';
 import { GoalPicker } from '@/components/common/GoalPicker';
 import { useBlockEditor, type BlockEditorProps } from './useBlockEditor';
@@ -28,7 +28,7 @@ export const BlockEditor = (props: BlockEditorProps) => {
     setStartStr,
     endStr,
     setEndStr,
-    dayTodos,
+    todos,
     projects,
     pending,
     error,
@@ -139,6 +139,11 @@ export const BlockEditor = (props: BlockEditorProps) => {
               placeholder="내용"
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key !== 'Enter' || e.defaultPrevented || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+                e.preventDefault();
+                if (!e.repeat) void save();
+              }}
               autoFocus
               className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -178,23 +183,26 @@ export const BlockEditor = (props: BlockEditorProps) => {
               TODO 연결 (이 날의 할 일)
             </label>
             <select
+              aria-label="연결 TODO"
               value={todoId ?? ''}
               onChange={(e) => selectTodo(e.target.value || null)}
               className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">(연결 없음)</option>
-              {dayTodos.map((t) => (
+              {todoId && !todos.value.some(todo => todo.id === todoId) && (
+                <option value={todoId}>{todos.loading ? '연결한 TODO 불러오는 중…' : '연결한 TODO를 찾을 수 없어요'}</option>
+              )}
+              {todos.value.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.status === 'done' ? '✓ ' : ''}
                   {t.title || '(제목 없음)'}
                 </option>
               ))}
             </select>
-            {todoId && (
-              <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-600">
-                <Link2 size={12} />
-                <span>{dayTodos.find((t) => t.id === todoId)?.title ?? '...'}</span>
-              </div>
+            {!!todos.error && (
+              <button type="button" className="mt-1 text-xs underline" onClick={() => void todos.refresh(true)}>
+                TODO 목록을 불러오지 못했어요. 다시 시도
+              </button>
             )}
           </div>
 
@@ -243,10 +251,10 @@ export const BlockEditor = (props: BlockEditorProps) => {
                 <button
                   type="button"
                   onClick={confirmAsActual}
-                  disabled={pending}
-                  className="flex items-center gap-1 px-2.5 py-2 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-sm font-medium"
+                  disabled={pending || props.alreadyConfirmed}
+                  className="flex items-center gap-1 px-2.5 py-2 disabled:opacity-60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-sm font-medium"
                 >
-                  <CheckCircle2 size={14} /> 실제로 기록
+                  <CheckCircle2 size={14} /> {props.alreadyConfirmed ? '이미 실제로 기록됨' : '실제로 기록'}
                 </button>
               )}
               {onCopyToNextDay && (

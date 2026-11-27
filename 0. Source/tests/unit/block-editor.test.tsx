@@ -46,6 +46,24 @@ describe('block editor persistence', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('saves on Enter in the content field after composition finishes', async () => {
+    render(<BlockEditor initial={initial} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const input = screen.getByPlaceholderText('내용');
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+    fireEvent.keyDown(screen.getByRole('button', { name: '취소' }), { key: 'Enter' });
+    expect(createTimeBlock).not.toHaveBeenCalled();
+    await act(async () => fireEvent.keyDown(input, { key: 'Enter' }));
+    expect(createTimeBlock).toHaveBeenCalledOnce();
+  });
+
+  it('preserves the untouched endpoint when editing times across grid intervals', async () => {
+    render(<BlockEditor initial={initial} existing={{ ...existing, startMin: 575, endMin: 635 }} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('종료 (00:00은 자정)'), { target: { value: '11:06' } });
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '저장' })));
+    expect(updateTimeBlock).toHaveBeenCalledWith(existing.id, expect.objectContaining({ startMin: 575, endMin: 660 }));
+  });
+
   it('requires real time inputs, handles midnight, and keeps snapped late starts inside the day', async () => {
     render(<BlockEditor initial={initial} onClose={vi.fn()} onSaved={vi.fn()} />);
     expect(screen.getByLabelText('종료 (00:00은 자정)')).toHaveValue('00:00');

@@ -1,4 +1,5 @@
 import { Todo, TodoScope, TodoStatus } from '../types';
+import { HttpError } from '@/lib/client/HttpClient';
 import { http } from './http';
 import { notifyMutation } from './events';
 import { useNotifications } from '@/store/notifications';
@@ -53,6 +54,15 @@ export const toggleDone = async (id: string): Promise<void> => {
   await http.post(`/api/todos/${id}/toggle-done`);
   notifyMutation('todos');
 };
+
+export async function getTodo(id: string): Promise<Todo | null> {
+  try {
+    return await http.get<Todo>(`/api/todos/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return null;
+    throw error;
+  }
+}
 
 export const listAllTodos = (): Promise<Todo[]> =>
   http.get<Todo[]>('/api/todos');
