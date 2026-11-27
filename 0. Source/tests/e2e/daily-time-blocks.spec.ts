@@ -2,6 +2,51 @@ import { expect, test } from '@playwright/test';
 import { ensureUserExists, loginAs } from './_helpers';
 
 for (const width of [1280, 390]) {
+  test(`three dates share a timeline and confirm only their own plans (${width}px)`, async ({ page }) => {
+    const username = `e2e-three-blocks-${width}`;
+    await ensureUserExists(username, 'pwTest123*');
+    await page.setViewportSize({ width, height: 900 });
+    await loginAs(page, username, 'pwTest123*');
+    const [category] = await (await page.request.get('/api/categories')).json();
+    const dates = ['2026-12-31', '2027-01-01', '2027-01-02'];
+    for (const [i, date] of dates.entries()) {
+      expect((await page.request.post('/api/time-blocks', { data: {
+        date, startMin: 540, endMin: 600, text: `작업 ${date}`, categoryId: category.id,
+        kind: i === 1 ? 'actual' : 'plan',
+      } })).ok()).toBe(true);
+    }
+    await page.goto('/daily/2027-01-01');
+    const section = page.getByRole('region', { name: '하루 계획과 실제', exact: true });
+    const grid = section.locator('[data-daily-timeline]');
+    await expect(grid.locator('[data-time-column]')).toHaveCount(6);
+    for (const [i, date] of dates.entries()) {
+      const column = grid.locator(`[data-time-column][data-date="${date}"][data-kind="${i === 1 ? 'actual' : 'plan'}"]`);
+      await expect(column.getByRole('button', { name: `작업 ${date} 블록` })).toBeVisible();
+    }
+    expect(await grid.locator('[data-time-column]').evaluateAll(cols => cols.every(col => {
+      const box = col.getBoundingClientRect();
+      return box.left >= 0 && box.right <= window.innerWidth && box.width > 0;
+    }))).toBe(true);
+    await section.screenshot({ path: `test-results/three-day-timeline-${width}.png` });
+    await section.getByRole('button', { name: '목록' }).click();
+    const [yesterday, today, tomorrow] = dates.map(date => section.getByRole('region', { name: date + ' 계획과 실제' }));
+    await expect(yesterday.getByRole('button', { name: '작업 2026-12-31 편집' })).toBeVisible();
+    await expect(today.getByRole('button', { name: '작업 2027-01-01 편집' })).toBeVisible();
+    await tomorrow.getByRole('button', { name: '계획 추가' }).click();
+    const editor = page.getByRole('dialog');
+    await expect(editor).toContainText('2027-01-02');
+    await editor.getByPlaceholder('내용').fill('내일 추가 계획');
+    await editor.getByRole('button', { name: '저장', exact: true }).click();
+    await tomorrow.getByRole('button', { name: /실제 확정 \(2\)/ }).click();
+    const actuals = tomorrow.getByRole('region', { name: '실제 진행', exact: true });
+    await expect(actuals.getByRole('button', { name: '내일 추가 계획 편집' })).toBeVisible();
+    await expect(yesterday).toContainText('계획 1시간 · 실제 0분');
+    await expect(today).toContainText('계획 0분 · 실제 1시간');
+    await page.reload();
+    await expect(grid.locator('[data-date="2027-01-02"][data-kind="actual"] [data-block]')).toHaveCount(2);
+    await expect(grid.locator('[data-date="2026-12-31"][data-kind="actual"] [data-block]')).toHaveCount(0);
+  });
+
   test(`daily plans and actuals share editable weekly records (${width}px)`, async ({ page }) => {
     test.setTimeout(90000);
     const username = `e2e-daily-time-${width}`;
@@ -34,8 +79,9 @@ for (const width of [1280, 390]) {
     await expect(summary.getByRole('link', { name: /일간 회의/ })).toBeVisible();
     await expect(summary.getByRole('listitem').filter({ hasText: '일간 회의' })).toContainText('09:50');
     await expect(page.getByRole('region', { name: '하루 계획과 실제', exact: true }).getByText('일간 회의', { exact: false })).toBeVisible();
-    const plans = page.getByRole('region', { name: '하루 계획', exact: true });
-    const actuals = page.getByRole('region', { name: '실제 진행', exact: true });
+    const selectedDay = page.getByRole('region', { name: '2026-09-07 계획과 실제', exact: true });
+    const plans = selectedDay.getByRole('region', { name: '하루 계획', exact: true });
+    const actuals = selectedDay.getByRole('region', { name: '실제 진행', exact: true });
     await plans.getByRole('button', { name: '기존 계획 편집', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByPlaceholder('내용').fill('수정한 계획');
@@ -46,14 +92,14 @@ for (const width of [1280, 390]) {
     const updatedPlan = (await (await page.request.get(range)).json()).find((block: { id: string }) => block.id === planId);
     expect(updatedPlan).toMatchObject({ startMin: 540, endMin: 600, goalId: goal.id, todoId: todo.id });
 
-    await page.getByRole('button', { name: '계획 추가', exact: true }).click();
+    await plans.getByRole('button', { name: '계획 추가', exact: true }).click();
     await dialog.getByPlaceholder('내용').fill('새 계획');
     await dialog.locator('input[type=time]').nth(0).fill('11:00');
     await dialog.locator('input[type=time]').nth(1).fill('12:00');
     await dialog.getByRole('button', { name: '저장', exact: true }).click();
     await expect(plans.getByRole('button', { name: '새 계획 편집', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: '실제 기록 추가', exact: true }).click();
+    await actuals.getByRole('button', { name: '실제 기록 추가', exact: true }).click();
     await expect(dialog.getByRole('button', { name: '실제', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await dialog.getByPlaceholder('내용').fill('실제로 진행한 업무');
     await dialog.locator('input[type=time]').nth(0).fill('23:00');
@@ -75,7 +121,7 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/daily/2026-09-08');
     await expect(page.getByRole('heading', { name: '하루 계획과 실제', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: '주간에서 수정한 계획 편집', exact: true })).toHaveCount(0);
+    await expect(page.locator(`[data-time-column][data-date="2026-09-07"] [data-block-id="${planId}"]`)).toContainText('주간에서 수정한 계획');
     await page.goto('/daily/2026-09-07');
     await page.getByRole('button', { name: '목록', exact: true }).click();
     await expect(plans.getByRole('button', { name: '주간에서 수정한 계획 편집', exact: true })).toBeVisible();

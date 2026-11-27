@@ -1,6 +1,6 @@
 'use client';
 
-import { addDays, parseISO } from 'date-fns';
+import { addDays, differenceInCalendarDays, parseISO } from 'date-fns';
 import { useMemo } from 'react';
 import { buildCalendarMarkers, type CalendarMarker } from '@/lib/calendarMarkers';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
@@ -19,6 +19,11 @@ export interface DailyAgendaDay {
   markers: CalendarMarker[];
   blocks: TimeBlock[];
   todos: Todo[];
+}
+
+export function getDailyDateLabel(date: string, today: string, index: number) {
+  const offset = differenceInCalendarDays(parseISO(date), parseISO(today));
+  return ['어제', '오늘', '내일'][offset + 1] ?? ['전날', '선택일', '다음 날'][index];
 }
 
 export function useDailyAgenda(date: string) {

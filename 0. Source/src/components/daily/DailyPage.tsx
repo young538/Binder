@@ -110,7 +110,7 @@ const DailyPageSession = ({ date }: Props) => {
 
         <DailyCheckinBar key={`checkin-${date}`} date={date} />
 
-        <DailyTimeBlocks date={date} dayEvents={agenda.events} blocks={selected.blocks}
+        <DailyTimeBlocks days={agenda.days} today={today} dayEvents={agenda.events}
           loading={agenda.blocks.loading} loadError={Boolean(agenda.blocks.error)} onRetry={() => void agenda.blocks.refresh(true)} />
 
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.85fr)]">

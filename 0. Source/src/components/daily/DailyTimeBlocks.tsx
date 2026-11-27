@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { format, parseISO } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { getDailyDateLabel, type DailyAgendaDay } from './useDailyAgenda';
 import { CheckCheck, Plus, RotateCcw } from 'lucide-react';
 import { BlockEditor } from '@/components/week/BlockEditor';
 import { TimeGrid } from '@/components/common/TimeGrid';
@@ -11,9 +14,9 @@ import type { LifeEvent, TimeBlock, TimeBlockKind } from '@/lib/types';
 import { useBinder } from '@/store';
 
 interface Props {
-  date: string;
+  days: DailyAgendaDay[];
+  today: string;
   dayEvents: LifeEvent[];
-  blocks: TimeBlock[];
   loading: boolean;
   loadError: boolean;
   onRetry: () => void;
@@ -39,17 +42,18 @@ const formatDuration = (minutes: number) => {
   return rest ? `${hours}시간 ${rest}분` : `${hours}시간`;
 };
 
-export const DailyTimeBlocks = ({ date, dayEvents, blocks, loading, loadError, onRetry }: Props) => {
-  const dates = useMemo(() => {
-    const [year, month, day] = date.split('-').map(Number);
-    return [new Date(year, month - 1, day)];
-  }, [date]);
+interface DayRecordsProps {
+  day: DailyAgendaDay;
+  dayEvents: LifeEvent[];
+  label: string;
+  showList: boolean;
+}
+
+function DayRecords({ day: { date, blocks }, dayEvents, label, showList }: DayRecordsProps) {
   const { categories, goals, projects, settings } = useBinder();
   const [editor, setEditor] = useState<EditorState | null>(null);
-  const [view, setView] = useState<'timeline' | 'list'>('timeline');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState('');
-  const error = loadError ? '하루 계획과 실제 기록을 불러오지 못했어요. 다시 시도해 주세요.' : '';
 
   // Older imported rows may not have kind; retain the historical plan default.
   const plans = useMemo(() => blocks.filter((block) => (block.kind ?? 'plan') === 'plan'), [blocks]);
@@ -161,7 +165,7 @@ export const DailyTimeBlocks = ({ date, dayEvents, blocks, loading, loadError, o
                     {minutesToTimeStr(block.startMin)}–{minutesToTimeStr(block.endMin)}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                    <span className="block break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">
                       {block.text || '(내용 없음)'}
                     </span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -186,90 +190,61 @@ export const DailyTimeBlocks = ({ date, dayEvents, blocks, loading, loadError, o
   };
 
   return (
-    <section aria-label="하루 계획과 실제" className="mb-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">하루 계획과 실제</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            {unconfirmedPlans.length > 0 && (
-              <button
-                type="button"
-                disabled={confirmBusy}
-                onClick={() => void handleConfirmAll()}
-                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
-              >
-                <CheckCheck size={14} />
-                {confirmBusy ? '확정 중…' : `계획 → 실제 확정 (${unconfirmedPlans.length})`}
-              </button>
-            )}
-            <div className="flex shrink-0 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800" aria-label="기록 보기 방식">
-              {(['timeline', 'list'] as const).map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={view === mode}
-                  onClick={() => setView(mode)}
-                  className={`rounded-md px-2.5 py-1 text-xs ${view === mode ? 'bg-white font-semibold text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300' : 'text-zinc-500'}`}
-                >
-                  {mode === 'timeline' ? '시간표' : '목록'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">계획과 실제 진행을 시간으로 비교해 보세요.</p>
+    <section aria-label={`${date} 계획과 실제`} className="min-w-0">
+      <div className="px-2 py-3 sm:px-4">
+        <h3 className="flex flex-col items-start gap-x-1.5 text-sm font-semibold sm:flex-row sm:flex-wrap sm:items-baseline">
+          {label}
+          <time dateTime={date} className="text-xs font-normal tabular-nums text-zinc-500">
+            {format(parseISO(date), 'M.d (EEE)', { locale: ko })}
+          </time>
+        </h3>
         <p className="mt-2 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-          계획 {formatDuration(plans.reduce((sum, block) => sum + block.endMin - block.startMin, 0))} · 실제 {formatDuration(actuals.reduce((sum, block) => sum + block.endMin - block.startMin, 0))}
+          <span className="inline-block">계획 {formatDuration(plans.reduce((sum, block) => sum + block.endMin - block.startMin, 0))}</span>
+          {' · '}
+          <span className="inline-block">실제 {formatDuration(actuals.reduce((sum, block) => sum + block.endMin - block.startMin, 0))}</span>
         </p>
         {confirmMsg && (
           <p role="status" className="mt-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             {confirmMsg}
           </p>
         )}
-      </div>
-      {loading ? (
-        <div aria-label="하루 계획과 실제를 불러오는 중" className="grid animate-pulse gap-px bg-zinc-100 md:grid-cols-2 dark:bg-zinc-800">
-          <div className="h-28 bg-white dark:bg-zinc-900" />
-          <div className="h-28 bg-white dark:bg-zinc-900" />
-        </div>
-      ) : error ? (
-        <div role="alert" className="flex items-center justify-center gap-3 px-5 py-8 text-sm text-rose-600 dark:text-rose-400">
-          <span>{error}</span>
-          <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 font-semibold underline">
-            <RotateCcw size={14} /> 다시 시도
+        {unconfirmedPlans.length > 0 && (
+          <button
+            type="button"
+            disabled={confirmBusy}
+            onClick={() => void handleConfirmAll()}
+            className="mt-2 inline-flex max-w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-1.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300 sm:px-2.5"
+          >
+            <CheckCheck size={14} className="hidden shrink-0 sm:block" />
+            <span><span className="sr-only sm:not-sr-only">계획 → </span>{confirmBusy ? '확정 중…' : `실제 확정 (${unconfirmedPlans.length})`}</span>
           </button>
-        </div>
-      ) : (
-        view === 'timeline' ? (
-          <div className="max-h-[520px] overflow-y-auto overscroll-contain" data-daily-timeline>
-            <TimeGrid key={date} dates={dates} blocks={blocks} calendarEvents={dayEvents} />
-          </div>
-        ) : (
-          <div>
-            {timedDayEvents.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-indigo-50/40 px-4 py-2.5 dark:border-zinc-800 dark:bg-indigo-950/20">
-                <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">캘린더 일정</span>
-                {timedDayEvents.map(ev => (
-                  <button
-                    key={ev.id}
-                    type="button"
-                    onClick={() => openEventAsPlan(ev)}
-                    className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:bg-zinc-900 dark:text-indigo-300"
-                  >
-                    <span>
-                      {minutesToTimeStr(ev.startMin!)}–{minutesToTimeStr(ev.endMin!)} {ev.title}
-                    </span>
-                    <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">+ 계획</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="grid divide-y divide-zinc-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-zinc-800">
-              {renderColumn('plan', '계획', plans)}
-              {renderColumn('actual', '실제 진행', actuals)}
+        )}
+      </div>
+      {showList && (
+        <div>
+          {timedDayEvents.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-indigo-50/40 px-4 py-2.5 dark:border-zinc-800 dark:bg-indigo-950/20">
+              <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">캘린더 일정</span>
+              {timedDayEvents.map(ev => (
+                <button
+                  key={ev.id}
+                  type="button"
+                  onClick={() => openEventAsPlan(ev)}
+                  className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:bg-zinc-900 dark:text-indigo-300"
+                >
+                  <span>
+                    {minutesToTimeStr(ev.startMin!)}–{minutesToTimeStr(ev.endMin!)} {ev.title}
+                  </span>
+                  <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">+ 계획</span>
+                </button>
+              ))}
             </div>
+          )}
+          <div className="grid divide-y divide-zinc-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-1 lg:divide-x-0 lg:divide-y dark:divide-zinc-800">
+            {renderColumn('plan', '계획', plans)}
+            {renderColumn('actual', '실제 진행', actuals)}
           </div>
-        )
+        </div>
       )}
       {editor && (
         <BlockEditor
@@ -293,4 +268,58 @@ export const DailyTimeBlocks = ({ date, dayEvents, blocks, loading, loadError, o
       )}
     </section>
   );
-};
+}
+
+export function DailyTimeBlocks({ days, today, dayEvents, loading, loadError, onRetry }: Props) {
+  const [view, setView] = useState<'timeline' | 'list'>('timeline');
+  const error = loadError ? '하루 계획과 실제 기록을 불러오지 못했어요. 다시 시도해 주세요.' : '';
+  return (
+    <section aria-label="하루 계획과 실제" className="mb-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">하루 계획과 실제</h2>
+        <div className="flex shrink-0 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800" aria-label="기록 보기 방식">
+          {(['timeline', 'list'] as const).map(mode => (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={view === mode}
+              onClick={() => setView(mode)}
+              className={`rounded-md px-2.5 py-1 text-xs ${view === mode ? 'bg-white font-semibold text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300' : 'text-zinc-500'}`}
+            >
+              {mode === 'timeline' ? '시간표' : '목록'}
+            </button>
+          ))}
+        </div>
+      </div>
+      {loading ? (
+        <div aria-label="하루 계획과 실제를 불러오는 중" className="grid animate-pulse gap-px bg-zinc-100 md:grid-cols-2 dark:bg-zinc-800">
+          <div className="h-28 bg-white dark:bg-zinc-900" />
+          <div className="h-28 bg-white dark:bg-zinc-900" />
+        </div>
+      ) : error ? (
+        <div role="alert" className="flex items-center justify-center gap-3 px-5 py-8 text-sm text-rose-600 dark:text-rose-400">
+          <span>{error}</span>
+          <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 font-semibold underline">
+            <RotateCcw size={14} /> 다시 시도
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className={`grid divide-zinc-100 dark:divide-zinc-800 ${view === 'timeline'
+            ? 'grid-cols-3 divide-x pl-[clamp(38px,10vw,60px)]' : 'divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0'}`}>
+            {days.map((day, index) => (
+              <DayRecords key={day.date} day={day} dayEvents={dayEvents}
+                label={getDailyDateLabel(day.date, today, index)} showList={view === 'list'} />
+            ))}
+          </div>
+          {view === 'timeline' && (
+            <div className="max-h-[520px] overflow-y-auto overscroll-contain" data-daily-timeline>
+              <TimeGrid fitToWidth dates={days.map(day => parseISO(day.date))}
+                blocks={days.flatMap(day => day.blocks)} calendarEvents={dayEvents} />
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}

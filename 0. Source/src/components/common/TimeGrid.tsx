@@ -16,6 +16,7 @@ interface Props {
   dates: Date[];
   blocks: TimeBlock[];
   calendarEvents?: LifeEvent[];
+  fitToWidth?: boolean;
   beforeGrid?: (onMakeBlock: (todo: Todo) => void) => ReactNode;
 }
 
@@ -39,7 +40,7 @@ const addDaysToIsoDate = (date: string, amount: number) => {
   return toIsoDate(addDays(new Date(year, month - 1, day), amount));
 };
 
-export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Props) => {
+export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid, fitToWidth = false }: Props) => {
   const { categories, settings } = useBinder();
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [retroDate, setRetroDate] = useState<string | null>(null);
@@ -143,7 +144,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Pro
         >
           <span className="font-medium">
             {selectedBlock
-              ? `선택: ${selectedBlock.text || '(내용 없음)'} · ${minutesToTimeStr(selectedBlock.startMin)}–${minutesToTimeStr(selectedBlock.endMin)}`
+              ? `선택: ${selectedBlock.date} ${selectedBlock.text || '(내용 없음)'} · ${minutesToTimeStr(selectedBlock.startMin)}–${minutesToTimeStr(selectedBlock.endMin)}`
               : selectedSlot && selectedSlotTime
                 ? `선택: ${selectedSlot.date} ${selectedSlot.kind === 'plan' ? '계획' : '실제'} ${minutesToTimeStr(selectedSlotTime.startMin)}–${minutesToTimeStr(selectedSlotTime.endMin)}`
                 : ''}
@@ -205,7 +206,9 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Pro
           }
         }}
         className="grid overflow-x-auto"
-        style={{ gridTemplateColumns: `60px repeat(${dates.length * 2}, minmax(60px, 1fr))` }}
+        style={{ gridTemplateColumns: fitToWidth
+          ? `clamp(38px, 10vw, 60px) repeat(${dates.length * 2}, minmax(0, 1fr))`
+          : `60px repeat(${dates.length * 2}, minmax(60px, 1fr))` }}
       >
         {/* Row 1: date header — spans 2 sub-cols */}
         <div className="bg-white dark:bg-zinc-950" style={{ gridColumn: 1, gridRow: 1 }}></div>
@@ -229,7 +232,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Pro
               `}
               style={{ gridColumn: `${i * 2 + 2} / span 2`, gridRow: 1 }}
             >
-              <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              <div className={`font-semibold text-zinc-800 dark:text-zinc-100 ${fitToWidth ? 'pr-3 text-xs sm:pr-0 sm:text-sm' : 'text-sm'}`}>
                 <span className="text-zinc-500 dark:text-zinc-400 mr-1">{WEEKDAYS_KO[(d.getDay() + 6) % 7]}</span>
                 {d.getMonth() + 1}/{d.getDate()}
               </div>
@@ -251,6 +254,7 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Pro
               )}
               <button
                 onClick={() => setRetroDate(dateStr)}
+                aria-label={`${dateStr} 회고`}
                 title="회고"
                 className="absolute top-1 right-1 p-1 rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
               >
@@ -530,12 +534,12 @@ export const TimeGrid = ({ dates, blocks, calendarEvents = [], beforeGrid }: Pro
                       }}
                       title={b.text}
                     >
-                      <div className="px-1.5 py-1">
-                        <div className="text-[12px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100 truncate">
+                      <div className={fitToWidth ? 'px-0.5 py-0.5 sm:px-1.5 sm:py-1' : 'px-1.5 py-1'}>
+                        <div className={`text-[12px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100 ${fitToWidth ? 'line-clamp-2 break-all sm:block sm:truncate' : 'truncate'}`}>
                           {b.text || '(내용 없음)'}
                         </div>
                         {spanRows >= 2 && (
-                          <div className="text-[10px] text-zinc-600 dark:text-zinc-400 mt-0.5 truncate">
+                          <div className={`mt-0.5 truncate text-[10px] text-zinc-600 dark:text-zinc-400 ${fitToWidth ? 'hidden sm:block' : ''}`}>
                             {minutesToTimeStr(b.startMin)}–{minutesToTimeStr(b.endMin)}
                           </div>
                         )}

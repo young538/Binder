@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { ChevronRight } from 'lucide-react';
 import { STATUS_LABEL } from '@/lib/types';
 import { minutesToTimeStr } from '@/lib/utils/date';
-import type { DailyAgendaDay } from './useDailyAgenda';
+import { getDailyDateLabel, type DailyAgendaDay } from './useDailyAgenda';
 
 interface Props {
   days: DailyAgendaDay[];
@@ -85,8 +85,7 @@ export function DailyAgenda({ days, today, loading, onRetry }: Props) {
     <section aria-label="3일 플래너" className="mt-4 border-t border-zinc-200 dark:border-zinc-800">
       <div className="grid divide-y divide-zinc-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-zinc-800">
         {days.map((day, index) => {
-          const offset = differenceInCalendarDays(parseISO(day.date), parseISO(today));
-          const label = ['어제', '오늘', '내일'][offset + 1] ?? ['전날', '선택일', '다음 날'][index];
+          const label = getDailyDateLabel(day.date, today, index);
           return <AgendaRow key={day.date} day={day} label={label} selected={index === 1}
             emptyText={loading ? '불러오는 중…' : onRetry ? '조회된 항목 없음' : '등록된 항목 없음'} />;
         })}

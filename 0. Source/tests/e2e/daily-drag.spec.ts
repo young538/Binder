@@ -59,12 +59,12 @@ const prepareDailyPage = async (page: Page) => {
   });
 
   await page.goto(`/daily/${DATE}`);
-  await expect(page.locator('[data-time-column][data-kind="plan"]')).toBeVisible();
-  await expect(page.locator('[data-time-column][data-kind="actual"]')).toBeVisible();
+  await expect(page.locator(`[data-time-column][data-date="${DATE}"][data-kind="plan"]`)).toBeVisible();
+  await expect(page.locator(`[data-time-column][data-date="${DATE}"][data-kind="actual"]`)).toBeVisible();
 };
 
 const row = (page: Page, kind: 'plan' | 'actual', minute: number) =>
-  page.locator(`[data-time-column][data-kind="${kind}"] [data-row="${(minute - 360) / 30}"]`);
+  page.locator(`[data-time-column][data-date="${DATE}"][data-kind="${kind}"] [data-row="${(minute - 360) / 30}"]`);
 
 const dragCenters = async (page: Page, source: Locator, target: Locator) => {
   // The timeline owns the vertical scroll. Centering the target keeps both
@@ -233,14 +233,14 @@ test('desktop timeline block click edits, moves, and Alt-copies across columns',
   await expect(page.locator(`[data-block-id="${seeded.id}"][data-block]`)).toBeVisible();
   expect(await blockStyle()).toEqual(dailyStyle);
   await page.goto(`/daily/${DATE}`);
-  await expect(page.locator('[data-time-column]')).toHaveCount(2);
+  await expect(page.locator('[data-time-column]')).toHaveCount(6);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/daily-drag-desktop.png', fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 1000 });
   await page.reload();
-  await expect(page.locator('[data-time-column][data-kind="plan"]')).toBeVisible();
-  await expect(page.locator('[data-time-column][data-kind="actual"]')).toBeVisible();
+  await expect(page.locator(`[data-time-column][data-date="${DATE}"][data-kind="plan"]`)).toBeVisible();
+  await expect(page.locator(`[data-time-column][data-date="${DATE}"][data-kind="actual"]`)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/daily-drag-mobile.png', fullPage: true });
 });
