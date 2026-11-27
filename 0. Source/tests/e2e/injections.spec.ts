@@ -9,7 +9,7 @@ for (const width of [390, 1280]) {
     await loginAs(page, user, 'pwTest123*');
     await page.goto('/injections');
     await page.getByRole('button', { name: '펜 등록' }).click();
-    await page.getByLabel('약물', { exact: true }).selectOption('tirzepatide');
+    await page.getByRole('combobox', { name: '약물', exact: true }).selectOption('tirzepatide');
     await page.getByLabel('펜 이름').fill('연습용 기록');
     await page.getByLabel('펜 한 개의 표시 총량 (mg)').fill('5');
     await page.getByRole('button', { name: '저장' }).click();

@@ -25,7 +25,8 @@ export default function PrivacyPolicyPage() {
           <p className="text-zinc-600 dark:text-zinc-300">
             Super 플래너(BinderOS)는 개인 및 허가된 계정을 위한 자체 호스팅 일정·목표·기록 관리 앱입니다.
             로그인을 위한 사용자 아이디와 Argon2id로 해시된 비밀번호, 그리고 사용자가 직접 입력한 일정,
-            할 일, 프로젝트, 습관, 회고, 지표, 구독 내역만을 저장합니다.
+            할 일, 프로젝트, 습관, 회고, 지표, 구독 내역 등을 저장합니다. 주사 기록을 이용하면 입력한 약물과 펜 이름,
+            표시 총량, 투여 시각과 투여량을 해당 계정에 저장합니다. 이 기록은 개인 JSON 내보내기와 서버 백업에 포함됩니다.
           </p>
           <p className="text-zinc-600 dark:text-zinc-300">
             사용자가 설정 화면에서 Google 캘린더 연동을 직접 승인한 경우에 한해, 연결된 Google 계정의
