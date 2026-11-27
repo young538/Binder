@@ -170,10 +170,10 @@ const rules: Record<MutationKind, Rules> = {
   metrics: { fields: { name: identifier, unit: str, direction: oneOf('up', 'down', 'target'), targetValue: nullable(number), goalId: optionalId, color, order: integer(0) }, required: ['name', 'unit', 'direction', 'color', 'order'] },
   injectionPens: { fields: {
     drug: oneOf('semaglutide', 'tirzepatide'), name: v => typeof v === 'string' && !!v.trim() && v.length <= 80,
-    capacityMcg: integer(1, 1000000), closed: v => typeof v === 'boolean',
+    startingClicks: nullable(integer(0, 1000000)), capacityMcg: integer(1, 1000000), closed: v => typeof v === 'boolean',
   }, required: ['drug', 'name', 'capacityMcg', 'closed'] },
   injectionEntries: { fields: {
-    penId: identifier, amountMcg: integer(1, 1000000),
+    penId: identifier, amountMcg: integer(1, 1000000), usedClicks: nullable(integer(0, 1000000)),
     takenAt: v => typeof v === 'string' && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v && Date.parse(v) <= Date.now(),
   }, required: ['penId', 'amountMcg', 'takenAt'] },
   metricEntries: { fields: { metricId: identifier, date: isDate, value: number, note: optionalText }, required: ['metricId', 'date', 'value'] },

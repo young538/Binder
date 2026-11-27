@@ -148,6 +148,13 @@
       "when": 1795767999102,
       "tag": "0020_injection_workbook_examples",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1795770014936,
+      "tag": "0021_injection_click_ledger",
+      "breakpoints": true
     }
   ]
 }

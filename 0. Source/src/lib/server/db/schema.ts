@@ -10,6 +10,7 @@ export const injectionPens = sqliteTable('injection_pens', {
   drug: text('drug').$type<Drug>().notNull(),
   name: text('name').notNull(),
   capacityMcg: integer('capacity_mcg').notNull(),
+  startingClicks: integer('starting_clicks'),
   isExample: integer('is_example', { mode: 'boolean' }).notNull().default(false),
   closed: integer('closed', { mode: 'boolean' }).notNull(),
   createdAt: text('created_at').notNull(),
@@ -22,6 +23,7 @@ export const injectionEntries = sqliteTable('injection_entries', {
   penId: text('pen_id').notNull(),
   takenAt: text('taken_at').notNull(),
   amountMcg: integer('amount_mcg').notNull(),
+  usedClicks: integer('used_clicks'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, t => [index('injection_entries_owner_pen').on(t.userId, t.penId)]);

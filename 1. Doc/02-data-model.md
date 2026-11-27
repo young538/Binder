@@ -138,7 +138,7 @@ schedule이 없으면 매일로 간주합니다. 요일은 일=0, 월=1, … 토
 
 기간 조회 인덱스와 사용자 인덱스는 있지만 `habitId+date`, `scope+scopeKey`, `type+dateOrWeek`의 논리상 단일 레코드를 모두 UNIQUE로 강제하지 않습니다. 습관 토글, 회고·한 문장 upsert는 즉시 트랜잭션으로 read/write를 직렬화합니다. 연간 기본 7행 확보도 조회와 부족분 삽입을 같은 즉시 트랜잭션에서 수행합니다. 다른 경로와 외부 직접 DB 쓰기까지 UNIQUE 제약으로 강제하는 것은 아닙니다.
 
-내보내기는 version 20의 23개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드, 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`), 가계부 도메인(`financeTransactions`, `financeBudgets`), 주사 기록(`injectionPens`, `injectionEntries`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
+내보내기는 version 21의 23개 배열과 settings를 사용합니다. 프로젝트, 주간 템플릿, 새 TODO 필드, 인생 OS 7개 도메인(`dailyCheckins`, `metrics`, `metricEntries`, `notes`, `people`, `lifeEvents`, `subscriptions`), 가계부 도메인(`financeTransactions`, `financeBudgets`), 주사 기록(`injectionPens`, `injectionEntries`)을 포함하며, 이전 필드·버전 백업도 누락 컬렉션을 빈 배열로 간주해 계속 가져올 수 있습니다. 컬렉션·가져오기 계약은 `lib/backup.ts`, 실제 내보내기 타입은 `lib/server/backup/service.ts`의 `BackupService`입니다. [API의 export 응답](03-api.md)이 형식 기준입니다.
 
 ## TODO 작업 기록
 
