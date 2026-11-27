@@ -1,9 +1,10 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import { drugs, type Drug, type InjectionEntry, type InjectionPen } from '@/lib/injections';
+import { drugs, mg, type Drug, type InjectionEntry, type InjectionPen } from '@/lib/injections';
 import { removeInjection, saveInjection } from '@/lib/repo/injections';
 import { Dialog } from '@/components/common/Dialog';
+import { wegovyDosesPerPen, wegovyPens } from '@/lib/wegovy-pens';
 import { HttpError } from '@/lib/client/HttpClient';
 
 export type Editor = { kind: 'pens'; row?: InjectionPen } | { kind: 'entries'; row?: InjectionEntry; penId?: string };
@@ -65,7 +66,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
   return <Dialog title={title} onClose={() => { if (!locked.current) onClose(); }}><form onSubmit={save} aria-label={editor.kind === 'pens' ? '펜 편집' : '투여 기록 편집'} className="space-y-4">
     <fieldset disabled={busy} className="grid min-w-0 gap-3 text-sm sm:grid-cols-2">
       {editor.kind === 'pens' ? <>
-        <label>약물<select className={field} value={drug} onChange={e => setDrug(e.target.value as Drug)}>
+        <label>약물<select className={field} value={drug} onChange={e => { setDrug(e.target.value as Drug); setAmount(''); }}>
           {Object.entries(drugs).map(([key, value]) => <option key={key} value={key}>{value.name}</option>)}
         </select></label>
         <label>펜 이름<input required autoFocus maxLength={80} className={field} value={name} onChange={e => setName(e.target.value)} placeholder="예: 11월에 개봉한 펜" /></label>
@@ -76,6 +77,13 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
         </select></label>
         <label>투여 일시<input required type="datetime-local" className={field} value={time} onChange={e => setTime(e.target.value)} /></label>
       </>}
+      {editor.kind === 'pens' && drug === 'semaglutide' && <label>국내 위고비 4회용 펜 규격
+        <select className={field} value={wegovyPens.find(p => p.capacityMcg / 1000 === Number(amount))?.capacityMcg ?? ''}
+          onChange={e => setAmount(e.target.value ? String(Number(e.target.value) / 1000) : '')}>
+          <option value="">총량 직접 입력</option>
+          {wegovyPens.map(p => <option key={p.doseMcg} value={p.capacityMcg}>{mg(p.doseMcg)} mg × {wegovyDosesPerPen}회분 · 총 {mg(p.capacityMcg)} mg</option>)}
+        </select>
+      </label>}
       <label>{editor.kind === 'pens' ? '펜 한 개의 표시 총량 (mg)' : '실제 투여량 (mg)'}
         <input required type="number" inputMode="decimal" min="0.001" max="1000" step="0.001" className={field} value={amount} onChange={e => setAmount(e.target.value)} />
       </label>

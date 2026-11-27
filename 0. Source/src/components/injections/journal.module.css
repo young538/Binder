@@ -80,6 +80,14 @@
 .iconButton:hover { background: var(--wash); }
 .note { margin-top: 12px; font-size: 12px; color: var(--soft); line-height: 1.6; }
 .note a { text-decoration: underline; }
+.guide { margin-top: 15px; border-top: 1px solid var(--line); font-size: 13px; }
+.guide summary { cursor: pointer; padding: 12px 0 6px; min-height: 40px; font-weight: 650; color: var(--accent); }
+.guide table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.guide caption { padding: 7px 0; text-align: left; color: var(--soft); }
+.guide th, .guide td { padding: 6px 3px; border-bottom: 1px solid var(--line); text-align: right; }
+.guide th:first-child { text-align: left; }
+.guide thead th, .guide tbody th { font-weight: 550; }
+.pen .penSpec { margin-top: 4px; color: var(--soft); font-size: 12px; }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
 .controls select { flex: 0 1 auto; max-width: 100%; min-height: 39px; padding: 5px 8px; font-size: 13px; border-radius: 8px; border-color: var(--line); background: var(--card); color: var(--ink); }
 .chartTitle { margin: 13px 0 9px; font-size: 13px; font-weight: 600; }

@@ -2,6 +2,43 @@ import { expect, test } from '@playwright/test';
 import { ensureUserExists, loginAs } from './_helpers';
 
 for (const width of [390, 1280]) {
+  test(`Korean Wegovy pen labels fill inventory and stay separate from injection amounts at ${width}px`, async ({ page }) => {
+    const user = 'wegovy-labels-' + width;
+    await ensureUserExists(user, 'pwTest123*');
+    await page.setViewportSize({ width, height: 840 });
+    await loginAs(page, user, 'pwTest123*');
+    await page.goto('/injections');
+    await page.getByText('위고비 펜 규격·다이얼 안내', { exact: true }).click();
+    const table = page.getByRole('table', { name: /국내 위고비 프리필드펜/ });
+    await expect(table.getByRole('row')).toHaveCount(6);
+    const expected = [['0.25 mg', '1 mg'], ['0.5 mg', '2 mg'], ['1 mg', '4 mg'], ['1.7 mg', '6.8 mg'], ['2.4 mg', '9.6 mg']];
+    for (const [index, doses] of expected.entries()) {
+      await expect(table.getByRole('row').nth(index + 1).getByRole('cell')).toHaveText(doses);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('button', { name: '펜 등록' }).click();
+    const selector = page.getByLabel('국내 위고비 4회용 펜 규격');
+    const capacity = page.getByLabel('펜 한 개의 표시 총량 (mg)');
+    await selector.selectOption({ label: '2.4 mg × 4회분 · 총 9.6 mg' });
+    await expect(capacity).toHaveValue('9.6');
+    const drug = page.getByRole('combobox', { name: '약물', exact: true });
+    await drug.selectOption('tirzepatide');
+    await expect(selector).toHaveCount(0);
+    await expect(capacity).toHaveValue('');
+    await drug.selectOption('semaglutide');
+    await selector.selectOption('6800');
+    await page.getByLabel('펜 이름').fill('테스트 펜');
+    await page.getByRole('button', { name: '저장', exact: true }).click();
+    const card = page.getByRole('article', { name: '테스트 펜' });
+    await expect(card).toBeVisible();
+    await page.reload();
+    await expect(card).toContainText('1.7 mg × 4회분');
+    await expect(card).toContainText('기록상 잔량 6.8 mg');
+    await card.getByRole('button', { name: '투여 기록 추가' }).click();
+    await expect(page.getByLabel('실제 투여량 (mg)')).toHaveValue('');
+    await expect(selector).toHaveCount(0);
+  });
+
   test(`personal workbook example is separate from editable records at ${width}px`, async ({ page }, info) => {
     const user = 'sample-view-' + width;
     await ensureUserExists(user, 'pwTest123*');

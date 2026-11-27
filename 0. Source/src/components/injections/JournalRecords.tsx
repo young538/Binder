@@ -2,6 +2,8 @@
 import { format } from 'date-fns';
 import { ChevronRight, History, PackageOpen, Pencil, Plus, Syringe } from 'lucide-react';
 import { drugs, mg, usedByPen, type InjectionJournal } from '@/lib/injections';
+import { wegovyDosesPerPen, wegovyPens } from '@/lib/wegovy-pens';
+import { WegovyPenGuide } from './WegovyPenGuide';
 import type { Editor } from './InjectionEditor';
 import styles from './journal.module.css';
 
@@ -17,17 +19,20 @@ export function PenInventory({ journal, isExample, open }: Props) {
     <h2><PackageOpen size={19} />{isExample ? '예시 펜' : '내 펜'}</h2>
     {journal.pens.map(p => {
       const remaining = p.capacityMcg - (used.get(p.id) ?? 0);
+      const matchingPen = p.drug === 'semaglutide' && wegovyPens.find(pen => pen.capacityMcg === p.capacityMcg);
       return <article key={p.id} aria-label={p.name} className={styles.pen} data-drug={p.drug}>
         <div className={styles.penTop}><div><span className={styles.drug}>{drugs[p.drug].name}{p.closed && ' · 사용 종료'}</span><h3>{p.name}</h3></div>
           {!isExample && <button className={styles.iconButton} aria-label={p.name + ' 수정'} onClick={() => open({ kind: 'pens', row: p })}><Pencil size={16} /></button>}
         </div>
         <p>{isExample ? '추정 잔량' : '기록상 잔량'} <strong>{mg(remaining)} mg</strong><span> / 총 {mg(p.capacityMcg)} mg</span></p>
+        {matchingPen && <p className={styles.penSpec}>같은 총량의 국내 위고비 규격 · {mg(matchingPen.doseMcg)} mg × {wegovyDosesPerPen}회분</p>}
         <progress aria-label={p.name + ' 잔량'} max={p.capacityMcg} value={remaining} />
         {!isExample && !p.closed && remaining > 0 && <button className={styles.secondary} onClick={() => open({ kind: 'entries', penId: p.id })}><Plus size={15} />투여 기록 추가</button>}
       </article>;
     })}
     {!journal.pens.length && <div className={styles.blank}><Syringe size={24} /><strong>등록한 펜이 없어요.</strong><span>상단의 펜 등록에서 첫 펜을 추가하세요.</span></div>}
     {!!journal.pens.length && <p className={styles.note}>표시 총량에서 기록한 양을 뺀 잔량입니다. 여분과 폐기량은 반영되지 않습니다.</p>}
+    {(!journal.pens.length || journal.pens.some(p => p.drug === 'semaglutide')) && <WegovyPenGuide />}
   </section>;
 }
 
