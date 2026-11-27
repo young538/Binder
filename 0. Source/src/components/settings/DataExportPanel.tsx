@@ -36,7 +36,7 @@ export const DataExportPanel = () => {
       <div>
         <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-50">데이터 내보내기</h2>
         <p className="text-xs text-zinc-500 mt-1">
-          서버 DB의 전체 데이터를 JSON 파일로 다운로드합니다. 수동 백업 용도.
+          내 계정의 전체 데이터를 JSON 파일로 다운로드합니다. 등록한 펜과 주사 기록도 포함됩니다.
         </p>
       </div>
       <button

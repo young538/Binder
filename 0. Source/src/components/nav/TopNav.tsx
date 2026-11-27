@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
   Activity,
+  Syringe,
   BookMarked,
   BookOpen,
   Calendar,
@@ -82,6 +83,7 @@ const dropdownGroups: DropdownGroup[] = [
     label: '지식 · 기록',
     items: [
       { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
+      { label: '주사 기록', Icon: Syringe, basePath: '/injections', href: () => '/injections' },
       { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },
       { label: '독서', Icon: BookOpen, basePath: '/reading', href: () => '/reading' },
     ],

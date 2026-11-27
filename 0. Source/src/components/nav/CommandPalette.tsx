@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
   Activity,
+  Syringe,
   BookMarked,
   BookOpen,
   Calendar,
@@ -123,6 +124,7 @@ export function CommandPalette() {
       { key: 'nav:daily', label: '오늘 일일 트래커', subtitle: today, href: `/daily/${today}`, Icon: Sun },
       { key: 'nav:projects', label: '프로젝트 실행 보드', subtitle: '/projects', href: '/projects', Icon: FolderKanban },
       { key: 'nav:notes', label: '원칙 · 의사결정 · 노트', subtitle: '/notes', href: '/notes', Icon: BookMarked },
+      { key: 'nav:injections', label: '주사 기록', subtitle: '/injections', href: '/injections', Icon: Syringe },
       { key: 'nav:metrics', label: '상태 지표 트래커', subtitle: '/metrics', href: '/metrics', Icon: Activity },
       { key: 'nav:finance', label: '가계부 · 예산', subtitle: '/finance', href: '/finance', Icon: Wallet },
       { key: 'nav:subscriptions', label: '구독 · 월정액 관리', subtitle: '/subscriptions', href: '/subscriptions', Icon: CreditCard },
