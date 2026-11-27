@@ -53,10 +53,12 @@ export function InjectionPage() {
       <section className="space-y-2"><h2 className="font-semibold">투여 이력</h2>
         {entries.length ? <ul className="divide-y divide-zinc-200 dark:divide-zinc-700">{entries.map(e => {
           const p = byId.get(e.penId)!;
-          return <li key={e.id} className="flex items-center justify-between gap-2 py-3 text-sm">
-            <div><time dateTime={e.takenAt}>{format(new Date(e.takenAt), 'yyyy.MM.dd HH:mm')}</time>
-              <p className="break-words text-zinc-600 dark:text-zinc-400">{drugs[p.drug].name} · {p.name} · {mg(e.amountMcg)} mg</p></div>
-            <button disabled={!!editor} className="shrink-0 underline" onClick={() => open({ kind: 'entries', row: e })}>기록 수정</button>
+          return <li key={e.id}>
+            <button disabled={!!editor} className="flex w-full items-center gap-4 py-3 text-left text-sm" onClick={() => open({ kind: 'entries', row: e })}>
+              <span><time dateTime={e.takenAt}>{format(new Date(e.takenAt), 'yyyy.MM.dd HH:mm')}</time>
+                <span className="block break-words text-zinc-600 dark:text-zinc-400">{drugs[p.drug].name} · {p.name} · {mg(e.amountMcg)} mg</span></span>
+              <span className="shrink-0 underline">투여 기록 수정</span>
+            </button>
           </li>;
         })}</ul> : <p className="text-sm text-zinc-500">아직 기록한 주사가 없어요.</p>}
       </section>

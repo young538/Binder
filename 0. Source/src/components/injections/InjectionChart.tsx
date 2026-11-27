@@ -41,18 +41,19 @@ export function InjectionChart({ journal }: { journal: InjectionJournal }) {
     </div>
     {show ? <>
       <p className="text-sm">{drugs[drug].name} · {description}</p>
-      <svg role="img" aria-label={drugs[drug].name + ' ' + description} viewBox="0 0 588 168" className="w-full text-teal-700 dark:text-teal-400">
-        {[0, 50, 100].map(v => <g key={v}>
-          <line x1="46" x2="570" y1={y(v)} y2={y(v)} stroke="currentColor" opacity=".18" />
-          <text x="40" y={y(v) + 4} textAnchor="end" fill="currentColor" fontSize="12">{mode === 'trend' ? v : mg(peakDose * v / 100)}</text>
-        </g>)}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+        <div className="flex flex-col items-end justify-between">
+          {[100, 50, 0].map(v => <span key={v}>{mode === 'trend' ? v : mg(peakDose * v / 100)}</span>)}
+        </div>
+        <svg role="img" aria-label={drugs[drug].name + ' ' + description} viewBox="42 20 528 128" preserveAspectRatio="none" className="h-36 w-full text-teal-700 dark:text-teal-400">
+        {[0, 50, 100].map(v => <line key={v} x1="46" x2="566" y1={y(v)} y2={y(v)} stroke="currentColor" opacity=".18" />)}
         {mode === 'trend' ? <polyline fill="none" stroke="currentColor" strokeWidth="2.5" points={trend.map(p => `${x(p.time)},${y(p.value)}`).join(' ')} /> :
           visible.map(e => <g key={e.id}><title>{format(new Date(e.takenAt), 'yyyy-MM-dd HH:mm')} · {mg(e.amountMcg)} mg</title>
             <line x1={x(Date.parse(e.takenAt))} x2={x(Date.parse(e.takenAt))} y1="142" y2={y(100 * e.amountMcg / peakDose)} stroke="currentColor" strokeWidth="2" />
             <circle cx={x(Date.parse(e.takenAt))} cy={y(100 * e.amountMcg / peakDose)} r="3" fill="currentColor" /></g>)}
-        <text x="46" y="162" fill="currentColor" fontSize="12">{format(start, 'yy.MM.dd')}</text>
-        <text x="566" y="162" textAnchor="end" fill="currentColor" fontSize="12">{format(end, 'yy.MM.dd')}</text>
-      </svg>
+        </svg>
+        <div className="col-start-2 flex justify-between"><span>{format(start, 'yy.MM.dd')}</span><span>{format(end, 'yy.MM.dd')}</span></div>
+      </div>
     </> : <p className="py-6 text-sm text-zinc-500">{drugs[drug].name}의 {mode === 'amount' ? '선택 기간 내 ' : ''}투여 기록이 없어요.</p>}
     {mode === 'trend' && <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
       {drugs[drug].ingredient}의 평균 반감기 약 {drugs[drug].halfLifeDays}일을 적용하고 해당 약의 기록상 최고 지수를 100으로 표시합니다.
