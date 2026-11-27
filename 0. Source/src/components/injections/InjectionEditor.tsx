@@ -3,6 +3,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
 import { drugs, type Drug, type InjectionEntry, type InjectionPen } from '@/lib/injections';
 import { removeInjection, saveInjection } from '@/lib/repo/injections';
+import { Dialog } from '@/components/common/Dialog';
 import { HttpError } from '@/lib/client/HttpClient';
 
 export type Editor = { kind: 'pens'; row?: InjectionPen } | { kind: 'entries'; row?: InjectionEntry; penId?: string };
@@ -60,8 +61,8 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
     }
   };
 
-  return <form onSubmit={save} aria-label={editor.kind === 'pens' ? '펜 편집' : '투여 기록 편집'} className="space-y-4 rounded-2xl border border-teal-200 bg-white p-5 shadow-sm dark:border-teal-800 dark:bg-zinc-900">
-    <h2 className="font-semibold">{editor.kind === 'pens' ? '펜' : '투여 기록'} {editor.row ? '수정' : '등록'}</h2>
+  const title = (editor.kind === 'pens' ? '펜' : '투여 기록') + (editor.row ? ' 수정' : ' 등록');
+  return <Dialog title={title} onClose={() => { if (!locked.current) onClose(); }}><form onSubmit={save} aria-label={editor.kind === 'pens' ? '펜 편집' : '투여 기록 편집'} className="space-y-4">
     <fieldset disabled={busy} className="grid min-w-0 gap-3 text-sm sm:grid-cols-2">
       {editor.kind === 'pens' ? <>
         <label>약물<select className={field} value={drug} onChange={e => setDrug(e.target.value as Drug)}>
@@ -92,5 +93,5 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
         }
       }}>삭제</button>}
     </div>
-  </form>;
+  </form></Dialog>;
 }

@@ -2,6 +2,35 @@ import { expect, test } from '@playwright/test';
 import { ensureUserExists, loginAs } from './_helpers';
 
 for (const width of [390, 1280]) {
+  test(`personal workbook example is separate from editable records at ${width}px`, async ({ page }, info) => {
+    const user = 'sample-view-' + width;
+    await ensureUserExists(user, 'pwTest123*');
+    await page.setViewportSize({ width, height: 840 });
+    await loginAs(page, user, 'pwTest123*');
+    const stamp = { createdAt: '2021-05-10T03:00:00.000Z', updatedAt: '2021-05-10T03:00:00.000Z' };
+    const penId = user + '-pen';
+    const dates = ['2021-05-02', '2021-05-06', '2021-05-10'];
+    const imported = await page.request.post('/api/import', { data: { mode: 'merge', data: {
+      injectionPens: [{ ...stamp, id: penId, name: '화면 검증용', drug: 'semaglutide', capacityMcg: 2000, closed: false, isExample: true }],
+      injectionEntries: dates.map((d, i) => ({ ...stamp, id: user + '-dose-' + i, penId, amountMcg: (i + 1) * 100, takenAt: d + 'T03:00:00.000Z' })),
+    } } });
+    expect(imported.ok()).toBe(true);
+    await page.goto('/injections');
+    await expect(page.getByRole('button', { name: '관리대장 예시' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('article', { name: '화면 검증용' })).toContainText('추정 잔량 1.4 mg');
+    await expect(page.getByRole('listitem').filter({ hasText: '2021.05.02' })).toContainText('추정 잔량 1.9 mg');
+    await expect(page.getByRole('button', { name: /투여 기록 수정/ })).toHaveCount(0);
+    await expect(page.getByRole('img', { name: /위고비 반감기/ })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('main').screenshot({ path: info.outputPath('journal-' + width + '.png') });
+    await page.getByLabel('그래프 종류').selectOption('amount');
+    await expect(page.getByRole('img', { name: /엑셀 추정 투여량/ })).toBeVisible();
+    await page.getByRole('button', { name: '내 기록', exact: true }).click();
+    await expect(page.getByRole('button', { name: '펜 등록' })).toBeVisible();
+    await expect(page.getByRole('article', { name: '화면 검증용' })).toHaveCount(0);
+    expect((await (await page.request.get('/api/injections')).json()).entries).toHaveLength(0);
+  });
+
   test(`injection journal saves, edits, graphs and restores remaining inventory at ${width}px`, async ({ page }) => {
     const user = 'e2e-injections-' + width;
     await ensureUserExists(user, 'pwTest123*');
