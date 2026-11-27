@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { BookOpen, Files, Plus } from 'lucide-react';
-import { drugs, type JournalOverview } from '@/lib/injections';
+import { clickLedger, drugs, type JournalOverview } from '@/lib/injections';
 import { getInjectionJournal } from '@/lib/repo/injections';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { InjectionChart } from './InjectionChart';
@@ -19,6 +19,7 @@ export function InjectionPage() {
   const { examples } = journal.value;
   const isExample = !!examples && (mode === 'example' || (mode === null && !journal.value.pens.length));
   const current = isExample ? examples : journal.value;
+  const clicks = clickLedger(current);
   const ready = !journal.loading && !journal.error;
 
   return <div className={styles.page}>
@@ -41,9 +42,9 @@ export function InjectionPage() {
       <JournalSummary journal={current} isExample={isExample} />
       <div className={styles.panels}>
         <InjectionChart key={isExample ? 'example' : 'live'} journal={current} isExample={isExample} />
-        <PenInventory journal={current} isExample={isExample} open={setEditor} />
+        <PenInventory journal={current} clicks={clicks} isExample={isExample} open={setEditor} />
       </div>
-      <InjectionHistory journal={current} isExample={isExample} open={setEditor} />
+      <InjectionHistory journal={current} clicks={clicks} isExample={isExample} open={setEditor} />
       {!isExample && new Set(current.pens.map(p => p.drug)).size > 1 && <p className={styles.note}>
         두 약을 같은 기간에 사용 중이라면 다음 투여 전에 처방 의료진에게 확인하세요. 위고비와 다른 GLP-1 계열 약의 병용은 권장되지 않습니다.{' '}
         <a href={drugs.semaglutide.source} target="_blank" rel="noreferrer">위고비 제품정보</a>

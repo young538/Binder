@@ -27,6 +27,7 @@ for (const width of [390, 1280]) {
     await expect(capacity).toHaveValue('');
     await drug.selectOption('semaglutide');
     await selector.selectOption('6800');
+    await page.getByLabel('장부 시작 클릭 수 (선택)').fill('47');
     await page.getByLabel('펜 이름').fill('테스트 펜');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     const card = page.getByRole('article', { name: '테스트 펜' });
@@ -37,6 +38,18 @@ for (const width of [390, 1280]) {
     await card.getByRole('button', { name: '투여 기록 추가' }).click();
     await expect(page.getByLabel('실제 투여량 (mg)')).toHaveValue('');
     await expect(selector).toHaveCount(0);
+    await page.getByLabel('실제 투여량 (mg)').fill('0.2');
+    await page.getByLabel('기록한 사용 클릭 수 (선택)').fill('6');
+    await page.getByRole('button', { name: '저장', exact: true }).click();
+    await expect(card).toContainText('장부상 남은 클릭 41클릭');
+    await page.reload();
+    await expect(card).toContainText('기록된 사용 6클릭');
+    await expect(page.getByText('사용 6클릭 · 장부 잔여 41클릭', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /투여 기록 수정$/ }).click();
+    await page.getByLabel('기록한 사용 클릭 수 (선택)').fill('');
+    await page.getByRole('button', { name: '저장', exact: true }).click();
+    await expect(card).toContainText('사용 클릭 미입력 1회');
+    await expect(card).toContainText('장부상 남은 클릭 —');
   });
 
   test(`personal workbook example is separate from editable records at ${width}px`, async ({ page }, info) => {

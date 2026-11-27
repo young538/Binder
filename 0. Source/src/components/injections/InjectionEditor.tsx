@@ -18,6 +18,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
   const [name, setName] = useState(pen?.name ?? '');
   const [closed, setClosed] = useState(pen?.closed ?? false);
   const [penId, setPenId] = useState(entry?.penId ?? (editor.kind === 'entries' ? editor.penId : '') ?? '');
+  const [clicks, setClicks] = useState(String(pen?.startingClicks ?? entry?.usedClicks ?? ''));
   const initialAmount = pen?.capacityMcg ?? entry?.amountMcg;
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount / 1000) : '');
   const localTime = (date: Date) => format(date, "yyyy-MM-dd'T'HH:mm");
@@ -48,9 +49,14 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
       setError('mg 단위로 소수점 셋째 자리까지 입력해 주세요.');
       return;
     }
+    const recordedClicks = clicks === '' ? null : Number(clicks);
+    if (recordedClicks !== null && (!Number.isSafeInteger(recordedClicks) || recordedClicks < 0 || recordedClicks > 1000000)) {
+      setError('클릭 수는 0에서 1,000,000 사이 정수로 입력해 주세요.');
+      return;
+    }
     const mcg = Math.round(Number(amount) * 1000);
     if (editor.kind === 'pens') {
-      void mutate(() => saveInjection('pens', id, { name: name.trim(), drug, capacityMcg: mcg, closed }, pen?.updatedAt));
+      void mutate(() => saveInjection('pens', id, { name: name.trim(), drug, capacityMcg: mcg, startingClicks: recordedClicks, closed }, pen?.updatedAt));
     } else {
       const instant = new Date(time);
       if (!Number.isFinite(+instant) || +instant > Date.now()) {
@@ -58,7 +64,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
         return;
       }
       const takenAt = entry && time === localTime(new Date(entry.takenAt)) ? entry.takenAt : instant.toISOString();
-      void mutate(() => saveInjection('entries', id, { penId, amountMcg: mcg, takenAt }, entry?.updatedAt));
+      void mutate(() => saveInjection('entries', id, { penId, amountMcg: mcg, usedClicks: recordedClicks, takenAt }, entry?.updatedAt));
     }
   };
 
@@ -66,7 +72,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
   return <Dialog title={title} onClose={() => { if (!locked.current) onClose(); }}><form onSubmit={save} aria-label={editor.kind === 'pens' ? '펜 편집' : '투여 기록 편집'} className="space-y-4">
     <fieldset disabled={busy} className="grid min-w-0 gap-3 text-sm sm:grid-cols-2">
       {editor.kind === 'pens' ? <>
-        <label>약물<select className={field} value={drug} onChange={e => { setDrug(e.target.value as Drug); setAmount(''); }}>
+        <label>약물<select className={field} value={drug} onChange={e => { setDrug(e.target.value as Drug); setAmount(''); setClicks(''); }}>
           {Object.entries(drugs).map(([key, value]) => <option key={key} value={key}>{value.name}</option>)}
         </select></label>
         <label>펜 이름<input required autoFocus maxLength={80} className={field} value={name} onChange={e => setName(e.target.value)} placeholder="예: 11월에 개봉한 펜" /></label>
@@ -86,6 +92,9 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
       </label>}
       <label>{editor.kind === 'pens' ? '펜 한 개의 표시 총량 (mg)' : '실제 투여량 (mg)'}
         <input required type="number" inputMode="decimal" min="0.001" max="1000" step="0.001" className={field} value={amount} onChange={e => setAmount(e.target.value)} />
+      </label>
+      <label>{editor.kind === 'pens' ? '장부 시작 클릭 수 (선택)' : '기록한 사용 클릭 수 (선택)'}
+        <input className={field} type="number" min="0" max="1000000" step="1" inputMode="numeric" value={clicks} onChange={e => setClicks(e.target.value)} />
       </label>
       {pen && <label className="flex items-center gap-2 self-end py-2"><input type="checkbox" checked={closed} onChange={e => setClosed(e.target.checked)} /> 사용 종료한 펜</label>}
     </fieldset>

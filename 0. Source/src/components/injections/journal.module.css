@@ -88,6 +88,8 @@
 .guide th:first-child { text-align: left; }
 .guide thead th, .guide tbody th { font-weight: 550; }
 .pen .penSpec { margin-top: 4px; color: var(--soft); font-size: 12px; }
+.clickBalance { margin: 12px 0 3px; padding: 10px 12px; border-radius: 9px; background: var(--wash); }
+.clickBalance p + p, .clickBalance small { display: block; color: var(--soft); font-size: 12px; margin-top: 3px; }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
 .controls select { flex: 0 1 auto; max-width: 100%; min-height: 39px; padding: 5px 8px; font-size: 13px; border-radius: 8px; border-color: var(--line); background: var(--card); color: var(--ink); }
 .chartTitle { margin: 13px 0 9px; font-size: 13px; font-weight: 600; }
