@@ -10,6 +10,7 @@ export const injectionPens = sqliteTable('injection_pens', {
   drug: text('drug').$type<Drug>().notNull(),
   name: text('name').notNull(),
   capacityMcg: integer('capacity_mcg').notNull(),
+  isExample: integer('is_example', { mode: 'boolean' }).notNull().default(false),
   closed: integer('closed', { mode: 'boolean' }).notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

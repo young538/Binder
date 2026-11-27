@@ -20,6 +20,8 @@ export type PenInput = Omit<InjectionPen, keyof RecordIdentity>;
 export type EntryInput = Omit<InjectionEntry, keyof RecordIdentity>;
 export interface InjectionJournal { pens: InjectionPen[]; entries: InjectionEntry[] }
 
+export interface JournalOverview extends InjectionJournal { examples?: InjectionJournal }
+
 export function usedByPen(entries: Pick<InjectionEntry, 'penId' | 'amountMcg'>[]) {
   const used = new Map<string, number>();
   for (const entry of entries) used.set(entry.penId, (used.get(entry.penId) ?? 0) + entry.amountMcg);

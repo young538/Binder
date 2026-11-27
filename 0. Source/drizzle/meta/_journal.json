@@ -141,6 +141,13 @@
       "when": 1795759327102,
       "tag": "0019_injection_journal",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1795767999102,
+      "tag": "0020_injection_workbook_examples",
+      "breakpoints": true
     }
   ]
 }

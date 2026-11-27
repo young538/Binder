@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, desc, eq, sum } from 'drizzle-orm';
-import type { EntryInput, InjectionJournal, PenInput } from '@/lib/injections';
+import type { EntryInput, JournalOverview, PenInput } from '@/lib/injections';
 import type { BinderDatabase, DatabaseSession } from '../db/connection';
 import { injectionEntries, injectionPens } from '../db/schema';
 import { DomainError } from '../errors';
@@ -17,11 +17,24 @@ function checkVersion(row: { userId: string; updatedAt: string } | undefined, us
 export class InjectionRepository {
   constructor(private db: BinderDatabase, private userId: string) {}
 
-  journal(): InjectionJournal {
-    return this.db.transaction(tx => ({
-      pens: tx.select().from(injectionPens).where(eq(injectionPens.userId, this.userId)).orderBy(desc(injectionPens.createdAt)).all(),
-      entries: tx.select().from(injectionEntries).where(eq(injectionEntries.userId, this.userId)).orderBy(desc(injectionEntries.takenAt), desc(injectionEntries.id)).all(),
-    }));
+  journal(includeExamples = false): JournalOverview {
+    return this.db.transaction(tx => {
+      const pens = tx.select().from(injectionPens).where(eq(injectionPens.userId, this.userId)).orderBy(desc(injectionPens.createdAt)).all();
+      const entries = tx.select().from(injectionEntries).where(eq(injectionEntries.userId, this.userId)).orderBy(desc(injectionEntries.takenAt), desc(injectionEntries.id)).all();
+      const examples = pens.filter(p => p.isExample);
+      const sampleIds = new Set(examples.map(p => p.id));
+      return {
+        pens: pens.filter(p => !p.isExample), entries: entries.filter(e => !sampleIds.has(e.penId)),
+        ...(includeExamples && examples.length ? { examples: { pens: examples, entries: entries.filter(e => sampleIds.has(e.penId)) } } : {}),
+      };
+    });
+  }
+
+  private requireEditablePen(tx: DatabaseSession, id: string) {
+    const pen = tx.select().from(injectionPens).where(and(eq(injectionPens.userId, this.userId), eq(injectionPens.id, id))).get();
+    if (!pen) throw new DomainError('펜을 찾을 수 없어요.', 404);
+    if (pen.isExample) throw new DomainError('이 펜은 읽기 전용 예시입니다.', 409);
+    return pen;
   }
 
   private used(tx: DatabaseSession, penId: string) {
@@ -34,6 +47,7 @@ export class InjectionRepository {
     return this.db.transaction(tx => {
       const predicate = eq(injectionPens.id, id);
       const old = tx.select().from(injectionPens).where(predicate).get();
+      if (old?.userId === this.userId && old.isExample) throw new DomainError('이 펜은 읽기 전용 예시입니다.', 409);
       if (old?.userId === this.userId && matches(old, data)) return old;
       checkVersion(old, this.userId, version);
       const used = this.used(tx, id);
@@ -49,10 +63,10 @@ export class InjectionRepository {
     return this.db.transaction(tx => {
       const predicate = eq(injectionEntries.id, id);
       const old = tx.select().from(injectionEntries).where(predicate).get();
+      if (old?.userId === this.userId && old.penId !== data.penId) this.requireEditablePen(tx, old.penId);
+      const pen = this.requireEditablePen(tx, data.penId);
       if (old?.userId === this.userId && matches(old, data)) return old;
       checkVersion(old, this.userId, version);
-      const pen = tx.select().from(injectionPens).where(and(eq(injectionPens.id, data.penId), eq(injectionPens.userId, this.userId))).get();
-      if (!pen) throw new DomainError('펜을 찾을 수 없어요.', 404);
       if (pen.closed && old?.penId !== pen.id) throw new DomainError('사용 종료한 펜이에요.', 409);
       const previous = old?.penId === pen.id ? old.amountMcg : 0;
       if (this.used(tx, pen.id) - previous + data.amountMcg > pen.capacityMcg) {
@@ -70,6 +84,7 @@ export class InjectionRepository {
       const owned = and(eq(table.userId, this.userId), eq(table.id, id));
       const row = tx.select().from(table).where(owned).get();
       if (!row) return;
+      this.requireEditablePen(tx, 'penId' in row ? row.penId : row.id);
       checkVersion(row, this.userId, version);
       if (kind === 'pens' && this.used(tx, id)) throw new DomainError('주사 기록이 있는 펜은 사용 종료로 표시해 주세요.', 409);
       tx.delete(table).where(owned).run();

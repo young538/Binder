@@ -103,10 +103,12 @@ export class UserBackupRepository implements BackupLookup {
   }
 
   checkInjectionInventory(imported: Record<string, unknown>[]): void {
-    const incoming = new Map(imported.map(pen => [pen.id, pen.drug]));
+    const incoming = new Map(imported.map(pen => [pen.id, pen]));
     const used = usedByPen(this.list('injectionEntries'));
     for (const pen of this.list('injectionPens')) {
-      if (incoming.has(pen.id) && incoming.get(pen.id) !== pen.drug) throw new ValidationError('같은 펜 ID에 서로 다른 약물이 지정됐습니다.');
+      const source = incoming.get(pen.id);
+      if (source && (source.isExample ?? false) !== pen.isExample) throw new ValidationError('예시와 내 기록의 펜 ID가 충돌합니다.');
+      if (source && source.drug !== pen.drug) throw new ValidationError('같은 펜 ID에 서로 다른 약물이 지정됐습니다.');
       if ((used.get(pen.id) ?? 0) > pen.capacityMcg) throw new ValidationError('주사 기록 합계가 펜 총량을 초과합니다.');
     }
   }

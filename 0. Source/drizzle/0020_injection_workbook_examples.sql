@@ -1,0 +1,1 @@
+ALTER TABLE `injection_pens` ADD `is_example` integer DEFAULT false NOT NULL;

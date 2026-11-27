@@ -63,7 +63,7 @@ describe('backup service transactions and account boundaries', () => {
     const first = backups.exportFor('a');
     expect(first).not.toHaveProperty('googleCalendarConnections');
     expect(JSON.stringify(first)).not.toContain('enc-secret-oauth-token');
-    expect(first.version).toBe(19);
+    expect(first.version).toBe(20);
     expect(first.generatedAt).toBe(now);
     expect(first.annualGoals[0].target).toBe(365);
     expect(first.annualGoals[0].monthlyActualAdjustments).toHaveLength(12);

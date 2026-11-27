@@ -1,8 +1,8 @@
-import type { InjectionJournal, PenInput, EntryInput } from '@/lib/injections';
+import type { JournalOverview, PenInput, EntryInput } from '@/lib/injections';
 import { http } from './http';
 import { notifyMutation } from './events';
 
-export const getInjectionJournal = () => http.get<InjectionJournal>('/api/injections');
+export const getInjectionJournal = () => http.get<JournalOverview>('/api/injections?examples=1');
 const path = (kind: 'pens' | 'entries', id: string) => `/api/injections/${kind}/${encodeURIComponent(id)}`;
 
 export async function saveInjection(kind: 'pens' | 'entries', id: string, input: PenInput | EntryInput, version?: string) {

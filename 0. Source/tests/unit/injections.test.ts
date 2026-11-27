@@ -51,6 +51,25 @@ describe('injection journal', () => {
     expect(repo.journal().pens).toEqual([p]);
   });
 
+  it('restores private examples separately and protects them during journal edits', () => {
+    const backup = new BackupService(() => connection.get());
+    const p = repo.savePen('p', pen, null);
+    const entry = repo.saveEntry('sample-entry', dose, null);
+    const exported = backup.exportFor('a');
+    const sample = { ...p, isExample: true };
+    backup.importFor('a', { mode: 'replace', data: { ...exported, injectionPens: [sample] } });
+    expect(repo.journal()).toEqual({ pens: [], entries: [] });
+    expect(repo.journal(true).examples).toEqual({ pens: [sample], entries: [entry] });
+    expect(new InjectionRepository(connection.get(), 'b').journal(true).examples).toBeUndefined();
+    repo.savePen('live', pen, null);
+    expect(() => repo.saveEntry(entry.id, { ...dose, penId: 'live' }, entry.updatedAt)).toThrow();
+    expect(() => repo.savePen('p', pen, p.updatedAt)).toThrow();
+    expect(() => repo.remove('entries', entry.id, entry.updatedAt)).toThrow();
+    expect(() => repo.saveEntry('new', dose, null)).toThrow();
+    expect(() => backup.importFor('a', { mode: 'merge', data: exported })).toThrow();
+    expect(backup.exportFor('a').injectionPens.find(row => row.id === 'p')?.isExample).toBe(true);
+  });
+
   it('rejects fractional inventory units, ambiguous local times and future records', () => {
     for (const invalid of [{ amountMcg: 0.6 }, { amountMcg: 0 }, { takenAt: '2020-01-01T16:00' }, { takenAt: '2999-01-01T01:00:00.000Z' }]) {
       expect(() => validateFields('injectionEntries', { ...dose, ...invalid })).toThrow();

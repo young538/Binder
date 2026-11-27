@@ -49,6 +49,10 @@ export function validateImport(
         if (adjustments !== null && (!Array.isArray(adjustments) || adjustments.length !== 12 || adjustments.some(v => v !== null && (typeof v !== 'number' || !Number.isFinite(v))))) fail('Invalid monthlyActualAdjustments');
         delete fields.monthlyActualAdjustments;
       }
+      if (name === 'injectionPens') {
+        if (fields.isExample !== undefined && typeof fields.isExample !== 'boolean') fail('Invalid isExample');
+        delete fields.isExample;
+      }
       if (name === 'projects') {
         if (fields.completedAt !== undefined && fields.completedAt !== null && !timestamp(fields.completedAt)) fail('Invalid completedAt');
         delete fields.completedAt;

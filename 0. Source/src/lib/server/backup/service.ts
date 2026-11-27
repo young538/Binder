@@ -13,7 +13,7 @@ export class BackupService {
 
   exportFor(userId: string) {
     return this.database().transaction(tx => ({
-      version: 19 as const,
+      version: 20 as const,
       generatedAt: this.now().toISOString(),
       ...new UserBackupRepository(tx, userId).exportData(),
     }));
