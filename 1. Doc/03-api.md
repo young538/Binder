@@ -153,11 +153,11 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 각 행의 userId는 로그인 사용자로 강제 교체합니다. 다른 계정 ID와의 충돌은 사전 검증에서 거절하고, 같은 계정의 기존 ID는 `onConflictDoNothing()`으로 건너뜁니다. merge는 기존 행 갱신이 아닙니다. replace는 본인 도메인 행을 먼저 삭제합니다. settings는 전달될 때만 upsert하며 replace 삭제 대상에서 제외됩니다.
 
-`BackupService`가 사전 검증과 전체 쓰기를 같은 즉시 트랜잭션 안에서 실행합니다. 내보내기도 하나의 읽기 트랜잭션을 사용합니다. 성공은 `{ok:true, mode, counts}`입니다. 사전 검증 실패는 400이며, 쓰기 중 DB 실패는 500 오류와 롤백입니다. counts는 시도한 입력 수이며 실제 삽입 수가 아닙니다. 가져오기는 `UserBackupRepository`가 컬렉션을 삽입한 뒤 연간 실적 기준선을 보존하고, 연결된 습관의 연·월 목표를 재계산합니다. merge의 기존 실적 기준선은 삽입 전에도 보존합니다.
+`BackupService`가 사전 검증과 전체 쓰기를 같은 즉시 트랜잭션 안에서 실행합니다. 내보내기도 하나의 읽기 트랜잭션을 사용합니다. 성공은 `{ok:true, mode, counts}`입니다. 입력 검증 실패와 덮어쓰기 중 발견한 중복 기록은 400을 반환합니다. 중복 오류에는 컬렉션과 행 번호, 날짜 필드가 있으면 날짜도 포함합니다. 예상치 못한 DB 오류는 500을 반환합니다. 실패한 트랜잭션은 삭제까지 모두 롤백합니다. counts는 replace에서 저장한 건수, merge에서 시도한 건수입니다. 가져오기는 `UserBackupRepository`가 컬렉션을 삽입한 뒤 연간 실적 기준선을 보존하고, 연결된 습관의 연·월 목표를 재계산합니다. merge의 기존 실적 기준선은 삽입 전에도 보존합니다.
 
 ## 8. 클라이언트 오류와 갱신
 
-`lib/repo/http.ts`는 401 리다이렉트, 비정상 응답의 error 메시지 추출, JSON 직렬화를 담당합니다. 도메인 mutation 함수는 성공 후 `notifyMutation()`을 호출하지만 화면이 그 알림을 구독해야 갱신됩니다.
+`lib/repo/http.ts`는 401 리다이렉트, 비정상 응답의 error 메시지 추출, JSON 직렬화를 담당합니다. 도메인 mutation 함수는 성공 후 변경한 리소스들을 `notifyMutation(...resources)`로 한 번 알립니다. 해당 리소스를 구독하는 화면은 한 번 갱신됩니다.
 
 로그인과 설정의 import/export는 자체 fetch를 사용하므로 공통 wrapper의 오류 처리와 정확히 같지 않습니다. API에 없는 정렬·검색·집계 기능을 URL 쿼리만 붙여 사용할 수는 없습니다.
 
