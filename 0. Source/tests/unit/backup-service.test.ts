@@ -233,6 +233,16 @@ describe('backup service transactions and account boundaries', () => {
     expect(backups.exportFor('a')).toEqual(before);
   });
 
+  it('rolls back the entire replacement and identifies the conflicting check-in date', () => {
+    backups.importFor('a', { mode: 'replace', data: fixture() });
+    const before = backups.exportFor('a');
+    const checkin = { ...fixture().dailyCheckins[0], date: '2026-11-02' };
+    const dailyCheckins = [checkin, { ...checkin, id: 'second' }];
+    expect(() => backups.importFor('a', { mode: 'replace', data: { dailyCheckins } }))
+      .toThrow('dailyCheckins 2번째 기록 (2026-11-02)');
+    expect(backups.exportFor('a')).toEqual(before);
+  });
+
   it('retains settings absent from replace and treats merge counts as submitted rows', () => {
     backups.importFor('a', { mode: 'replace', data: fixture() });
     expect(backups.importFor('a', { mode: 'merge', data: fixture() }).counts.todos).toBe(1);

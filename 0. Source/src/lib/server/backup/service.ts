@@ -30,7 +30,7 @@ export class BackupService {
       for (const name of BACKUP_COLLECTIONS) {
         const rows = data[name];
         if (!rows?.length) continue;
-        repository.insert(name, rows);
+        repository.insert(name, rows, mode);
         counts[name] = rows.length;
       }
       if (data.injectionEntries?.length || data.injectionPens?.length) repository.checkInjectionInventory(data.injectionPens ?? []);

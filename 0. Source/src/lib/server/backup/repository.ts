@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, eq } from 'drizzle-orm';
-import type { BackupCollection } from '@/lib/backup';
+import type { BackupCollection, ImportMode } from '@/lib/backup';
 import { ValidationError } from '@/lib/validation/mutations';
 import { usedByPen } from '@/lib/injections';
 import { DEFAULT_SETTINGS } from '@/lib/settings';
@@ -91,14 +91,28 @@ export class UserBackupRepository implements BackupLookup {
     }
   }
 
-  insert(collection: BackupCollection, rows: Record<string, unknown>[]): void {
+  insert(collection: BackupCollection, rows: Record<string, unknown>[], mode: ImportMode): void {
     const table = tables[collection];
     // Called only after complete runtime validation, including cross-user ID checks.
     const incoming = collection === 'todos' && rows.some(row => row.googleTaskId) ? this.prepareImportedTodos(rows) : rows;
     const batchSize = 100;
     for (let offset = 0; offset < incoming.length; offset += batchSize) {
-      const batch = incoming.slice(offset, offset + batchSize).map(row => ({ ...row, userId: this.userId }));
-      this.db.insert(table).values(batch as typeof table.$inferInsert[]).onConflictDoNothing(collection === 'timeBlocks' ? { target: table.id } : undefined).run();
+      const batch = incoming.slice(offset, offset + batchSize);
+      const values = batch.map(row => ({ ...row, userId: this.userId })) as typeof table.$inferInsert[];
+      const insert = this.db.insert(table).values(values);
+      if (mode === 'merge') {
+        insert.onConflictDoNothing(collection === 'timeBlocks' ? { target: table.id } : undefined).run();
+        continue;
+      }
+
+      const inserted = insert.onConflictDoNothing().returning({ id: table.id }).all();
+      if (inserted.length !== batch.length) {
+        const ids = new Set(inserted.map(row => row.id));
+        const index = batch.findIndex(row => !ids.has(String(row.id)));
+        const date = batch[index].date;
+        const location = `${collection} ${offset + index + 1}번째 기록${date ? ` (${date})` : ''}`;
+        throw new ValidationError(`${location}이 중복되어 덮어쓰기를 취소했습니다.`);
+      }
     }
   }
 
