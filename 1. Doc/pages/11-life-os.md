@@ -127,6 +127,8 @@ PC 메뉴 또는 모바일 더보기의 **주사 기록**에서 위고비·마�
 
 ## 10. Karpathy LLM Wiki 통합 (`/wiki`)
 
+실전 사용 방법, 복사용 프롬프트 예제, `/schedule` 자동화 예시는 [Karpathy LLM Wiki 사용 가이드](../11-llm-wiki-guide.md)를 참고하세요.
+
 - **3계층 지식베이스 구조 ([SKILL.md](../../.agents/skills/life-os-wiki/SKILL.md) · [wiki-schema-template.md](../../0.%20Source/scripts/wiki-schema-template.md))**: Andrej Karpathy의 LLM Wiki 패턴을 따라 로컬 `2. Wiki/` 아래에 불변 원본(`raw/inbox/`, `raw/life-os/`), 에이전트가 상호 링크하며 컴파일하는 위키(`wiki/life/`, `wiki/topics/`, `wiki/sources/`, `wiki/synthesis/`), 마스터 목차·규칙·로그(`index.md`, `SCHEMA.md`, `log.md`)를 분리 관리합니다. 개인 내용 보호를 위해 `2. Wiki/`는 `.gitignore`로 원격 저장소에서 제외하며 Docker `app` 컨테이너의 `/app/wiki`에 마운트합니다.
 - **웹 리더 · 백링크 · Raw 수집함 ([WikiPage.tsx](../../0.%20Source/src/components/wiki/WikiPage.tsx) · [WikiMarkdown.tsx](../../0.%20Source/src/components/wiki/WikiMarkdown.tsx) · [WikiRawCaptureDialog.tsx](../../0.%20Source/src/components/wiki/WikiRawCaptureDialog.tsx))**: `/wiki`에서 `[[위키링크]]` 클릭 이동, 역방향 백링크 목록, 끊김/고아 링크 건전성 요약, `+ Raw 넣기`(텍스트 메모/URL 또는 최대 10MB 파일 업로드)를 지원합니다.
 - **보안 · 사용자 격리 · 통합 검색 ([service.ts](../../0.%20Source/src/lib/server/wiki/service.ts) · [search/route.ts](../../0.%20Source/src/app/api/search/route.ts))**: `WIKI_OWNER_USERNAME`과 일치하는 소유자 외 계정은 `.users/<userId>/`로 격리되며, `resolveSafeWikiPath`가 경로 이탈·숨김 디렉터리·심볼릭 링크 탈출을 차단합니다. `/api/search` 및 `Ctrl/Cmd+K` 검색에도 위키(`wiki`) 결과가 함께 노출됩니다.

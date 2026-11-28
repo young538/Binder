@@ -23,6 +23,7 @@
 ---
 title: 문서 제목
 category: topics # life | topics | sources | synthesis
+question: 질의 기억 문서(synthesis)일 때 원래 질문 (선택)
 tags: [태그1, 태그2]
 updated: YYYY-MM-DD
 summary: 한 줄 요약
@@ -39,5 +40,5 @@ sources: [raw/life-os/..., wiki/sources/...]
 ## 4. 3대 작업 루프
 
 1. **Ingest**: `raw/inbox/` 또는 `raw/life-os/`의 신규 자료를 읽어 `sources/`에 요약하고, 관련 `topics/`·`life/` 문서 3~10개에 지식을 반영한 뒤 `index.md`·`log.md` 갱신.
-2. **Query**: 질문 시 `index.md` → 관련 `wiki/` 문서 순으로 읽고 근거 `[[링크]]`와 함께 답변. 좋은 분석은 `synthesis/`로 영구 저장.
+2. **Query (질문 자동 기억)**: 질문 시 먼저 `index.md`와 기존 `wiki/synthesis/`를 확인해 과거 질문·결론을 회상한 뒤, 관련 `wiki/` 문서 근거 `[[링크]]`와 함께 답변. 재사용 가치가 있는 Q&A·결론은 `wiki/synthesis/YYYY-MM-DD-주제.md`에 `question:` 메타데이터와 함께 자동 저장하고 `index.md`·`log.md`에 기록.
 3. **Lint**: 주기적으로 깨진 `[[링크]]`, 고아 문서, 중복 주제, "적어둔 원칙 vs 실제 최근 행동" 괴리를 점검하고 `log.md`에 기록.

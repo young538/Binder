@@ -40,10 +40,10 @@ Before any Ingest, Query, or Lint operation, **always read `2. Wiki/SCHEMA.md` a
 5. Append an entry to `2. Wiki/log.md` in format:
    `## [YYYY-MM-DD] ingest | <summary of sources ingested and pages touched>`
 
-### 2. Query
-1. Read `2. Wiki/index.md` first to locate candidate wiki pages (avoid scanning `raw/` unless fine detail is missing from `wiki/`).
-2. Read the relevant `wiki/**/*.md` pages and synthesize a direct, grounded answer citing exact `[[wikilinks]]`.
-3. When a query yields durable cross-domain insight, offer (or write on approval) a new note in `wiki/synthesis/`, update `index.md`, and append `## [YYYY-MM-DD] query | ...` to `log.md`.
+### 2. Query (With Persistent Memory)
+1. **Recall prior Q&A first**: Read `2. Wiki/index.md` and scan existing `2. Wiki/wiki/synthesis/*.md` pages (checking `question:` frontmatter/summaries) to check what you and the user already analyzed or concluded earlier on this topic.
+2. **Synthesize from compiled wiki**: Read the relevant `wiki/**/*.md` pages (falling back to `raw/` only when fine detail is missing from `wiki/`) and write a grounded answer citing exact `[[wikilinks]]`.
+3. **Auto file-back valuable Q&A (Query Memory)**: Unless the user asks for an ephemeral quick lookup (or asks not to save), automatically write meaningful/reusable Q&A conclusions into `2. Wiki/wiki/synthesis/YYYY-MM-DD-<slug>.md` with `question: "<original question>"`, `category: synthesis`, `tags`, `updated`, `summary`, `sources`, and `[[wikilinks]]`. Update `2. Wiki/index.md` and append `## [YYYY-MM-DD] query | <question summary> -> <synthesis path>` to `2. Wiki/log.md`.
 
 ### 3. Lint
 1. Audit `2. Wiki/`:

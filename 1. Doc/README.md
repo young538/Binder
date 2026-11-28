@@ -1,6 +1,6 @@
 # 프로젝트 문서 목차
 
-작성 기준: **2026-11-07 작업 트리·운영 배포**. 최신 기능 사용법은 [계획·실행·회고 연결](10-planning-workflow.md), 보안·자동 백업·CI는 [후속 개선 기록](09-follow-up-improvements.md)에 있습니다. 1차 리팩토링·2026-10-29 Docker 배포 결과는 [전체 리팩토링 기록](08-full-refactor.md)에 보존합니다. 소스·문서 대조 결과는 [점검 기록](07-source-doc-audit.md), 이후 수정 방법은 [유지보수 가이드](06-maintenance.md)를 확인하세요. 실제 검증과 최신 연결 기능 6종의 운영 배포 결과는 [검증과 구현 한계](05-verification-and-limitations.md)에 구분해 기록합니다.
+작성 기준: **2026-11-28 작업 트리·운영 배포**. 최신 기능 사용법은 [계획·실행·회고 연결](10-planning-workflow.md)과 [Karpathy LLM Wiki 사용 가이드](11-llm-wiki-guide.md), 보안·자동 백업·CI는 [후속 개선 기록](09-follow-up-improvements.md)에 있습니다. 1차 리팩토링·2026-10-29 Docker 배포 결과는 [전체 리팩토링 기록](08-full-refactor.md)에 보존합니다. 소스·문서 대조 결과는 [점검 기록](07-source-doc-audit.md), 이후 수정 방법은 [유지보수 가이드](06-maintenance.md)를 확인하세요. 실제 검증과 최신 연결 기능 6종의 운영 배포 결과는 [검증과 구현 한계](05-verification-and-limitations.md)에 구분해 기록합니다.
 
 ## 1. 프로젝트가 하는 일
 
@@ -38,6 +38,7 @@ Super 플래너는 큰 목표와 매일의 실행 기록을 함께 관리합니�
 | `/retrospective/year/[year]` | 연간 실행 요약과 회고 작성 | [인생 OS 확장](pages/11-life-os.md#2-회고-내비게이션--월연-회고--원칙-승격) |
 | `/metrics` | 상태·추세 지표 트래커 | [인생 OS 확장](pages/11-life-os.md#3-상태-지표-트래커-metrics) |
 | `/notes` | 원칙·의사결정·인사이트·레퍼런스 노트 | [인생 OS 확장](pages/11-life-os.md#4-지식--원칙--의사결정-노트-notes) |
+| `/wiki` | Karpathy LLM Wiki(지식 위키·백링크·Raw 수집) | [LLM Wiki 가이드](11-llm-wiki-guide.md) |
 | `/life` | 일정·D-Day·기념일(`.ics`)·소중한 사람 CRM | [인생 OS 확장](pages/11-life-os.md#5-일정--기념일--소중한-사람-life) |
 | `/subscriptions` | 구독·월정액 고정비 및 다음 결제일 관리 | [인생 OS 확장](pages/11-life-os.md#6-구독--월정액-고정비-관리-subscriptions) |
 | `/finance` | 개인 가계부·뱅크샐러드 엑셀 가져오기·월 예산 관리 | [인생 OS 확장](pages/11-life-os.md#9-가계부--뱅크샐러드-엑셀-가져오기-finance) |
