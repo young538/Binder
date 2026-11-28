@@ -40,16 +40,36 @@ for (const width of [390, 1280]) {
     await expect(selector).toHaveCount(0);
     await page.getByLabel('실제 투여량 (mg)').fill('0.2');
     await page.getByLabel('기록한 사용 클릭 수 (선택)').fill('6');
+    await page.getByText('회차별 상태 기록 (선택)', { exact: true }).click();
+    await page.getByLabel('주사 부위', { exact: true }).fill('복부 왼쪽');
+    await page.getByLabel('당일 체중 (kg)').fill('68.75');
+    await page.getByLabel('식욕 억제도', { exact: true }).selectOption('3');
+    await page.getByLabel('부작용·컨디션', { exact: true }).fill('오후에 기록한 컨디션');
+    await page.getByLabel('식단·운동 등 상세 메모').fill('저녁 산책');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     await expect(card).toContainText('장부상 남은 클릭 41클릭');
     await page.reload();
     await expect(card).toContainText('기록된 사용 6클릭');
+    const history = page.locator('#injection-history');
+    await expect(history).toContainText('주사 부위 복부 왼쪽');
+    await expect(history).toContainText('체중 68.75 kg');
+    await expect(history).toContainText('식욕 억제도 3/5점');
+    await expect(history).toContainText('오후에 기록한 컨디션');
+    await expect(history).toContainText('저녁 산책');
+    await expect(page.getByRole('link', { name: /투여 기록/ })).toHaveAttribute('href', '#injection-history');
     await expect(page.getByText('사용 6클릭 · 장부 잔여 41클릭', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /투여 기록 수정$/ }).click();
     await page.getByLabel('기록한 사용 클릭 수 (선택)').fill('');
+    await page.getByText('회차별 상태 기록 (선택)', { exact: true }).click();
+    await expect(page.getByLabel('당일 체중 (kg)')).toHaveValue('68.75');
+    await page.getByLabel('부작용·컨디션', { exact: true }).fill('');
+    await page.getByLabel('식단·운동 등 상세 메모').fill('다시 작성한 메모');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     await expect(card).toContainText('사용 클릭 미입력 1회');
     await expect(card).toContainText('장부상 남은 클릭 —');
+    await expect(history).not.toContainText('오후에 기록한 컨디션');
+    await expect(history).toContainText('다시 작성한 메모');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
   test(`personal workbook example is separate from editable records at ${width}px`, async ({ page }, info) => {

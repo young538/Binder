@@ -5,6 +5,7 @@ import { drugs, mg, type Drug, type InjectionEntry, type InjectionPen } from '@/
 import { removeInjection, saveInjection } from '@/lib/repo/injections';
 import { Dialog } from '@/components/common/Dialog';
 import { wegovyDosesPerPen, wegovyPens } from '@/lib/wegovy-pens';
+import { ConditionFields, readCondition } from './InjectionCondition';
 import { HttpError } from '@/lib/client/HttpClient';
 
 export type Editor = { kind: 'pens'; row?: InjectionPen } | { kind: 'entries'; row?: InjectionEntry; penId?: string };
@@ -43,7 +44,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
     }
   };
 
-  const save = (e: FormEvent) => {
+  const save = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!/^(?:\d+|\d*\.\d{1,3})$/.test(amount) || Number(amount) <= 0) {
       setError('mg 단위로 소수점 셋째 자리까지 입력해 주세요.');
@@ -64,7 +65,8 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
         return;
       }
       const takenAt = entry && time === localTime(new Date(entry.takenAt)) ? entry.takenAt : instant.toISOString();
-      void mutate(() => saveInjection('entries', id, { penId, amountMcg: mcg, usedClicks: recordedClicks, takenAt }, entry?.updatedAt));
+      const condition = readCondition(e.currentTarget);
+      void mutate(() => saveInjection('entries', id, { penId, amountMcg: mcg, usedClicks: recordedClicks, takenAt, ...condition }, entry?.updatedAt));
     }
   };
 
@@ -98,6 +100,7 @@ export function InjectionEditor({ editor, pens, refresh, onClose }: { editor: Ed
       </label>
       {pen && <label className="flex items-center gap-2 self-end py-2"><input type="checkbox" checked={closed} onChange={e => setClosed(e.target.checked)} /> 사용 종료한 펜</label>}
     </fieldset>
+    {editor.kind === 'entries' && <fieldset disabled={busy}><ConditionFields entry={entry} fieldClass={field} /></fieldset>}
     {editor.kind === 'pens' && <p className="text-xs text-zinc-600 dark:text-zinc-400">라벨에서 펜 전체에 들어 있는 약물량(mg)을 확인해 주세요. 1회 용량이나 용액의 부피(mL)와 다를 수 있어요. 제품의 사용 횟수와 폐기 기준을 따르고 남은 여분을 추가 투여하지 마세요.</p>}
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     <div className="flex flex-wrap items-center gap-3 text-sm">

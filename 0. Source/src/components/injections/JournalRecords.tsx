@@ -1,9 +1,10 @@
 'use client';
 import { format } from 'date-fns';
 import { ChevronRight, History, PackageOpen, Pencil, Plus, Syringe } from 'lucide-react';
-import { drugs, mg, usedByPen, type clickLedger, type InjectionJournal } from '@/lib/injections';
+import { drugs, mg, usedByPen, weightChanges, type clickLedger, type InjectionJournal } from '@/lib/injections';
 import { wegovyDosesPerPen, wegovyPens } from '@/lib/wegovy-pens';
 import { WegovyPenGuide } from './WegovyPenGuide';
+import { ConditionHistory } from './InjectionCondition';
 import type { Editor } from './InjectionEditor';
 import styles from './journal.module.css';
 
@@ -47,7 +48,8 @@ export function PenInventory({ journal, clicks, isExample, open }: Props) {
 export function InjectionHistory({ journal, clicks, isExample, open }: Props) {
   const byId = new Map(journal.pens.map(p => [p.id, p]));
   const spent = usedByPen(journal.entries);
-  return <section className={styles.panel}>
+  const changes = weightChanges(journal.entries);
+  return <section id="injection-history" className={styles.panel}>
     <h2><History size={19} />투여 이력</h2>
     {journal.entries.length ? <ol className={styles.history}>{journal.entries.map(e => {
       const p = byId.get(e.penId)!;
@@ -60,6 +62,7 @@ export function InjectionHistory({ journal, clicks, isExample, open }: Props) {
         <div className={styles.dose}><b>{mg(e.amountMcg)} mg</b><small>{isExample ? '추정 잔량' : '투여 후 잔량'} {mg(p.capacityMcg - cumulative)} mg</small>
           {e.usedClicks != null && <small>사용 {e.usedClicks}클릭{remainingClicks !== undefined && ' · 장부 잔여 ' + remainingClicks + '클릭'}</small>}</div>
         {!isExample && <button className={styles.iconButton} aria-label={format(new Date(e.takenAt), 'yyyy.MM.dd HH:mm') + ' · ' + mg(e.amountMcg) + ' mg 투여 기록 수정'} onClick={() => open({ kind: 'entries', row: e })}><ChevronRight size={18} /></button>}
+        <ConditionHistory entry={e} weightChange={changes.get(e.id)} />
       </li>;
     })}</ol> : <p className={styles.blank}>아직 기록한 주사가 없어요.</p>}
   </section>;

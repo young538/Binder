@@ -97,6 +97,10 @@
 .blank { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 24px 10px; color: var(--soft); font-size: 13px; background: var(--wash); border-radius: 10px; }
 .history li { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(95px, 1.6fr) minmax(100px, .9fr) auto; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .history small { display: block; font-size: 12px; margin-top: 3px; }
+.condition { grid-column: 1 / -1; border-inline-start: 2px solid var(--line); padding-inline-start: 10px; font-size: 13px; color: var(--soft); overflow-wrap: anywhere; }
+.observations { display: flex; flex-wrap: wrap; gap: 3px 14px; }
+.condition p { margin: 3px 0; white-space: pre-wrap; }
+.condition b { font-weight: 600; color: var(--ink); }
 .dose { text-align: right; }
 @media (max-width: 850px) { .panels { grid-template-columns: 1fr; } }
 @media (max-width: 580px) {

@@ -2,20 +2,25 @@
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { ArrowUpRight, CalendarDays, Layers, Scale, Syringe } from 'lucide-react';
-import { drugs, mg, type InjectionJournal } from '@/lib/injections';
+import { drugs, mg, type InjectionEntry, type InjectionJournal } from '@/lib/injections';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { listMetricsWithEntries } from '@/lib/repo/metrics';
 import { sortMetricEntries } from '@/lib/metrics';
 import styles from './journal.module.css';
 
-function WeightSummary() {
+function WeightSummary({ entries }: { entries: InjectionEntry[] }) {
   const resource = useAsyncResource('injection-journal-weight', listMetricsWithEntries, [], ['metrics', 'metricEntries']);
   const weights = resource.value.filter(({ metric }) => metric.unit.trim().toLowerCase() === 'kg' &&
     ['체중', '몸무게', 'weight', 'body weight'].includes(metric.name.trim().toLowerCase()));
-  const latest = sortMetricEntries(weights.flatMap(row => row.entries)).at(-1);
+  const metric = sortMetricEntries(weights.flatMap(row => row.entries)).at(-1);
+  const injection = entries.find(entry => entry.weightKg != null);
+  const date = injection && format(new Date(injection.takenAt), 'yyyy-MM-dd');
+  const fromInjection = date && (!metric || date >= metric.date);
+  const value = fromInjection ? injection?.weightKg : metric?.value;
+  const source = fromInjection ? date + ' · 투여 기록' : metric?.date;
   return <div><dt><Scale size={16} />최근 체중</dt>
-    <dd>{latest ? <>{latest.value}<small> kg</small></> : '—'}</dd>
-    <Link href="/metrics">{latest ? latest.date : resource.error ? '지표에서 확인' : '체중 지표 열기'} <ArrowUpRight size={12} /></Link>
+    <dd>{value != null ? <>{value}<small> kg</small></> : '—'}</dd>
+    <Link href={fromInjection ? '#injection-history' : '/metrics'}>{source ?? (resource.error ? '지표에서 확인' : '체중 지표 열기')} <ArrowUpRight size={12} /></Link>
   </div>;
 }
 
@@ -30,6 +35,6 @@ export function JournalSummary({ journal, isExample }: { journal: InjectionJourn
     <div><dt><Layers size={16} />누적 기록</dt><dd>{journal.entries.length}<small> 회</small></dd>
       <span>등록한 펜 {journal.pens.length}개</span></div>
     {isExample ? <div><dt><CalendarDays size={16} />기록 기간</dt><dd>{first && latest ? Math.round((Date.parse(latest.takenAt) - Date.parse(first.takenAt)) / 86400000) + 1 : 0}<small> 일</small></dd>
-      <span>{first && latest ? format(new Date(first.takenAt), 'MM.dd') + ' – ' + format(new Date(latest.takenAt), 'MM.dd') : '—'}</span></div> : <WeightSummary />}
+      <span>{first && latest ? format(new Date(first.takenAt), 'MM.dd') + ' – ' + format(new Date(latest.takenAt), 'MM.dd') : '—'}</span></div> : <WeightSummary entries={journal.entries} />}
   </dl>;
 }
