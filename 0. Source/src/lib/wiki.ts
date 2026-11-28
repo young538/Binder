@@ -1,4 +1,5 @@
 export type WikiCategory = 'life' | 'topics' | 'sources' | 'synthesis' | 'meta';
+export type WikiGraphNodeCategory = WikiCategory | 'unresolved';
 
 export const WIKI_CATEGORY_LABEL: Record<WikiCategory, string> = {
   life: '삶 · 원칙',
@@ -7,6 +8,30 @@ export const WIKI_CATEGORY_LABEL: Record<WikiCategory, string> = {
   synthesis: '통찰 · 합성',
   meta: '인덱스 · 규칙',
 };
+
+export interface WikiGraphNode {
+  id: string;
+  label: string;
+  category: WikiGraphNodeCategory;
+  summary: string;
+  tags: string[];
+  degree: number;
+  backlinkCount: number;
+  outgoingCount: number;
+  isOrphan: boolean;
+  unresolved?: boolean;
+}
+
+export interface WikiGraphEdge {
+  source: string;
+  target: string;
+  resolved: boolean;
+}
+
+export interface WikiGraphData {
+  nodes: WikiGraphNode[];
+  edges: WikiGraphEdge[];
+}
 
 export interface WikiLinkRef {
   target: string;
@@ -67,6 +92,7 @@ export interface WikiIndexResponse {
   rawFiles: WikiRawFile[];
   stats: WikiStats;
   recentLogs: WikiLogEntry[];
+  graph: WikiGraphData;
 }
 
 function unquoteYaml(val: string): string {

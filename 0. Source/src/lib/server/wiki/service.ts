@@ -10,6 +10,9 @@ import {
   stripMarkdownTitleHeading,
   WIKI_CATEGORY_LABEL,
   type WikiCategory,
+  type WikiGraphData,
+  type WikiGraphEdge,
+  type WikiGraphNode,
   type WikiIndexResponse,
   type WikiLogEntry,
   type WikiPageDetail,
@@ -188,6 +191,7 @@ export class WikiService {
     recentLogs: WikiLogEntry[];
     brokenLinkCount: number;
     orphanCount: number;
+    graph: WikiGraphData;
   } {
     if (!fs.existsSync(this.rootDir)) {
       return {
@@ -196,6 +200,7 @@ export class WikiService {
         recentLogs: [],
         brokenLinkCount: 0,
         orphanCount: 0,
+        graph: { nodes: [], edges: [] },
       };
     }
 
@@ -285,9 +290,12 @@ export class WikiService {
       });
     }
 
-    // 3. Resolve outgoing links & backlinks
+    // 3. Resolve outgoing links, backlinks & graph edges/nodes
     const summaryPool = parsedPages.map(p => p.summary);
     const backlinkCounts = new Map<string, number>();
+    const edgeSet = new Set<string>();
+    const edges: WikiGraphEdge[] = [];
+    const missingNodes = new Map<string, WikiGraphNode>();
     let brokenLinkCount = 0;
 
     for (const page of parsedPages) {
@@ -297,12 +305,40 @@ export class WikiService {
         const targetPath = resolveWikiLink(link.target, summaryPool);
         if (!targetPath) {
           brokenLinkCount++;
+          const missingKey = link.target.trim().toLowerCase();
+          if (missingKey) {
+            const missingId = `missing:${missingKey}`;
+            if (!missingNodes.has(missingId)) {
+              missingNodes.set(missingId, {
+                id: missingId,
+                label: link.target.trim(),
+                category: 'unresolved',
+                summary: '아직 작성되지 않은 위키 문서',
+                tags: [],
+                degree: 0,
+                backlinkCount: 0,
+                outgoingCount: 0,
+                isOrphan: false,
+                unresolved: true,
+              });
+            }
+            const ek = `${page.summary.path}->${missingId}`;
+            if (!edgeSet.has(ek)) {
+              edgeSet.add(ek);
+              edges.push({ source: page.summary.path, target: missingId, resolved: false });
+            }
+          }
           continue;
         }
         outCount++;
         if (targetPath !== page.summary.path && !seenResolved.has(targetPath)) {
           seenResolved.add(targetPath);
           backlinkCounts.set(targetPath, (backlinkCounts.get(targetPath) ?? 0) + 1);
+          const ek = `${page.summary.path}->${targetPath}`;
+          if (!edgeSet.has(ek)) {
+            edgeSet.add(ek);
+            edges.push({ source: page.summary.path, target: targetPath, resolved: true });
+          }
         }
       }
       page.summary.outgoingCount = outCount;
@@ -316,6 +352,30 @@ export class WikiService {
         orphanCount++;
       }
     }
+
+    const degreeCounts = new Map<string, number>();
+    for (const edge of edges) {
+      degreeCounts.set(edge.source, (degreeCounts.get(edge.source) ?? 0) + 1);
+      degreeCounts.set(edge.target, (degreeCounts.get(edge.target) ?? 0) + 1);
+    }
+
+    const graphNodes: WikiGraphNode[] = [
+      ...parsedPages.map(p => ({
+        id: p.summary.path,
+        label: p.summary.title,
+        category: p.summary.category,
+        summary: p.summary.summary,
+        tags: p.summary.tags,
+        degree: degreeCounts.get(p.summary.path) ?? 0,
+        backlinkCount: p.summary.backlinkCount,
+        outgoingCount: p.summary.outgoingCount,
+        isOrphan: p.summary.category !== 'meta' && p.summary.backlinkCount === 0,
+      })),
+      ...[...missingNodes.values()].map(m => ({
+        ...m,
+        degree: degreeCounts.get(m.id) ?? 0,
+      })),
+    ];
 
     // 4. Raw files (raw/inbox/* & raw/life-os/**)
     const rawRelPaths = walkFiles(path.join(this.rootDir, 'raw'), this.rootDir).sort();
@@ -333,11 +393,18 @@ export class WikiService {
       };
     });
 
-    return { parsedPages, rawFiles, recentLogs, brokenLinkCount, orphanCount };
+    return {
+      parsedPages,
+      rawFiles,
+      recentLogs,
+      brokenLinkCount,
+      orphanCount,
+      graph: { nodes: graphNodes, edges },
+    };
   }
 
   getIndex(): WikiIndexResponse {
-    const { parsedPages, rawFiles, recentLogs, brokenLinkCount, orphanCount } =
+    const { parsedPages, rawFiles, recentLogs, brokenLinkCount, orphanCount, graph } =
       this.collectPages();
     const pages = parsedPages.map(p => p.summary);
     const dates = pages
@@ -358,6 +425,7 @@ export class WikiService {
         lastUpdated: dates[dates.length - 1] ?? null,
       },
       recentLogs,
+      graph,
     };
   }
 

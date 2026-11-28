@@ -10,6 +10,11 @@ import {
   sanitizeRawSlug,
 } from '@/lib/wiki';
 import { WikiService, resolveSafeWikiPath } from '@/lib/server/wiki/service';
+import {
+  computeNeighborhood,
+  filterWikiGraph,
+  layoutWikiGraph,
+} from '@/lib/wikiGraph';
 import { DomainError } from '@/lib/server/errors';
 
 let tempDir: string;
@@ -168,6 +173,39 @@ summary: 핵심 목표 요약
     expect(hits.some(h => h.href.includes(encodeURIComponent('wiki/life/목표-노트.md')))).toBe(
       true,
     );
+
+    // Graph building, filtering, neighborhood BFS & layout
+    expect(idx.graph.edges).toEqual(
+      expect.arrayContaining([
+        { source: 'wiki/life/목표-노트.md', target: 'wiki/topics/고아-아님.md', resolved: true },
+        { source: 'wiki/life/목표-노트.md', target: 'missing:없는-페이지', resolved: false },
+      ]),
+    );
+    expect(idx.graph.nodes.find(n => n.id === 'wiki/topics/고아-페이지.md')?.isOrphan).toBe(true);
+    expect(idx.graph.nodes.find(n => n.id === 'missing:없는-페이지')?.unresolved).toBe(true);
+
+    const cleanGlobal = filterWikiGraph(idx.graph, { hideMeta: true, showUnresolved: false });
+    expect(cleanGlobal.nodes.some(n => n.id === 'index.md' || n.unresolved)).toBe(false);
+    expect(cleanGlobal.edges).toEqual([
+      { source: 'wiki/life/목표-노트.md', target: 'wiki/topics/고아-아님.md', resolved: true },
+    ]);
+
+    const withMissing = filterWikiGraph(idx.graph, { hideMeta: true, showUnresolved: true });
+    expect(withMissing.nodes.some(n => n.id === 'missing:없는-페이지')).toBe(true);
+
+    const hop1 = computeNeighborhood('wiki/life/목표-노트.md', cleanGlobal.edges, 1);
+    expect([...hop1].sort()).toEqual(['wiki/life/목표-노트.md', 'wiki/topics/고아-아님.md']);
+
+    const coords = layoutWikiGraph(withMissing.nodes, withMissing.edges, {
+      width: 780,
+      height: 500,
+    });
+    for (const n of withMissing.nodes) {
+      expect(Number.isFinite(coords[n.id].x)).toBe(true);
+      expect(Number.isFinite(coords[n.id].y)).toBe(true);
+      expect(coords[n.id].x).toBeGreaterThanOrEqual(40);
+      expect(coords[n.id].x).toBeLessThanOrEqual(740);
+    }
 
     // User isolation: 'other' sees nothing from owner and gets own isolated dir
     expect(other.getIndex().initialized).toBe(false);

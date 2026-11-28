@@ -8,6 +8,7 @@ import {
   FileText,
   FolderArchive,
   Library,
+  Network,
   Plus,
   Search,
   Sparkles,
@@ -20,6 +21,7 @@ import {
   type WikiIndexResponse,
   type WikiRawFile,
 } from '@/lib/wiki';
+import { WikiGraphView } from './WikiGraphView';
 import { WikiMarkdown } from './WikiMarkdown';
 import { WikiRawCaptureDialog } from './WikiRawCaptureDialog';
 
@@ -38,6 +40,7 @@ const EMPTY_INDEX: WikiIndexResponse = {
     lastUpdated: null,
   },
   recentLogs: [],
+  graph: { nodes: [], edges: [] },
 };
 
 export function WikiPage({ initialPage }: { initialPage?: string }) {
@@ -45,6 +48,8 @@ export function WikiPage({ initialPage }: { initialPage?: string }) {
   const sp = useSearchParams();
   const queryPage = sp.get('page');
   const [pickedPath, setPickedPath] = useState<string | null>(initialPage ?? null);
+  const [viewMode, setViewMode] = useState<'reader' | 'graph'>('reader');
+  const [localGraphOpen, setLocalGraphOpen] = useState(true);
   const [filterText, setFilterText] = useState('');
   const [captureOpen, setCaptureOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -138,14 +143,44 @@ export function WikiPage({ initialPage }: { initialPage?: string }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(prev => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 lg:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-          >
-            <BookOpen size={14} />
-            목록 ({index.stats.totalPages})
-          </button>
+          <div className="inline-flex rounded-xl border border-zinc-200 bg-white p-0.5 dark:border-zinc-700 dark:bg-zinc-900" role="tablist" aria-label="위키 보기">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'reader'}
+              onClick={() => setViewMode('reader')}
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                viewMode === 'reader'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <BookOpen size={13} /> 문서 보기
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'graph'}
+              onClick={() => setViewMode('graph')}
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                viewMode === 'graph'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <Network size={13} /> 그래프 보기
+            </button>
+          </div>
+          {viewMode === 'reader' && (
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 lg:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              <BookOpen size={14} />
+              목록 ({index.stats.totalPages})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setCaptureOpen(true)}
@@ -198,7 +233,21 @@ export function WikiPage({ initialPage }: { initialPage?: string }) {
         </div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
+      {viewMode === 'graph' ? (
+        <section className="space-y-4">
+          <WikiGraphView
+            mode="global"
+            graph={index.graph}
+            activePath={activePath}
+            searchHighlight={filterText}
+            onOpenPage={nextPath => {
+              setViewMode('reader');
+              navigateToPage(nextPath);
+            }}
+          />
+        </section>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
         <aside
           aria-label="위키 문서 목록"
           className={`${
@@ -389,6 +438,33 @@ export function WikiPage({ initialPage }: { initialPage?: string }) {
                   {detail.sources.join(' · ')}
                 </div>
               )}
+
+              {!detail.isRaw && index.graph.nodes.length > 0 && (
+                <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                      <Network size={13} className="text-blue-600 dark:text-blue-400" />
+                      로컬 연결 그래프
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLocalGraphOpen(prev => !prev)}
+                      className="text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    >
+                      {localGraphOpen ? '접기' : '펼치기'}
+                    </button>
+                  </div>
+                  {localGraphOpen && (
+                    <WikiGraphView
+                      mode="local"
+                      graph={index.graph}
+                      activePath={detail.path}
+                      onOpenPage={navigateToPage}
+                      onExpandToGlobal={() => setViewMode('graph')}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -419,7 +495,8 @@ export function WikiPage({ initialPage }: { initialPage?: string }) {
             </section>
           )}
         </article>
-      </div>
+        </div>
+      )}
 
       {captureOpen && (
         <WikiRawCaptureDialog

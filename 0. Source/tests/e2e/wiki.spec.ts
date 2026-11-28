@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { ensureUserExists, loginAs } from './_helpers';
 
@@ -26,7 +28,7 @@ test('anonymous wiki APIs return 401', async ({ request }) => {
 });
 
 for (const width of [1280, 390]) {
-  test(`wiki navigation, Raw capture, preview and unified search work without overflow at ${width}px`, async ({
+  test(`wiki navigation, Raw capture, global & local graph view work without overflow at ${width}px`, async ({
     page,
   }) => {
     const username = `wiki-${width}-${Date.now()}`;
@@ -67,12 +69,57 @@ for (const width of [1280, 390]) {
     ).toBeVisible();
     await checkNoHorizontalOverflow(page);
 
-    // Reload preserves Raw capture & counts
-    await page.reload();
-    await expect(page.getByLabel('위키 상태 요약')).toContainText('1건');
+    // Seed two compiled linked wiki pages into this user's isolated E2E wiki dir
+    const meRes = await page.request.get('/api/auth/me');
+    const me = (await meRes.json()) as { userId: string };
+    const e2eDbDir = path.dirname(
+      process.env.BINDER_E2E_DATABASE ??
+        path.resolve('test-results', process.env.BINDER_E2E_RUN_ID ?? '', 'e2e.sqlite'),
+    );
+    const userWikiDir = path.join(e2eDbDir, 'wiki', '.users', me.userId);
+    fs.mkdirSync(path.join(userWikiDir, 'wiki', 'life'), { recursive: true });
+    fs.mkdirSync(path.join(userWikiDir, 'wiki', 'topics'), { recursive: true });
+    fs.writeFileSync(
+      path.join(userWikiDir, 'wiki', 'life', '목표-노트.md'),
+      '---\ntitle: 목표 노트\ncategory: life\nupdated: 2026-11-28\nsummary: 핵심 목표 요약\n---\n\n[[개념-노트]] 와 [[미작성-항목]] 연결\n',
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(userWikiDir, 'wiki', 'topics', '개념-노트.md'),
+      '---\ntitle: 개념 노트\ncategory: topics\nupdated: 2026-11-28\nsummary: 주제 개념 정리\n---\n\n[[목표-노트]] 에서 참조됨\n',
+      'utf8',
+    );
+
+    await page.goto('/wiki');
+    await expect(page.getByLabel('위키 상태 요약')).toContainText('2개');
+    await expect(page.getByRole('img', { name: '현재 문서 로컬 그래프' })).toBeVisible();
     await checkNoHorizontalOverflow(page);
 
-    // Unified search API rejects traversal & finds TODO/wiki cleanly
+    // Switch to Global Graph view and navigate to node via preview card
+    await page.getByRole('tab', { name: '그래프 보기' }).click();
+    const globalSvg = page.getByRole('img', { name: '위키 연결 그래프' });
+    await expect(globalSvg).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    // Toggle unresolved links ON -> 미작성-항목 appears
+    const unresolvedBtn = page.getByRole('button', { name: '미작성 링크', exact: true });
+    await unresolvedBtn.click();
+    await expect(unresolvedBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      globalSvg.getByRole('button', { name: /미작성-항목/ }),
+    ).toBeVisible();
+
+    // Select '개념 노트' node -> preview card -> '문서 열기'
+    await globalSvg.getByRole('button', { name: /개념 노트/ }).click();
+    const previewCard = page.getByLabel('선택한 그래프 노드 정보');
+    await expect(previewCard).toContainText('주제 개념 정리');
+    await previewCard.getByRole('button', { name: '문서 열기' }).click();
+
+    await expect(page.getByRole('heading', { name: '개념 노트' })).toBeVisible();
+    await expect(page.getByRole('img', { name: '현재 문서 로컬 그래프' })).toBeVisible();
+    await checkNoHorizontalOverflow(page);
+
+    // Bad path rejected cleanly
     const badPath = await page.request.get('/api/wiki/page?path=../app.env');
     expect(badPath.status()).toBe(400);
   });
