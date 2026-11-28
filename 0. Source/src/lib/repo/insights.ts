@@ -10,8 +10,7 @@ export const linkDailyReadings = async (
   payload: { dates?: string[]; matchTitle?: string },
 ): Promise<BookLinkDailyResult> => {
   const result = await http.post<BookLinkDailyResult>(`/api/books/${encodeURIComponent(bookId)}/link-daily`, payload);
-  notifyMutation('retrospectives');
-  notifyMutation('books');
+  notifyMutation('retrospectives', 'books');
   return result;
 };
 export const getGoalReview = (date: string) => http.get<{ start: string; end: string; goals: GoalReview[] }>(`/api/goal-review?date=${encodeURIComponent(date)}`);

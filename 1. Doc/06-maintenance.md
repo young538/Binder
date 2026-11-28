@@ -74,7 +74,7 @@ TimeGrid는 표시와 편집기 배치를 담당하고 `useTimeGridInteraction`�
 ## 5. 화면 조회·동작을 바꿀 때
 
 - `useAsyncResource(key, loader, initial, resources)`의 key에는 조회 날짜·기간·대상 ID를 포함합니다. 사용자 ID는 훅이 붙입니다. loader는 조회만 수행해야 하며 변경 알림을 발생시키는 API를 호출하면 재조회 루프가 생길 수 있습니다.
-- 변경 알림은 `todos`, `habits`, `books`처럼 실제 리소스 이름을 전달합니다. 서로 다른 화면 인스턴스의 조회를 전역으로 합치는 캐시는 아니며, 주간 시간블록·일일 할 일·일정은 WeeklyDataProvider에서 조회하여 PC와 모바일 간 전환에서도 같은 결과를 사용합니다.
+- 한 작업에서 변경된 리소스는 `notifyMutation('projects', 'todos')`처럼 함께 전달합니다. 각 구독자는 해당 리소스 중 하나라도 구독하면 한 번 갱신합니다. 서로 다른 화면 인스턴스의 조회를 전역으로 합치는 캐시는 아니며, 주간 시간블록·일일 할 일·일정은 WeeklyDataProvider에서 조회하여 PC와 모바일 간 전환에서도 같은 결과를 사용합니다.
 - 날짜·대상 전환 시 입력 세션도 바뀌어야 하면 상위에서 `key`를 지정합니다. 렌더 중 ref 쓰기는 피하고 최신 저장 콜백에는 `useLatest`를 사용합니다.
 - `useDailyTracker`는 루틴 조회·그룹·체크·프리셋, `useHabitEditor`는 일정 편집·순서 저장, `useAnnualGoals`는 연간 데이터·수치 변경을 담당합니다. 화면 배치 수정은 각각 DailyPage/HabitRow, AnnualGoalDesktop/AnnualGoalMobile에서 합니다.
 - 루틴 정렬은 AutosaveQueue의 350ms 지연을 사용합니다. 보류값을 덮어쓸 수 있어야 하며 닫기 시 flush와 실패 재시도를 보존합니다.

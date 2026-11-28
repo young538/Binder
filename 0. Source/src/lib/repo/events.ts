@@ -1,5 +1,3 @@
-// Simple pub-sub for cross-component refresh after any mutation.
-// Replaces the Dexie-era `onDirty` from lib/db.ts with the same signature.
 export type MutationResource =
   | 'todos'
   | 'projects'
@@ -27,23 +25,25 @@ export type MutationResource =
   | 'financeBudgets'
   | 'financeAutomation'
   | 'googleCalendar';
-type Listener = (resource?: MutationResource) => void;
+type Listener = (resources: readonly MutationResource[]) => void;
 
 const listeners = new Set<Listener>();
 
-export const onDirty = (fn: Listener): (() => void) => {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
-};
-
-export const notifyMutation = (resource?: MutationResource): void => {
-  listeners.forEach(fn => {
-    try {
-      fn(resource);
-    } catch {
-      /* swallow listener errors */
+export function onDirty(names: readonly string[], refresh: () => void): () => void {
+  const listener: Listener = changed => {
+    if (names.includes('*') || (!names.length && !changed.length) || changed.some(name => names.includes(name))) {
+      refresh();
     }
-  });
-};
+  };
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+/** Publish all resources changed by one completed operation together. */
+export function notifyMutation(...resources: MutationResource[]): void {
+  for (const listener of listeners) {
+    try {
+      listener(resources);
+    } catch { /* One subscriber must not prevent other views from refreshing. */ }
+  }
+}

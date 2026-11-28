@@ -45,6 +45,7 @@ export function DashboardPage() {
       'todos',
       'timeBlocks',
       'dailyCheckins',
+      'focusNotes',
       'projects',
       'lifeEvents',
       'subscriptions',

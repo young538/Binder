@@ -27,9 +27,5 @@ export const updateProject = async (
 
 export const deleteProject = async (id: string): Promise<void> => {
   await http.del(`/api/projects/${id}`);
-  notifyMutation('projects');
-  notifyMutation('todos');
-  notifyMutation('timeBlocks');
-  notifyMutation('notes');
-  notifyMutation('lifeEvents');
+  notifyMutation('projects', 'todos', 'timeBlocks', 'notes', 'lifeEvents');
 };

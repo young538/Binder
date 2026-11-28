@@ -26,8 +26,7 @@ export const updateMetric = async (
 
 export const deleteMetric = async (id: string): Promise<void> => {
   await http.del(`/api/metrics/${encodeURIComponent(id)}`);
-  notifyMutation('metrics');
-  notifyMutation('metricEntries');
+  notifyMutation('metrics', 'metricEntries');
 };
 
 export const upsertMetricEntry = async (

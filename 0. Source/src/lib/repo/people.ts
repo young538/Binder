@@ -20,6 +20,5 @@ export const updatePerson = async (id: string, patch: Partial<NewPerson>): Promi
 
 export const deletePerson = async (id: string): Promise<void> => {
   await http.del(`/api/people/${encodeURIComponent(id)}`);
-  notifyMutation('people');
-  notifyMutation('lifeEvents');
+  notifyMutation('people', 'lifeEvents');
 };

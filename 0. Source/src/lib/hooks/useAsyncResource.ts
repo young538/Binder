@@ -21,8 +21,8 @@ export function useAsyncResource<T>(key: string, load: () => Promise<T>, initial
     queueMicrotask(() => {
       if (active && resource.snapshot() === beforeLoad) void refresh();
     });
-    const names = dirtyKey.split(',');
-    const unsubscribe = onDirty(name => { if (names.includes(name ?? '') || names.includes('*')) void refresh(); });
+    const names = dirtyKey ? dirtyKey.split(',') : [];
+    const unsubscribe = onDirty(names, () => { void refresh(); });
     return () => { active = false; resource.cancel(); unsubscribe(); };
   }, [resource, refresh, dirtyKey]);
 

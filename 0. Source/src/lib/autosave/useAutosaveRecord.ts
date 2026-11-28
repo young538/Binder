@@ -85,11 +85,7 @@ export function useAutosaveRecord<T>(options: Options<T>) {
     const dirtyNames = dirtyKey ? dirtyKey.split(',') : [];
     const unsubscribeDirty =
       dirtyNames.length > 0
-        ? onDirty(resource => {
-            if (dirtyNames.includes(resource ?? '')) {
-              void loadRecord(false);
-            }
-          })
+        ? onDirty(dirtyNames, () => { void loadRecord(false); })
         : () => {};
 
     const flush = () => { void activeQueue.flush(); };

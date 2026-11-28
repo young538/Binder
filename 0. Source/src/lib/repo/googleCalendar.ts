@@ -4,7 +4,7 @@ import type {
   GoogleCalendarStatus,
   GoogleCalendarSyncResult,
 } from '../types';
-import { notifyMutation } from './events';
+import { notifyMutation, type MutationResource } from './events';
 import { http } from './http';
 
 export const getGoogleCalendarStatus = (): Promise<GoogleCalendarStatus> =>
@@ -31,9 +31,7 @@ export const updateGoogleCalendarSettings = async (patch: {
 
 export const syncGoogleCalendar = async (): Promise<GoogleCalendarSyncResult> => {
   const result = await http.post<GoogleCalendarSyncResult>('/api/integrations/google/sync', {});
-  notifyMutation('lifeEvents');
-  notifyMutation('todos');
-  notifyMutation('googleCalendar');
+  notifyMutation('lifeEvents', 'todos', 'googleCalendar');
   return result;
 };
 
@@ -42,13 +40,14 @@ export const syncGoogleCalendarIfDue = async (): Promise<GoogleCalendarAutoSyncO
     mode: 'auto',
   });
   if (!result.skipped) {
+    const changed: MutationResource[] = ['googleCalendar'];
     if (
       result.pulledCreated > 0 ||
       result.pulledUpdated > 0 ||
       result.pulledDeleted > 0 ||
       result.pushedCreated > 0
     ) {
-      notifyMutation('lifeEvents');
+      changed.push('lifeEvents');
     }
     if (
       result.tasks &&
@@ -58,9 +57,9 @@ export const syncGoogleCalendarIfDue = async (): Promise<GoogleCalendarAutoSyncO
         result.tasks.pushedCreated > 0 ||
         result.tasks.pushedUpdated > 0)
     ) {
-      notifyMutation('todos');
+      changed.push('todos');
     }
-    notifyMutation('googleCalendar');
+    notifyMutation(...changed);
   }
   return result;
 };
@@ -72,9 +71,7 @@ export const disconnectGoogleCalendar = async (
   const result = await http.del<{ ok: boolean; deletedEvents: number }>(
     `/api/integrations/google/disconnect${qs}`,
   );
-  if (result.deletedEvents > 0) {
-    notifyMutation('lifeEvents');
-  }
-  notifyMutation('googleCalendar');
+  if (result.deletedEvents > 0) notifyMutation('googleCalendar', 'lifeEvents');
+  else notifyMutation('googleCalendar');
   return result;
 };

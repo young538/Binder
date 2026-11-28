@@ -1,7 +1,9 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
 import { useStoredBoolean } from '@/lib/hooks/useStoredBoolean';
+import { http } from '@/lib/repo/http';
+import { deleteProject } from '@/lib/repo/projects';
 import { notifyMutation } from '@/lib/repo/events';
 
 vi.mock('@/store', () => ({ useBinder: (select: (state: { me: { userId: string } }) => unknown) => select({ me: { userId: 'hooks-user' } }) }));
@@ -33,6 +35,23 @@ describe('client read and preference adapters', () => {
     nextRead.mockResolvedValue('updated');
     await act(async () => notifyMutation('todos'));
     await screen.findByText('updated');
+  });
+
+  it('refreshes each interested query once per project deletion', async () => {
+    vi.spyOn(http, 'del').mockResolvedValue(undefined);
+    const dashboard = vi.fn().mockResolvedValue(1);
+    const todos = vi.fn().mockResolvedValue(1);
+    const books = vi.fn().mockResolvedValue(1);
+    renderHook(() => {
+      useAsyncResource('dashboard', dashboard, 0, ['projects', 'todos', 'timeBlocks', 'notes', 'lifeEvents']);
+      useAsyncResource('todos', todos, 0, ['todos']);
+      useAsyncResource('books', books, 0, ['books']);
+    });
+    await waitFor(() => expect(books).toHaveBeenCalledTimes(1));
+    await act(async () => deleteProject('project'));
+    expect(dashboard).toHaveBeenCalledTimes(2);
+    expect(todos).toHaveBeenCalledTimes(2);
+    expect(books).toHaveBeenCalledTimes(1);
   });
 
   it('reads persisted disclosure state and separates preference keys', async () => {
