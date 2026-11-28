@@ -14,6 +14,8 @@ services:
     volumes:
       # SQLite DB 파일을 호스트 ./data 에 보존 (컨테이너 재생성해도 데이터 유지)
       - ./data:/app/data
+      # Karpathy LLM Wiki 루트 마운트 (/app/wiki)
+      - ../2. Wiki:/app/wiki
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/login"]
       interval: 30s

@@ -34,6 +34,7 @@ export default defineConfig({
       // 64 chars (≥32 byte) iron-session secret — fixed for reproducibility.
       SESSION_SECRET:
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      WIKI_DIR: path.resolve('test-results', runId, 'wiki'),
     },
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],

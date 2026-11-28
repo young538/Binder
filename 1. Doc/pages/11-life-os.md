@@ -125,6 +125,15 @@ PC 메뉴 또는 모바일 더보기의 **주사 기록**에서 위고비·마�
 
 ---
 
+## 10. Karpathy LLM Wiki 통합 (`/wiki`)
+
+- **3계층 지식베이스 구조 ([SKILL.md](../../.agents/skills/life-os-wiki/SKILL.md) · [wiki-schema-template.md](../../0.%20Source/scripts/wiki-schema-template.md))**: Andrej Karpathy의 LLM Wiki 패턴을 따라 로컬 `2. Wiki/` 아래에 불변 원본(`raw/inbox/`, `raw/life-os/`), 에이전트가 상호 링크하며 컴파일하는 위키(`wiki/life/`, `wiki/topics/`, `wiki/sources/`, `wiki/synthesis/`), 마스터 목차·규칙·로그(`index.md`, `SCHEMA.md`, `log.md`)를 분리 관리합니다. 개인 내용 보호를 위해 `2. Wiki/`는 `.gitignore`로 원격 저장소에서 제외하며 Docker `app` 컨테이너의 `/app/wiki`에 마운트합니다.
+- **웹 리더 · 백링크 · Raw 수집함 ([WikiPage.tsx](../../0.%20Source/src/components/wiki/WikiPage.tsx) · [WikiMarkdown.tsx](../../0.%20Source/src/components/wiki/WikiMarkdown.tsx) · [WikiRawCaptureDialog.tsx](../../0.%20Source/src/components/wiki/WikiRawCaptureDialog.tsx))**: `/wiki`에서 `[[위키링크]]` 클릭 이동, 역방향 백링크 목록, 끊김/고아 링크 건전성 요약, `+ Raw 넣기`(텍스트 메모/URL 또는 최대 10MB 파일 업로드)를 지원합니다.
+- **보안 · 사용자 격리 · 통합 검색 ([service.ts](../../0.%20Source/src/lib/server/wiki/service.ts) · [search/route.ts](../../0.%20Source/src/app/api/search/route.ts))**: `WIKI_OWNER_USERNAME`과 일치하는 소유자 외 계정은 `.users/<userId>/`로 격리되며, `resolveSafeWikiPath`가 경로 이탈·숨김 디렉터리·심볼릭 링크 탈출을 차단합니다. `/api/search` 및 `Ctrl/Cmd+K` 검색에도 위키(`wiki`) 결과가 함께 노출됩니다.
+- **Life OS 스냅샷 추출기 ([export-life-os-raw.mjs](../../0.%20Source/scripts/export-life-os-raw.mjs))**: `--mode seed|weekly`로 목표·프로젝트·회고·독서·원칙·가계부·구독·컨디션·투여 이력을 `raw/life-os/` 마크다운 스냅샷으로 추출해 에이전트의 주간 Ingest 및 월간 Lint 기반을 제공합니다.
+
+---
+
 ## 구현 파일
 
 | 파일 | 역할 |
@@ -136,9 +145,10 @@ PC 메뉴 또는 모바일 더보기의 **주사 기록**에서 위고비·마�
 | [EveningShutdownBanner](../../0.%20Source/src/components/daily/EveningShutdownBanner.tsx) / [EveningShutdownDialog](../../0.%20Source/src/components/daily/EveningShutdownDialog.tsx) | 3단계 이브닝 셧다운 루틴 |
 | [MetricsPage](../../0.%20Source/src/components/metrics/MetricsPage.tsx) / [MetricCard](../../0.%20Source/src/components/metrics/MetricCard.tsx) / [MetricSparkline](../../0.%20Source/src/components/metrics/MetricSparkline.tsx) | 상태 지표 CRUD, 기록 입력, SVG 스파크라인 |
 | [NotesPage](../../0.%20Source/src/components/notes/NotesPage.tsx) / [NoteEditorDialog](../../0.%20Source/src/components/notes/NoteEditorDialog.tsx) | 원칙·의사결정·인사이트·레퍼런스 관리 |
+| [WikiPage](../../0.%20Source/src/components/wiki/WikiPage.tsx) / [service.ts](../../0.%20Source/src/lib/server/wiki/service.ts) / [export-life-os-raw.mjs](../../0.%20Source/scripts/export-life-os-raw.mjs) | LLM Wiki 뷰어, Raw 수집·백링크·검색, Life OS 스냅샷 추출 |
 | [LifePage](../../0.%20Source/src/components/life/LifePage.tsx) / [LifeEventsSection](../../0.%20Source/src/components/life/LifeEventsSection.tsx) / [IcsImportDialog](../../0.%20Source/src/components/life/IcsImportDialog.tsx) / [PeopleSection](../../0.%20Source/src/components/life/PeopleSection.tsx) | 일정·기념일·`.ics` 가져오기·소중한 사람 CRM |
 | [SubscriptionsPage](../../0.%20Source/src/components/subscriptions/SubscriptionsPage.tsx) / [SubscriptionEditorDialog](../../0.%20Source/src/components/subscriptions/SubscriptionEditorDialog.tsx) | 구독·월정액 CRUD, 요약 카드, 결제일 갱신 |
 | [FinancePage](../../0.%20Source/src/components/finance/FinancePage.tsx) / [FinanceCalendarView](../../0.%20Source/src/components/finance/FinanceCalendarView.tsx) / [FinanceImportDialog](../../0.%20Source/src/components/finance/FinanceImportDialog.tsx) / [parser.ts](../../0.%20Source/src/lib/server/finance/parser.ts) | 가계부, 캘린더 보기, 월 예산, 뱅크샐러드 엑셀/CSV 가져오기 |
 | [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) / [QuickCapture](../../0.%20Source/src/components/inbox/QuickCapture.tsx) / [TodoHubPage](../../0.%20Source/src/components/inbox/TodoHubPage.tsx) | `Ctrl/Cmd+K` 런처, 빠른 입력·수집함/오늘/예정/프로젝트 통합 허브 |
 | [ics.ts](../../0.%20Source/src/lib/ics.ts) / [lifeEvents.ts](../../0.%20Source/src/lib/lifeEvents.ts) / [metrics.ts](../../0.%20Source/src/lib/metrics.ts) / [subscriptions.ts](../../0.%20Source/src/lib/subscriptions.ts) / [eveningShutdown.ts](../../0.%20Source/src/lib/eveningShutdown.ts) | 순수 도메인 파싱·D-Day·스파크라인·구독 환산·마감 유틸리티 |
-| [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) / [subscriptions](../../0.%20Source/src/app/(app)/subscriptions/page.tsx) | App Router 페이지 진입점 |
+| [app/(app)/metrics/page.tsx](../../0.%20Source/src/app/(app)/metrics/page.tsx) / [notes](../../0.%20Source/src/app/(app)/notes/page.tsx) / [wiki](../../0.%20Source/src/app/(app)/wiki/page.tsx) / [life](../../0.%20Source/src/app/(app)/life/page.tsx) / [subscriptions](../../0.%20Source/src/app/(app)/subscriptions/page.tsx) | App Router 페이지 진입점 |

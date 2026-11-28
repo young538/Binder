@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import {
   Activity, BookMarked, BookOpen, Calendar, CalendarDays, CalendarHeart, CalendarRange, CreditCard,
-  FolderKanban, Inbox, LayoutDashboard, NotebookPen, Search, Settings, Sun, Syringe, Target, Wallet,
+  FolderKanban, Inbox, LayoutDashboard, Library, NotebookPen, Search, Settings, Sun, Syringe, Target, Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
@@ -22,6 +22,7 @@ export const destinations = {
   daily: destination('일일', '/daily', Sun, '오늘 일일 트래커', toIsoDate),
   projects: destination('프로젝트', '/projects', FolderKanban, '프로젝트 실행 보드'),
   notes: destination('원칙 · 노트', '/notes', BookMarked, '원칙 · 의사결정 · 노트'),
+  wiki: destination('지식 위키', '/wiki', Library, 'LLM 지식 위키'),
   injections: destination('주사 기록', '/injections', Syringe),
   metrics: destination('상태 지표', '/metrics', Activity, '상태 지표 트래커'),
   finance: destination('가계부', '/finance', Wallet, '가계부 · 예산'),

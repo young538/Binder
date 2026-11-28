@@ -13,7 +13,7 @@ const dropdownGroups = [
   { key: 'planner', label: '플래너', items: [destinations.week, destinations.monthly, destinations.annual, destinations.life] },
   { key: 'goals', label: '목표 · 실행', items: [destinations.mandalart, destinations.projects, retrospectiveMenu, destinations.goalReview] },
   { key: 'finance', label: '재무', items: [destinations.finance, destinations.subscriptions] },
-  { key: 'records', label: '지식 · 기록', items: [destinations.notes, destinations.injections, destinations.metrics, destinations.reading] },
+  { key: 'records', label: '지식 · 기록', items: [destinations.wiki, destinations.notes, destinations.injections, destinations.metrics, destinations.reading] },
 ] as const;
 
 type GroupKey = (typeof dropdownGroups)[number]['key'];

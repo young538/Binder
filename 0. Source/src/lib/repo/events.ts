@@ -24,7 +24,8 @@ export type MutationResource =
   | 'financeTransactions'
   | 'financeBudgets'
   | 'financeAutomation'
-  | 'googleCalendar';
+  | 'googleCalendar'
+  | 'wiki';
 type Listener = (resources: readonly MutationResource[]) => void;
 
 const listeners = new Set<Listener>();

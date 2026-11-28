@@ -3,6 +3,7 @@ export const SEARCH_KINDS = {
   books: '독서', focusNotes: '포커스 노트', retrospectives: '회고', timeBlocks: '시간표', categories: '카테고리',
   notes: '노트·원칙', people: '사람', lifeEvents: '일정·기념일', metrics: '지표', subscriptions: '구독·월정액',
   financeTransactions: '가계부',
+  wiki: '위키',
 } as const;
 export type SearchKind = keyof typeof SEARCH_KINDS;
 export const isSearchKind = (value: string): value is SearchKind => Object.hasOwn(SEARCH_KINDS, value);

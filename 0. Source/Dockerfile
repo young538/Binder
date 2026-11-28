@@ -26,6 +26,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DB_PATH=/app/data/binder.sqlite
+ENV WIKI_DIR=/app/wiki
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -51,8 +52,8 @@ COPY --from=build --chown=nextjs:nodejs /app/node_modules/node-gyp-build ./node_
 # scripts/users.mjs uses ulid for new user IDs; standalone bundle doesn't trace it
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/ulid ./node_modules/ulid
 
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
-VOLUME ["/app/data"]
+RUN mkdir -p /app/data /app/wiki && chown -R nextjs:nodejs /app/data /app/wiki
+VOLUME ["/app/data", "/app/wiki"]
 
 USER nextjs
 

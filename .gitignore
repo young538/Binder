@@ -60,3 +60,6 @@ playwright-report/
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Karpathy LLM Wiki (personal knowledge & raw life-os exports)
+/2. Wiki/

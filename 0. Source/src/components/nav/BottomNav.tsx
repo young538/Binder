@@ -11,7 +11,7 @@ const moreGroups = [
   { title: '플래너', items: [destinations.week, destinations.monthly, destinations.annual, destinations.life] },
   { title: '목표 · 실행', items: [destinations.mandalart, destinations.projects, retrospectiveMenu, destinations.goalReview] },
   { title: '재무', items: [destinations.subscriptions] },
-  { title: '기록 · 도구', items: [destinations.notes, destinations.injections, destinations.metrics, destinations.reading, destinations.search, destinations.settings] },
+  { title: '기록 · 도구', items: [destinations.wiki, destinations.notes, destinations.injections, destinations.metrics, destinations.reading, destinations.search, destinations.settings] },
 ];
 
 export const BottomNav = () => {
