@@ -166,6 +166,29 @@ for (const width of [1280, 390]) {
   });
 }
 
+test('failed finance reads recover independently without displaying an empty ledger', async ({ page }) => {
+  await setup(page, 390, 'retry');
+  await page.route('**/api/finance/transactions?**', route => route.fulfill({ status: 503, body: '{}' }));
+  await page.route('**/api/finance/budgets?**', route => route.fulfill({ status: 503, body: '{}' }));
+  await page.goto('/finance');
+  const summary = page.getByRole('region', { name: '이번 달 재무 요약' });
+  await expect(page.getByText('거래 내역 조회에 실패했습니다.')).toBeVisible();
+  await expect(summary).toHaveCount(0);
+  await expect(page.getByText(/기록된 거래 내역이 없습니다/)).toHaveCount(0);
+
+  await page.unroute('**/api/finance/transactions?**');
+  await page.getByRole('button', { name: '거래 내역 다시 불러오기' }).click();
+  await expect(summary).toContainText('₩0');
+  await expect(page.getByText(/기록된 거래 내역이 없습니다/)).toBeVisible();
+  await expect(summary).not.toContainText('미설정');
+  await expect(page.getByText('예산 조회에 실패했습니다.')).toBeVisible();
+
+  await page.unroute('**/api/finance/budgets?**');
+  await page.getByRole('button', { name: '예산 다시 불러오기' }).click();
+  await expect(summary).toContainText('미설정');
+  await checkNoHorizontalOverflow(page);
+});
+
 test('redesigned 1024px TopNav fits without overflow and finance APIs reject anonymous requests', async ({ page, request }) => {
   await setup(page, 1024, 'nav1024');
   await page.goto('/dashboard');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { parseISO } from 'date-fns';
@@ -22,23 +22,18 @@ import {
   TOTAL_BUDGET_CATEGORY,
   formatFinanceAmount,
   getFinanceCycleKeyForDate,
-  getFinanceCycleRange,
   nextMonthKey,
   normalizeFinanceCycleStartDay,
   prevMonthKey,
-  resolveEffectiveBudgets,
-  summarizeMonthFinance,
   type FinanceImportCommitResult,
 } from '@/lib/finance';
-import { useAsyncResource } from '@/lib/hooks/useAsyncResource';
+import { useFinanceMonth } from './useFinanceMonth';
+import { FinanceReadStatus } from './FinanceReadStatus';
 import { updateSettings } from '@/lib/repo/settings';
 import { useBinder } from '@/store';
 import {
   deleteFinanceBudget,
   deleteFinanceTransaction,
-  getFinanceAutomationStatus,
-  listFinanceBudgets,
-  listFinanceTransactions,
   syncSubscriptionsToFinance,
   updateFinanceTransaction,
   upsertFinanceBudget,
@@ -68,10 +63,13 @@ export function FinancePage() {
     paramMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(paramMonth) ? paramMonth : null,
   );
   const month = selectedMonth ?? defaultMonth;
-  const cycleRange = useMemo(
-    () => getFinanceCycleRange(month, cycleStartDay),
-    [cycleStartDay, month],
-  );
+  const { cycleRange, transactionsQuery, budgetsQuery, automationQuery, monthTransactions, summary, effectiveBudgets } =
+    useFinanceMonth(month, cycleStartDay, todayIso);
+  const transactionsReady = !transactionsQuery.loading && !transactionsQuery.error;
+  const budgetsReady = !budgetsQuery.loading && !budgetsQuery.error;
+  const automationReady = !automationQuery.loading && !automationQuery.error;
+  const budgets = budgetsQuery.value;
+  const automationStatus = automationQuery.value;
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'calendar' | 'budgets'>('transactions');
   const [searchQuery, setSearchQuery] = useState(() => sp.get('q') ?? '');
@@ -87,77 +85,6 @@ export function FinancePage() {
   const [syncingSubs, setSyncingSubs] = useState(false);
   const [cycleBusy, setCycleBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
-
-  const { value: rangeTransactions, refresh: refreshTx } = useAsyncResource(
-    `finance:tx:${month}:d${cycleStartDay}`,
-    () =>
-      listFinanceTransactions({
-        startDate: cycleRange.prevStartDate,
-        endDate: cycleRange.endDate,
-      }),
-    [],
-    ['financeTransactions'],
-  );
-
-  const { value: budgets, refresh: refreshBudgets } = useAsyncResource(
-    `finance:budgets:${month}`,
-    () => listFinanceBudgets(month),
-    [],
-    ['financeBudgets'],
-  );
-
-  const { value: automationStatus, refresh: refreshAutomation } = useAsyncResource(
-    'finance:automation',
-    getFinanceAutomationStatus,
-    null,
-    ['financeAutomation'],
-  );
-
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void refreshTx();
-        void refreshBudgets();
-        void refreshAutomation();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [refreshAutomation, refreshBudgets, refreshTx]);
-
-  const monthTransactions = useMemo(
-    () =>
-      rangeTransactions.filter(
-        t => t.date >= cycleRange.startDate && t.date <= cycleRange.endDate,
-      ),
-    [cycleRange.endDate, cycleRange.startDate, rangeTransactions],
-  );
-
-  const prevTransactions = useMemo(
-    () =>
-      rangeTransactions.filter(
-        t => t.date >= cycleRange.prevStartDate && t.date <= cycleRange.prevEndDate,
-      ),
-    [cycleRange.prevEndDate, cycleRange.prevStartDate, rangeTransactions],
-  );
-
-  const summary = useMemo(
-    () =>
-      summarizeMonthFinance(
-        monthTransactions,
-        budgets,
-        prevTransactions,
-        month,
-        todayIso,
-        cycleStartDay,
-      ),
-    [budgets, cycleStartDay, month, monthTransactions, prevTransactions, todayIso],
-  );
-
-  const effectiveBudgets = useMemo(
-    () => resolveEffectiveBudgets(budgets, month),
-    [budgets, month],
-  );
 
   const [totalBudgetDraft, setTotalBudgetDraft] = useState<string>('');
   const [totalBudgetScope, setTotalBudgetScope] = useState<'default' | 'month'>('default');
@@ -404,6 +331,7 @@ export function FinancePage() {
           </button>
           <button
             type="button"
+            disabled={!automationReady}
             onClick={() => setAutomationDialogOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
           >
@@ -450,7 +378,11 @@ export function FinancePage() {
         </p>
       )}
 
-      {automationStatus?.lastImportStatus === 'error' && automationStatus.lastImportError && (
+      <FinanceReadStatus label="거래 내역" query={transactionsQuery} />
+      <FinanceReadStatus label="예산" query={budgetsQuery} />
+      <FinanceReadStatus label="자동 연동 상태" query={automationQuery} />
+
+      {automationReady && automationStatus?.lastImportStatus === 'error' && automationStatus.lastImportError && (
         <div
           role="alert"
           className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
@@ -470,71 +402,75 @@ export function FinancePage() {
         </div>
       )}
 
-      <section aria-label="이번 달 재무 요약" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400">총 지출</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-            {formatFinanceAmount(summary.totalExpense)}
-          </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            전월 대비{' '}
-            <span className={summary.expenseDiff > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
-              {summary.expenseDiff >= 0 ? '+' : '-'}
-              {formatFinanceAmount(Math.abs(summary.expenseDiff))}
-            </span>
-          </div>
-        </div>
-
-        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400">총 수입</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-            {formatFinanceAmount(summary.totalIncome)}
-          </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {summary.transferInTotal > 0 || summary.transferOutTotal > 0
-              ? `이체 입금 +${formatFinanceAmount(summary.transferInTotal)} · 출금 -${formatFinanceAmount(summary.transferOutTotal)} (제외)`
-              : '이체 ₩0 제외됨'}
-          </div>
-        </div>
-
-        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400">순저축 (수입 − 지출)</div>
-          <div
-            className={`mt-1 text-2xl font-bold tabular-nums ${
-              summary.netSavings >= 0
-                ? 'text-blue-700 dark:text-blue-400'
-                : 'text-rose-600 dark:text-rose-400'
-            }`}
-          >
-            {summary.netSavings < 0 ? '-' : ''}
-            {formatFinanceAmount(Math.abs(summary.netSavings))}
-          </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            합계 제외 {summary.excludedCount}건
-          </div>
-        </div>
-
-        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400">월 예산 사용률</div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-              {summary.budgetPercent !== null ? `${summary.budgetPercent}%` : '미설정'}
-            </span>
-            {summary.totalBudget !== null && (
-              <span className="truncate text-xs text-zinc-500">
-                / {formatFinanceAmount(summary.totalBudget)}
+      {transactionsReady && (
+        <section aria-label="이번 달 재무 요약" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">총 지출</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+              {formatFinanceAmount(summary.totalExpense)}
+            </div>
+            <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              전월 대비{' '}
+              <span className={summary.expenseDiff > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                {summary.expenseDiff >= 0 ? '+' : '-'}
+                {formatFinanceAmount(Math.abs(summary.expenseDiff))}
               </span>
-            )}
+            </div>
           </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {summary.remainingBudget !== null
-              ? summary.dailyAllowance !== null
-                ? `남은 일평균 ${formatFinanceAmount(summary.dailyAllowance)}`
-                : `잔여 ${formatFinanceAmount(summary.remainingBudget)}`
-              : '예산 탭에서 한도를 정해보세요'}
+
+          <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">총 수입</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {formatFinanceAmount(summary.totalIncome)}
+            </div>
+            <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {summary.transferInTotal > 0 || summary.transferOutTotal > 0
+                ? `이체 입금 +${formatFinanceAmount(summary.transferInTotal)} · 출금 -${formatFinanceAmount(summary.transferOutTotal)} (제외)`
+                : '이체 ₩0 제외됨'}
+            </div>
           </div>
-        </div>
-      </section>
+
+          <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">순저축 (수입 − 지출)</div>
+            <div
+              className={`mt-1 text-2xl font-bold tabular-nums ${
+                summary.netSavings >= 0
+                  ? 'text-blue-700 dark:text-blue-400'
+                  : 'text-rose-600 dark:text-rose-400'
+              }`}
+            >
+              {summary.netSavings < 0 ? '-' : ''}
+              {formatFinanceAmount(Math.abs(summary.netSavings))}
+            </div>
+            <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              합계 제외 {summary.excludedCount}건
+            </div>
+          </div>
+
+          {budgetsReady && (
+            <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">월 예산 사용률</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+                  {summary.budgetPercent !== null ? `${summary.budgetPercent}%` : '미설정'}
+                </span>
+                {summary.totalBudget !== null && (
+                  <span className="truncate text-xs text-zinc-500">
+                    / {formatFinanceAmount(summary.totalBudget)}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {summary.remainingBudget !== null
+                  ? summary.dailyAllowance !== null
+                    ? `남은 일평균 ${formatFinanceAmount(summary.dailyAllowance)}`
+                    : `잔여 ${formatFinanceAmount(summary.remainingBudget)}`
+                  : '예산 탭에서 한도를 정해보세요'}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-2 dark:border-zinc-800">
         <div className="flex gap-1.5" role="tablist" aria-label="가계부 보기">
@@ -587,7 +523,7 @@ export function FinancePage() {
         </Link>
       </div>
 
-      {activeTab !== 'budgets' ? (
+      {transactionsReady && activeTab !== 'budgets' && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative min-w-[180px] flex-1">
@@ -684,7 +620,9 @@ export function FinancePage() {
             </div>
           )}
         </section>
-      ) : (
+      )}
+
+      {transactionsReady && budgetsReady && activeTab === 'budgets' && (
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
@@ -914,7 +852,7 @@ export function FinancePage() {
         />
       )}
 
-      {automationDialogOpen && (
+      {automationDialogOpen && automationReady && (
         <FinanceAutomationDialog
           status={automationStatus}
           onClose={() => setAutomationDialogOpen(false)}
