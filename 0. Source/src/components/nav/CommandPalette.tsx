@@ -1,34 +1,12 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import {
-  Activity,
-  Syringe,
-  BookMarked,
-  BookOpen,
-  Calendar,
-  CalendarDays,
-  CalendarHeart,
-  CalendarRange,
-  Command,
-  CreditCard,
-  FolderKanban,
-  Inbox,
-  LayoutDashboard,
-  NotebookPen,
-  Plus,
-  Search,
-  Settings,
-  Sun,
-  Target,
-  Wallet,
-} from 'lucide-react';
+import { Command, Plus } from 'lucide-react';
+import { destinations } from './destinations';
 import { createNote } from '@/lib/repo/notes';
 import { http } from '@/lib/repo/http';
 import { createTodo } from '@/lib/repo/todos';
 import { SEARCH_KINDS, type SearchResult, type SearchResults } from '@/lib/search/types';
-import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
 import { useBinder } from '@/store';
 import { useNotifications } from '@/store/notifications';
 import { Dialog } from '@/components/common/Dialog';
@@ -114,40 +92,16 @@ export function CommandPalette() {
   const trimmed = query.trim();
 
   const navTargets = useMemo(() => {
+    if (!open) return [];
     const now = new Date();
-    const today = toIsoDate(now);
-    const isoWeek = toIsoWeek(now);
-    const yyyymm = format(now, 'yyyy-MM');
-    const year = format(now, 'yyyy');
-    const items = [
-      { key: 'nav:dashboard', label: '인생 OS 대시보드', subtitle: '/dashboard', href: '/dashboard', Icon: LayoutDashboard },
-      { key: 'nav:daily', label: '오늘 일일 트래커', subtitle: today, href: `/daily/${today}`, Icon: Sun },
-      { key: 'nav:projects', label: '프로젝트 실행 보드', subtitle: '/projects', href: '/projects', Icon: FolderKanban },
-      { key: 'nav:notes', label: '원칙 · 의사결정 · 노트', subtitle: '/notes', href: '/notes', Icon: BookMarked },
-      { key: 'nav:injections', label: '주사 기록', subtitle: '/injections', href: '/injections', Icon: Syringe },
-      { key: 'nav:metrics', label: '상태 지표 트래커', subtitle: '/metrics', href: '/metrics', Icon: Activity },
-      { key: 'nav:finance', label: '가계부 · 예산', subtitle: '/finance', href: '/finance', Icon: Wallet },
-      { key: 'nav:subscriptions', label: '구독 · 월정액 관리', subtitle: '/subscriptions', href: '/subscriptions', Icon: CreditCard },
-      { key: 'nav:life', label: '일정 · 기념일 · 인간관계', subtitle: '/life', href: '/life', Icon: CalendarHeart },
-      { key: 'nav:week', label: '이번 주 시간표', subtitle: isoWeek, href: `/week/${isoWeek}`, Icon: Calendar },
-      { key: 'nav:monthly', label: '이번 달 달력', subtitle: yyyymm, href: `/monthly/${yyyymm}`, Icon: CalendarDays },
-      { key: 'nav:annual', label: '올해 연간 목표', subtitle: year, href: `/annual/${year}`, Icon: CalendarRange },
-      { key: 'nav:mandalart', label: 'One-Thing 보드', subtitle: '/mandalart', href: '/mandalart', Icon: Target },
-      { key: 'nav:retro-week', label: '주간 회고', subtitle: isoWeek, href: `/retrospective/week/${isoWeek}`, Icon: NotebookPen },
-      { key: 'nav:retro-month', label: '월간 회고', subtitle: yyyymm, href: `/retrospective/month/${yyyymm}`, Icon: NotebookPen },
-      { key: 'nav:retro-year', label: '연간 회고', subtitle: year, href: `/retrospective/year/${year}`, Icon: NotebookPen },
-      { key: 'nav:reading', label: '독서 리스트', subtitle: '/reading', href: '/reading', Icon: BookOpen },
-      { key: 'nav:inbox', label: '수집함', subtitle: '/inbox', href: '/inbox', Icon: Inbox },
-      { key: 'nav:goal-review', label: '목표 실행 점검', subtitle: '/goal-review', href: '/goal-review', Icon: Target },
-      { key: 'nav:search', label: '전체 검색 페이지', subtitle: '/search', href: '/search', Icon: Search },
-      { key: 'nav:settings', label: '설정 · 백업', subtitle: '/settings', href: '/settings', Icon: Settings },
-    ];
-    if (!trimmed) return items;
     const lower = trimmed.toLowerCase();
-    return items.filter(
-      item => item.label.toLowerCase().includes(lower) || item.subtitle.toLowerCase().includes(lower),
-    );
-  }, [trimmed]);
+    return Object.entries(destinations)
+      .filter(([, item]) => [item.label, item.searchLabel, item.basePath, item.subtitle(now)]
+        .some(text => text.toLowerCase().includes(lower)))
+      .map(([key, item]) => ({
+        key: `nav:${key}`, label: item.searchLabel, subtitle: item.subtitle(now), href: item.href,
+      }));
+  }, [open, trimmed]);
 
   const actions: PaletteAction[] = useMemo(() => {
     const list: PaletteAction[] = [];
@@ -217,7 +171,7 @@ export function CommandPalette() {
         badge: '이동',
         run: () => {
           setOpen(false);
-          router.push(nav.href);
+          router.push(nav.href());
         },
       });
     }

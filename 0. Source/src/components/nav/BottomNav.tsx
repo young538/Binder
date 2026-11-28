@@ -2,75 +2,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import {
-  Activity,
-  Syringe,
-  BookMarked,
-  BookOpen,
-  Calendar,
-  CalendarDays,
-  CalendarHeart,
-  CalendarRange,
-  Command,
-  CreditCard,
-  FolderKanban,
-  Inbox,
-  LayoutDashboard,
-  MoreHorizontal,
-  NotebookPen,
-  Search,
-  Settings as SettingsIcon,
-  Sun,
-  Target,
-  Wallet,
-  X,
-} from 'lucide-react';
-import { toIsoDate, toIsoWeek } from '@/lib/utils/date';
+import { Command, MoreHorizontal, X } from 'lucide-react';
+import { destinations, retrospectiveMenu } from './destinations';
 
-const primary = [
-  { label: '홈', Icon: LayoutDashboard, basePath: '/dashboard', href: () => '/dashboard' },
-  { label: '일일', Icon: Sun, basePath: '/daily', href: () => '/daily' },
-  { label: '할 일', Icon: Inbox, basePath: '/inbox', href: () => '/inbox' },
-  { label: '가계부', Icon: Wallet, basePath: '/finance', href: () => '/finance' },
-];
+const primary = [destinations.dashboard, destinations.daily, destinations.inbox, destinations.finance];
 
 const moreGroups = [
-  {
-    title: '플래너',
-    items: [
-      { label: '주간', Icon: Calendar, basePath: '/week', href: () => `/week/${toIsoWeek(new Date())}` },
-      { label: '월간', Icon: CalendarDays, basePath: '/monthly', href: () => `/monthly/${format(new Date(), 'yyyy-MM')}` },
-      { label: '연간', Icon: CalendarRange, basePath: '/annual', href: () => `/annual/${format(new Date(), 'yyyy')}` },
-      { label: '일정 · 사람', Icon: CalendarHeart, basePath: '/life', href: () => '/life' },
-    ],
-  },
-  {
-    title: '목표 · 실행',
-    items: [
-      { label: 'One-Thing', Icon: Target, basePath: '/mandalart', href: () => '/mandalart' },
-      { label: '프로젝트', Icon: FolderKanban, basePath: '/projects', href: () => '/projects' },
-      { label: '회고', Icon: NotebookPen, basePath: '/retrospective', href: () => `/retrospective/week/${toIsoWeek(new Date())}` },
-      { label: '목표 실행 점검', Icon: Target, basePath: '/goal-review', href: () => '/goal-review' },
-    ],
-  },
-  {
-    title: '재무',
-    items: [
-      { label: '구독 · 월정액', Icon: CreditCard, basePath: '/subscriptions', href: () => '/subscriptions' },
-    ],
-  },
-  {
-    title: '기록 · 도구',
-    items: [
-      { label: '원칙 · 노트', Icon: BookMarked, basePath: '/notes', href: () => '/notes' },
-      { label: '주사 기록', Icon: Syringe, basePath: '/injections', href: () => '/injections' },
-      { label: '상태 지표', Icon: Activity, basePath: '/metrics', href: () => '/metrics' },
-      { label: '독서', Icon: BookOpen, basePath: '/reading', href: () => '/reading' },
-      { label: '전체 검색', Icon: Search, basePath: '/search', href: () => '/search' },
-      { label: '설정', Icon: SettingsIcon, basePath: '/settings', href: () => '/settings' },
-    ],
-  },
+  { title: '플래너', items: [destinations.week, destinations.monthly, destinations.annual, destinations.life] },
+  { title: '목표 · 실행', items: [destinations.mandalart, destinations.projects, retrospectiveMenu, destinations.goalReview] },
+  { title: '재무', items: [destinations.subscriptions] },
+  { title: '기록 · 도구', items: [destinations.notes, destinations.injections, destinations.metrics, destinations.reading, destinations.search, destinations.settings] },
 ];
 
 export const BottomNav = () => {
@@ -87,10 +28,10 @@ export const BottomNav = () => {
           return (
             <Link
               key={basePath}
-              href={href()}
-              onNavigate={basePath === '/daily' ? (event) => {
+              href={basePath === destinations.daily.basePath ? basePath : href()}
+              onNavigate={basePath === destinations.daily.basePath ? (event) => {
                 event.preventDefault();
-                router.push(`/daily/${toIsoDate(new Date())}`);
+                router.push(destinations.daily.href());
               } : undefined}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors
                 ${active ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}`}

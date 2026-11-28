@@ -46,6 +46,7 @@
 | [루트 페이지](../../0.%20Source/src/app/page.tsx) | 오늘 일일 화면 리다이렉트 |
 | [Proxy](../../0.%20Source/src/proxy.ts) | 요청 단위 인증 진입점 |
 | [서버 인증](../../0.%20Source/src/lib/server/auth.ts) | DB 인증, 쿠키 옵션, 세션 요구 |
+| [메뉴 정의](../../0.%20Source/src/components/nav/destinations.ts) | PC·모바일·런처의 이름, 아이콘, 날짜별 이동 주소 |
 | [TopNav](../../0.%20Source/src/components/nav/TopNav.tsx) / [BottomNav](../../0.%20Source/src/components/nav/BottomNav.tsx) | 반응형 메뉴 및 라이프 허브 드롭다운 |
 | [CommandPalette](../../0.%20Source/src/components/nav/CommandPalette.tsx) | Ctrl/Cmd+K 전역 커맨드 런처·빠른 입력·검색 점프 |
 | [AccountPanel](../../0.%20Source/src/components/settings/AccountPanel.tsx) | 계정 표시와 로그아웃 |
