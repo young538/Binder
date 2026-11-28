@@ -43,8 +43,8 @@ for (const width of [390, 1280]) {
     await page.getByText('회차별 상태 기록 (선택)', { exact: true }).click();
     await page.getByLabel('주사 부위', { exact: true }).fill('복부 왼쪽');
     await page.getByLabel('당일 체중 (kg)').fill('68.75');
-    await page.getByLabel('식욕 억제도', { exact: true }).selectOption('3');
-    await page.getByLabel('부작용·컨디션', { exact: true }).fill('오후에 기록한 컨디션');
+    await page.getByRole('combobox', { name: '식욕 억제도', exact: true }).selectOption('3');
+    await page.getByRole('textbox', { name: '부작용·컨디션', exact: true }).fill('오후에 기록한 컨디션');
     await page.getByLabel('식단·운동 등 상세 메모').fill('저녁 산책');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     await expect(card).toContainText('장부상 남은 클릭 41클릭');
@@ -62,7 +62,7 @@ for (const width of [390, 1280]) {
     await page.getByLabel('기록한 사용 클릭 수 (선택)').fill('');
     await page.getByText('회차별 상태 기록 (선택)', { exact: true }).click();
     await expect(page.getByLabel('당일 체중 (kg)')).toHaveValue('68.75');
-    await page.getByLabel('부작용·컨디션', { exact: true }).fill('');
+    await page.getByRole('textbox', { name: '부작용·컨디션', exact: true }).fill('');
     await page.getByLabel('식단·운동 등 상세 메모').fill('다시 작성한 메모');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     await expect(card).toContainText('사용 클릭 미입력 1회');
