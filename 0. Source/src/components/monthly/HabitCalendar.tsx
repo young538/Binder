@@ -76,7 +76,7 @@ export const HabitCalendar = ({ yyyymm }: Props) => {
                     >
                       <div
                         className={`text-[10px] font-normal
-                        ${dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-zinc-500'}`}
+                        ${dow === 0 ? 'text-red-500' : dow === 6 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-500'}`}
                       >
                         {DOW_KO[dow]}
                       </div>

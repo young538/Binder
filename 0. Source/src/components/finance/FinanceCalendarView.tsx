@@ -149,7 +149,7 @@ export function FinanceCalendarView({
                   dayLabel === '일'
                     ? 'text-rose-500 dark:text-rose-400'
                     : dayLabel === '토'
-                      ? 'text-blue-500 dark:text-blue-400'
+                      ? 'text-sky-600 dark:text-sky-400'
                       : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               >
@@ -229,7 +229,7 @@ export function FinanceCalendarView({
                               : isSunday
                                 ? 'text-rose-600 dark:text-rose-400'
                                 : isSaturday
-                                  ? 'text-blue-600 dark:text-blue-400'
+                                  ? 'text-sky-600 dark:text-sky-400'
                                   : 'text-zinc-700 dark:text-zinc-200'
                           }`}
                         >

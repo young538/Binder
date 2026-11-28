@@ -47,7 +47,7 @@ export const DayCell = ({
           ${isToday ? 'text-blue-600 dark:text-blue-400' :
             !isCurrentMonth ? 'text-zinc-400' :
             date.getDay() === 0 ? 'text-red-500' :
-            date.getDay() === 6 ? 'text-blue-500' :
+            date.getDay() === 6 ? 'text-sky-600 dark:text-sky-400' :
             'text-zinc-700 dark:text-zinc-300'}`}>
           {dayNum}
         </span>

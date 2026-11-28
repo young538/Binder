@@ -41,7 +41,7 @@ export const DayTodoStrip = ({
                     : i === 6
                       ? 'text-red-500'
                       : i === 5
-                        ? 'text-blue-500'
+                        ? 'text-sky-600 dark:text-sky-400'
                         : 'text-zinc-700 dark:text-zinc-300'
                 }`}
             >

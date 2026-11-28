@@ -1,10 +1,13 @@
 .page {
-  --ink: #193331;
-  --soft: #536968;
-  --accent: #11665a;
-  --wash: #edf6f1;
-  --line: #dce6e1;
-  --card: #fff;
+  --ink: #262522;
+  --soft: #736e65;
+  --accent: #c15f3c;
+  --wash: #fdf5f0;
+  --line: #e5e2d9;
+  --card: #ffffff;
+  --hero-bg: #ede8dc;
+  --hero-ink: #262522;
+  --hero-sub: #59554d;
   color: var(--ink);
   max-width: 1180px;
   margin: 0 auto;
@@ -16,11 +19,12 @@
   overflow-wrap: anywhere;
 }
 :global([data-theme="dark"]) .page {
-  --ink: #e6f0eb; --soft: #a2b7ae; --accent: #85d6ba;
-  --wash: #213c34; --line: #354941; --card: #1a2623;
+  --ink: #f3f1ea; --soft: #9c978b; --accent: #df8b68;
+  --wash: #2c1c15; --line: #33312d; --card: #22211e;
+  --hero-bg: #26231f; --hero-ink: #f3f1ea; --hero-sub: #b5b0a4;
 }
-.page [data-drug="tirzepatide"] { --accent: #884c71; --wash: #fbf0f6; }
-:global([data-theme="dark"]) .page [data-drug="tirzepatide"] { --accent: #e8a9cc; --wash: #402d37; }
+.page [data-drug="tirzepatide"] { --accent: #8f4763; --wash: #faf1f4; }
+:global([data-theme="dark"]) .page [data-drug="tirzepatide"] { --accent: #dfa0b8; --wash: #342129; }
 .hero {
   overflow: hidden;
   position: relative;
@@ -29,26 +33,26 @@
   align-items: center;
   min-height: 210px;
   border-radius: 22px;
-  color: #153b36;
-  background: #e2ece1;
+  color: var(--hero-ink);
+  background: var(--hero-bg);
 }
 .hero::before {
   content: "";
   position: absolute;
   z-index: -1;
   inset: 0 0 0 39%;
-  background: linear-gradient(90deg, #e2ece1, transparent 48%), url('/images/injection-journal.webp') center 49% / cover;
+  background: linear-gradient(90deg, var(--hero-bg), transparent 48%), url('/images/injection-journal.webp') center 49% / cover;
 }
 .heroContent { padding: 26px clamp(20px, 3.5vw, 46px); max-width: 61%; }
-.hero h1 { font-weight: 760; font-size: clamp(29px, 3.1vw, 45px); line-height: 1.12; letter-spacing: -.06em; }
-.hero p { font-size: 14px; line-height: 1.65; color: #365a50; margin: 10px 0 16px; }
+.hero h1 { font-family: var(--font-serif); font-weight: 760; font-size: clamp(29px, 3.1vw, 45px); line-height: 1.12; letter-spacing: -.04em; }
+.hero p { font-size: 14px; line-height: 1.65; color: var(--hero-sub); margin: 10px 0 16px; }
 .primary, .secondary, .modes button, .iconButton { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 650; min-height: 42px; }
-.primary { color: white; background: #185c50; padding: 0 17px; border-radius: 10px; }
-.primary:hover { background: #0e463b; }
+.primary { color: white; background: #c15f3c; padding: 0 17px; border-radius: 10px; }
+.primary:hover { background: #a64b2c; }
 .secondary { color: var(--accent); background: var(--wash); border: 1px solid var(--line); border-radius: 9px; padding: 0 12px; }
 .modes { justify-self: start; display: flex; padding: 3px; border-radius: 12px; background: var(--wash); }
 .modes button { min-height: 40px; padding: 0 13px; color: var(--soft); border-radius: 9px; }
-.modes button[aria-pressed="true"] { color: var(--ink); background: var(--card); box-shadow: 0 1px 5px #152e241c; }
+.modes button[aria-pressed="true"] { color: var(--ink); background: var(--card); box-shadow: 0 1px 5px rgba(20, 20, 19, 0.08); }
 .summary, .panel { background: var(--card); border: 1px solid var(--line); border-radius: 17px; min-width: 0; }
 .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 20px 0; }
 .summary > div { padding: 0 clamp(12px, 2.4vw, 32px); }

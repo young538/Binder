@@ -22,7 +22,7 @@ export const BottomNav = () => {
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 flex border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-30 pb-2">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 flex border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/95 backdrop-blur-md dark:bg-zinc-950/95 z-30 pb-2">
         {primary.map(({ label, Icon, basePath, href }) => {
           const active = path.startsWith(basePath);
           return (

@@ -8,7 +8,7 @@ import { useBinder } from '@/store';
 import { Dialog, actionClass, fieldClass } from '@/components/common/Dialog';
 import { MetricCard } from './MetricCard';
 
-const PRESET_COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+const PRESET_COLORS = ['#c15f3c', '#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed'];
 
 export function MetricsPage() {
   const { goals } = useBinder();

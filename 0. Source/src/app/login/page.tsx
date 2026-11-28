@@ -44,7 +44,7 @@ function LoginForm() {
       className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6 space-y-4"
     >
       <div className="text-center mb-2">
-        <div className="text-lg font-bold text-zinc-800 dark:text-zinc-50">Super 플래너</div>
+        <div className="font-serif text-xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-50">Super 플래너</div>
         <div className="text-xs text-zinc-500">로그인</div>
       </div>
       <label className="flex flex-col text-xs">
@@ -92,7 +92,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--color-bg)]">
       <Suspense fallback={<div className="text-sm text-zinc-500">로딩 중…</div>}>
         <LoginForm />
       </Suspense>

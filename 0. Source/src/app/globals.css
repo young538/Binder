@@ -4,53 +4,131 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --color-bg: #fafaf9;            /* warm off-white */
-  --color-bg-surface: #ffffff;    /* pure white for cards */
-  --color-fg: #27272a;            /* zinc-800 — softer body text */
-  --color-fg-strong: #18181b;     /* zinc-900 — use sparingly for emphasis */
-  --color-fg-muted: #71717a;      /* zinc-500 */
-  --color-fg-subtle: #a1a1aa;     /* zinc-400 */
-  --color-border: #e4e4e7;        /* zinc-200 */
-  --color-border-subtle: #f4f4f5; /* zinc-100 */
+  --color-bg: #f5f4ef;            /* Claude warm parchment */
+  --color-bg-surface: #ffffff;    /* crisp editorial card */
+  --color-fg: #262522;            /* warm charcoal ink */
+  --color-fg-strong: #141413;     /* deep ink emphasis */
+  --color-fg-muted: #736e65;      /* warm muted stone */
+  --color-fg-subtle: #9c978b;     /* subtle warm grey */
+  --color-border: #e5e2d9;        /* warm linen border */
+  --color-border-subtle: #f3f1ea; /* soft parchment divider */
 
-  --color-primary: #3b82f6;       /* blue-500 */
-  --color-primary-hover: #2563eb; /* blue-600 */
-  --color-primary-soft: #dbeafe;  /* blue-100 */
+  --color-primary: #c15f3c;       /* Claude terracotta primary */
+  --color-primary-hover: #a64b2c; /* deeper clay hover */
+  --color-primary-soft: #fae6dc;  /* soft terracotta tint */
 
-  --color-today-bg: #eff6ff;      /* blue-50 */
-  --color-today-border: #93c5fd;  /* blue-300 */
+  --color-today-bg: #fdf5f0;      /* warm highlight wash */
+  --color-today-border: #e6aa8d;  /* warm clay border */
 
-  /* Status (kept minimal) */
-  --color-success: #10b981;       /* emerald-500 */
-  --color-success-soft: #d1fae5;  /* emerald-100 */
-  --color-warning: #f59e0b;       /* amber-500 */
-  --color-warning-soft: #fef3c7;  /* amber-100 */
-  --color-danger: #dc2626;        /* red-600 */
-  --color-danger-soft: #fee2e2;   /* red-100 */
+  /* Warm-harmonized status colors */
+  --color-success: #2d7a58;
+  --color-success-soft: #dcf2e7;
+  --color-warning: #c8811a;
+  --color-warning-soft: #fdf0d5;
+  --color-danger: #c43d32;
+  --color-danger-soft: #fbe4e1;
 
-  /* Softer modal backdrop — warmer, lighter than pure black */
-  --color-backdrop: rgba(39, 39, 42, 0.35);        /* zinc-800 @ 35% */
-  --color-backdrop-strong: rgba(39, 39, 42, 0.5);  /* zinc-800 @ 50% */
+  /* Warm modal backdrop */
+  --color-backdrop: rgba(24, 23, 21, 0.38);
+  --color-backdrop-strong: rgba(24, 23, 21, 0.56);
 }
 
-/* Dark theme applied ONLY when explicitly requested via [data-theme="dark"] on <html>.
-   No auto-switch based on OS preference — keep default light for consistent color showcase. */
+/* Dark theme applied ONLY when explicitly requested via [data-theme="dark"] on <html>. */
 html[data-theme="dark"] {
-  --color-bg: #0a0a0a;
-  --color-bg-surface: #161618;
-  --color-fg: #fafafa;
-  --color-fg-muted: #a1a1aa;
-  --color-border: #27272a;
-  --color-border-subtle: #1c1c1f;
-  --color-today-bg: #1e2a3f;
+  --color-bg: #181715;
+  --color-bg-surface: #22211e;
+  --color-fg: #f3f1ea;
+  --color-fg-strong: #faf9f5;
+  --color-fg-muted: #9c978b;
+  --color-fg-subtle: #736e65;
+  --color-border: #2e2c28;
+  --color-border-subtle: #242320;
+  --color-primary: #d97757;
+  --color-primary-hover: #df8b68;
+  --color-primary-soft: #3a1a10;
+  --color-today-bg: #2c1c15;
+  --color-today-border: #873d24;
+}
+
+/* Static Tailwind v4 palette remap for Claude warm parchment + terracotta design system */
+@theme {
+  --color-zinc-50: #faf9f5;
+  --color-zinc-100: #f3f1ea;
+  --color-zinc-200: #e5e2d9;
+  --color-zinc-300: #d4cfc3;
+  --color-zinc-400: #9c978b;
+  --color-zinc-500: #736e65;
+  --color-zinc-600: #59554d;
+  --color-zinc-700: #423f39;
+  --color-zinc-800: #2e2c28;
+  --color-zinc-900: #22211e;
+  --color-zinc-950: #181715;
+
+  --color-blue-50: #fdf5f0;
+  --color-blue-100: #fae6dc;
+  --color-blue-200: #f2ccb9;
+  --color-blue-300: #e6aa8d;
+  --color-blue-400: #df8b68;
+  --color-blue-500: #d97757;
+  --color-blue-600: #c15f3c;
+  --color-blue-700: #a64b2c;
+  --color-blue-800: #873d24;
+  --color-blue-900: #6e331f;
+  --color-blue-950: #3a1a10;
+
+  --color-indigo-50: #f9f5f2;
+  --color-indigo-100: #f0e6de;
+  --color-indigo-200: #dfd0c4;
+  --color-indigo-300: #c7b09f;
+  --color-indigo-400: #b58d72;
+  --color-indigo-500: #996d52;
+  --color-indigo-600: #7d563f;
+  --color-indigo-700: #664532;
+  --color-indigo-800: #523728;
+  --color-indigo-900: #422c20;
+  --color-indigo-950: #291b14;
+
+  --shadow-sm: 0 1px 2px 0 rgba(20, 20, 19, 0.04), 0 1px 3px 0 rgba(20, 20, 19, 0.03);
+}
+
+/* Dynamic runtime tokens + next/font bindings */
+@theme inline {
+  --font-sans: var(--font-geist-sans), var(--font-noto-sans-kr), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-noto-serif-kr), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-bg-surface);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-primary: var(--color-primary);
+  --color-today: var(--color-today-bg);
 }
 
 html, body {
   background: var(--color-bg);
   color: var(--color-fg);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+h1 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.025em;
+}
+
+::selection {
+  background: #fae6dc;
+  color: #141413;
+}
+
+html[data-theme="dark"] ::selection {
+  background: rgba(217, 119, 87, 0.32);
+  color: #faf9f5;
 }
 
 /* 숫자 input의 스피너(증감 화살표) 숨기기 — 좁은 셀에서 숫자 잘림 방지 */
@@ -61,16 +139,4 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
-}
-
-/* Tailwind v4 @theme inline — expose vars as Tailwind tokens */
-@theme inline {
-  --color-bg: var(--color-bg);
-  --color-surface: var(--color-bg-surface);
-  --color-fg: var(--color-fg);
-  --color-fg-muted: var(--color-fg-muted);
-  --color-border: var(--color-border);
-  --color-border-subtle: var(--color-border-subtle);
-  --color-primary: var(--color-primary);
-  --color-today: var(--color-today-bg);
 }

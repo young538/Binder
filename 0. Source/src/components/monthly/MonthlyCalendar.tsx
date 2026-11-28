@@ -95,7 +95,7 @@ export const MonthlyCalendar = ({ yyyymm }: Props) => {
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DOW.map((d, i) => (
           <div key={d} className={`text-xs font-medium text-center py-2
-            ${i === 6 ? 'text-red-500' : i === 5 ? 'text-blue-500' : 'text-zinc-600 dark:text-zinc-400'}`}>{d}</div>
+            ${i === 6 ? 'text-red-500' : i === 5 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-600 dark:text-zinc-400'}`}>{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">

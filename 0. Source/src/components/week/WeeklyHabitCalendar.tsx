@@ -94,7 +94,7 @@ export const WeeklyHabitCalendar = ({ isoweek, embedded = false }: Props) => {
             <tr className="h-7 bg-zinc-50 dark:bg-zinc-900">
               <th scope="col" className="px-3 text-left font-medium text-zinc-500">습관</th>
               {days.map((day, index) => (
-                <th key={toIsoDate(day)} scope="col" className={`border-l border-zinc-100 text-center font-medium dark:border-zinc-800 ${toIsoDate(day) === today ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : day.getDay() === 0 ? 'text-red-500' : day.getDay() === 6 ? 'text-blue-500' : 'text-zinc-500'}`}>
+                <th key={toIsoDate(day)} scope="col" className={`border-l border-zinc-100 text-center font-medium dark:border-zinc-800 ${toIsoDate(day) === today ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : day.getDay() === 0 ? 'text-red-500' : day.getDay() === 6 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-500'}`}>
                   <span>{DOW_KO[index]}</span><span className="ml-0.5 tabular-nums">{day.getDate()}</span>
                 </th>
               ))}
