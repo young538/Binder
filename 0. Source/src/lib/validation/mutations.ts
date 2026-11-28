@@ -174,6 +174,11 @@ const rules: Record<MutationKind, Rules> = {
   }, required: ['drug', 'name', 'capacityMcg', 'closed'] },
   injectionEntries: { fields: {
     penId: identifier, amountMcg: integer(1, 1000000), usedClicks: nullable(integer(0, 1000000)),
+    injectionSite: nullable(v => typeof v === 'string' && v.length <= 80),
+    weightKg: nullable(v => typeof v === 'number' && Number.isFinite(v) && v >= 0.01),
+    appetiteSuppression: nullable(integer(1, 5)),
+    conditionNote: nullable(v => typeof v === 'string' && v.length <= 4000),
+    lifestyleNote: nullable(v => typeof v === 'string' && v.length <= 4000),
     takenAt: v => typeof v === 'string' && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v && Date.parse(v) <= Date.now(),
   }, required: ['penId', 'amountMcg', 'takenAt'] },
   metricEntries: { fields: { metricId: identifier, date: isDate, value: number, note: optionalText }, required: ['metricId', 'date', 'value'] },

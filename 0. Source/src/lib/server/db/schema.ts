@@ -24,6 +24,11 @@ export const injectionEntries = sqliteTable('injection_entries', {
   takenAt: text('taken_at').notNull(),
   amountMcg: integer('amount_mcg').notNull(),
   usedClicks: integer('used_clicks'),
+  injectionSite: text('injection_site'),
+  weightKg: real('weight_kg'),
+  appetiteSuppression: integer('appetite_suppression'),
+  conditionNote: text('condition_note'),
+  lifestyleNote: text('lifestyle_note'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, t => [index('injection_entries_owner_pen').on(t.userId, t.penId)]);

@@ -319,7 +319,7 @@ describe('life OS phase 1-4 domains', () => {
       },
     });
     const out = backups.exportFor('legacy-v12');
-    expect(out.version).toBe(21);
+    expect(out.version).toBe(22);
     expect(out.projects).toHaveLength(1);
     expect(out.notes).toEqual([]);
     expect(out.metrics).toEqual([]);

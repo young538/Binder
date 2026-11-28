@@ -4,7 +4,7 @@ import path from 'node:path';
 import { DatabaseConnection } from '@/lib/server/db/connection';
 import { InjectionRepository } from '@/lib/server/repos/injections';
 import { BackupService } from '@/lib/server/backup/service';
-import { clickLedger, residualTrend, type InjectionEntry } from '@/lib/injections';
+import { clickLedger, residualTrend, weightChanges, type InjectionEntry } from '@/lib/injections';
 import { validateFields } from '@/lib/validation/mutations';
 
 const date = '2020-01-01T00:00:00.000Z';
@@ -95,6 +95,28 @@ describe('injection journal', () => {
     for (const invalid of [-1, 1.5, '10']) {
       expect(() => validateFields('injectionEntries', { ...dose, usedClicks: invalid })).toThrow();
       expect(() => validateFields('injectionPens', { ...pen, startingClicks: invalid })).toThrow();
+    }
+  });
+
+  it('restores per-injection observations and preserves omitted fields on older clients', () => {
+    repo.savePen('p', pen, null);
+    const observed = { injectionSite: '왼쪽', weightKg: 70.45, appetiteSuppression: 4, conditionNote: '상태 메모', lifestyleNote: '산책' };
+    const row = repo.saveEntry('o1', { ...dose, ...observed }, null);
+    const changed = repo.saveEntry(row.id, { ...dose, amountMcg: 100 }, row.updatedAt);
+    expect(changed).toMatchObject(observed);
+    repo.saveEntry('o2', { ...dose, amountMcg: 100 }, null);
+    repo.saveEntry('o3', { ...dose, weightKg: 70.35 }, null);
+    expect([...weightChanges(repo.journal().entries)]).toEqual([['o3', -0.1]]);
+    const backup = new BackupService(() => connection.get());
+    const exported = backup.exportFor('a');
+    backup.importFor('a', { mode: 'replace', data: exported });
+    expect(repo.journal().entries.find(e => e.id === row.id)).toMatchObject(observed);
+    const cleared = repo.saveEntry(row.id, { ...dose, conditionNote: null, weightKg: null }, changed.updatedAt);
+    expect(cleared).toMatchObject({ weightKg: null, conditionNote: null, appetiteSuppression: 4, lifestyleNote: '산책' });
+    expect(weightChanges(repo.journal().entries).size).toBe(0);
+    for (const bad of [{ weightKg: 0 }, { weightKg: Infinity }, { appetiteSuppression: 6 }, { appetiteSuppression: 1.5 },
+      { conditionNote: 'a'.repeat(4001) }, { injectionSite: 'a'.repeat(81) }]) {
+      expect(() => validateFields('injectionEntries', { ...dose, ...bad })).toThrow();
     }
   });
 

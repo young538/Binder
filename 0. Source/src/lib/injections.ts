@@ -17,6 +17,11 @@ export interface InjectionEntry extends RecordIdentity {
   takenAt: string;
   amountMcg: number;
   usedClicks?: number | null;
+  injectionSite?: string | null;
+  weightKg?: number | null;
+  appetiteSuppression?: number | null;
+  conditionNote?: string | null;
+  lifestyleNote?: string | null;
 }
 export type PenInput = Omit<InjectionPen, keyof RecordIdentity>;
 export type EntryInput = Omit<InjectionEntry, keyof RecordIdentity>;
@@ -54,6 +59,19 @@ export function clickLedger({ pens, entries }: InjectionJournal) {
     if (balance.remaining !== null) afterEntry.set(entry.id, balance.remaining);
   }
   return { byPen, afterEntry };
+}
+
+// Entries use the journal's newest-first order, including its tie-breaker.
+export function weightChanges(entries: InjectionEntry[]) {
+  const changes = new Map<string, number>();
+  let previous: number | undefined;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const { id, weightKg } = entries[i];
+    if (weightKg == null) continue;
+    if (previous !== undefined) changes.set(id, Number((weightKg - previous).toFixed(2)));
+    previous = weightKg;
+  }
+  return changes;
 }
 
 export const mg = (mcg: number) => (mcg / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 3 });

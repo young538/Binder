@@ -84,7 +84,7 @@ Google 일정 수정은 최신 로컬 내용을 저장하고 쓰기 가능한 �
 
 ## 주사 기록
 
-`GET /api/injections`는 현재 사용자의 펜과 투여 이력을 반환합니다. `PUT /api/injections/pens/[id]`는 약물·펜 이름·총량(capacityMcg)·사용 종료(closed)를, `PUT /api/injections/entries/[id]`는 penId·UTC 일시(takenAt)·실제 투여량(amountMcg)을 저장합니다. mg 입력값은 정수 마이크로그램으로 저장합니다. 생성 시 클라이언트가 동일 요청에 같은 ID를 사용합니다. 수정과 DELETE는 조회한 updatedAt을 X-Record-Version 헤더로 보내며 충돌 시 409를 반환합니다. 주사 기록이 있는 펜은 삭제할 수 없습니다. `GET /api/injections?examples=1`은 이 사용자에게 등록한 관리대장 예시가 있을 때 `examples` 안에 별도로 반환합니다. 예시 펜과 회차는 주사 기록 화면에서 읽기 전용입니다. v21에서는 펜의 장부 시작 클릭 수(`startingClicks`)와 회차에 기록한 사용 클릭 수(`usedClicks`)를 선택적으로 저장합니다. 이전 백업은 클릭 수 미입력으로 처리합니다. 사용자 내보내기는 `injectionPens.isExample`을 보존합니다. 이전 백업에서 필드가 생략된 펜은 내 기록으로 복원합니다.
+`GET /api/injections`는 현재 사용자의 펜과 투여 이력을 반환합니다. `PUT /api/injections/pens/[id]`는 약물·펜 이름·총량(capacityMcg)·사용 종료(closed)를, `PUT /api/injections/entries/[id]`는 penId·UTC 일시(takenAt)·실제 투여량(amountMcg)을 저장합니다. mg 입력값은 정수 마이크로그램으로 저장합니다. 생성 시 클라이언트가 동일 요청에 같은 ID를 사용합니다. 수정과 DELETE는 조회한 updatedAt을 X-Record-Version 헤더로 보내며 충돌 시 409를 반환합니다. 주사 기록이 있는 펜은 삭제할 수 없습니다. `GET /api/injections?examples=1`은 이 사용자에게 등록한 관리대장 예시가 있을 때 `examples` 안에 별도로 반환합니다. 예시 펜과 회차는 주사 기록 화면에서 읽기 전용입니다. v21에서는 펜의 장부 시작 클릭 수(`startingClicks`)와 회차에 기록한 사용 클릭 수(`usedClicks`)를 선택적으로 저장합니다. 이전 백업은 클릭 수 미입력으로 처리합니다. v22의 `injectionEntries`에는 선택 항목인 `injectionSite`, `weightKg`, `appetiteSuppression`(1~5), `conditionNote`, `lifestyleNote`가 포함됩니다. 수정 시 `null`은 입력 해제이며 생략한 항목은 보존됩니다. 사용자 내보내기는 `injectionPens.isExample`을 보존합니다. 이전 백업에서 필드가 생략된 펜은 내 기록으로 복원합니다.
 
 ## 전체 검색
 
@@ -138,7 +138,7 @@ GoalProgress는 goalId, numeric?, habits?, todos?, timeInvested, overall입니�
 
 ```json
 {
-  "version": 21,
+  "version": 22,
   "generatedAt": "ISO 시각",
   "goals": [], "categories": [], "projects": [], "people": [], "metrics": [], "metricEntries": [],
   "injectionPens": [], "injectionEntries": [], "financeTransactions": [], "financeBudgets": [],
